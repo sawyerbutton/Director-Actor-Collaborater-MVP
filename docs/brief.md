@@ -92,7 +92,7 @@ ScriptAI MVP 是一款智能剧本分析与修改助手，它利用三个协作�
 **开放性问题**: 真实的用户交互模式、成本效益模型、功能价值排序、Token使用效率。
 
 ## 11. 附录
-**参考文献**: `PROJECT-CRITIQUE-REPORT.md`, `NEW-MVP-PROJECT-REQUIREMENTS.md`, `MVP-EPIC-STRUCTURE.md`, `MVP-ROADMAP-ACTION.md`, `MULTI-AGENT-ARCHITECTURE.md`, `DEEPSEEK-INTEGRATION.md`。
+**参考文献**: `Appendix/PROJECT-CRITIQUE-REPORT.md`, `Appendix/NEW-MVP-PROJECT-REQUIREMENTS.md`, `Appendix/MVP-EPIC-STRUCTURE.md`, `Appendix/MVP-ROADMAP-ACTION.md`, `Appendix/MULTI-AGENT-ARCHITECTURE.md`, `Appendix/NEW-PROJECT-INIT.sh`。
 
 ## 12. 后续步骤
 **立即行动**: 最终化并分发本文档、运行`NEW-PROJECT-INIT.sh`初始化项目、召开项目启动会、开始执行Epic A。
