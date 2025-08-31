@@ -1,0 +1,48 @@
+{
+  "name": "director-actor-collaborater-mvp",
+  "version": "1.0.0",
+  "description": "> An AI-powered collaborative system that helps screenwriters detect and fix common logical errors in scripts within 10 seconds.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sawyerbutton/Director-Actor-Collaborater-MVP.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/sawyerbutton/Director-Actor-Collaborater-MVP/issues"
+  },
+  "homepage": "https://github.com/sawyerbutton/Director-Actor-Collaborater-MVP#readme",
+  "dependencies": {
+    "next": "^14.2.32",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.8.0",
+    "@testing-library/react": "^16.3.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.3.0",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "autoprefixer": "^10.4.21",
+    "jest": "^30.1.1",
+    "jest-environment-jsdom": "^30.1.1",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.12",
+    "ts-jest": "^29.4.1",
+    "typescript": "^5.9.2"
+  }
+}
