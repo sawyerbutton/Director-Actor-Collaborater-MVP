@@ -27,6 +27,7 @@
   "homepage": "https://github.com/sawyerbutton/Director-Actor-Collaborater-MVP#readme",
   "dependencies": {
     "@types/uuid": "^10.0.0",
+    "deep-object-diff": "^1.1.9",
     "next": "^14.2.32",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
