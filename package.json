@@ -26,14 +26,24 @@
   },
   "homepage": "https://github.com/sawyerbutton/Director-Actor-Collaborater-MVP#readme",
   "dependencies": {
+    "@radix-ui/react-progress": "^1.1.7",
+    "@radix-ui/react-select": "^2.2.6",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-tabs": "^1.1.13",
+    "@testing-library/user-event": "^14.6.1",
     "@types/uuid": "^10.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "deep-object-diff": "^1.1.9",
     "isomorphic-dompurify": "^2.26.0",
+    "lucide-react": "^0.542.0",
     "next": "^14.2.32",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "tailwind-merge": "^3.3.1",
     "uuid": "^11.1.0",
-    "zod": "^4.1.5"
+    "zod": "^4.1.5",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.8.0",

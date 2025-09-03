@@ -20,7 +20,7 @@ Severity Guidelines:
 
 export function buildUserPrompt(
   scriptContent: string,
-  checkTypes: LogicErrorType[] = Object.values(LogicErrorType),
+  checkTypes: LogicErrorType[] = ['timeline', 'character', 'plot', 'dialogue', 'scene'],
   maxErrors: number = 50
 ): string {
   const selectedRules = ERROR_DETECTION_RULES.filter(rule => 
@@ -135,7 +135,7 @@ export class PromptBuilder {
 
   constructor(
     scriptContent: string,
-    checkTypes: LogicErrorType[] = Object.values(LogicErrorType),
+    checkTypes: LogicErrorType[] = ['timeline', 'character', 'plot', 'dialogue', 'scene'],
     maxErrors: number = 50
   ) {
     this.scriptContent = scriptContent;

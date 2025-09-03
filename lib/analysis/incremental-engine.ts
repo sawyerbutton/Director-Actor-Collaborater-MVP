@@ -266,7 +266,7 @@ export class IncrementalAnalysisEngine {
     try {
       const request: ConsistencyCheckRequest = {
         script: this.convertToAnalysisScript(elementScript),
-        checkTypes: options?.checkTypes || Object.values(LogicErrorType),
+        checkTypes: options?.checkTypes || ['timeline', 'character', 'plot', 'dialogue', 'scene'] as LogicErrorType[],
         severityThreshold: options?.severityThreshold,
         maxErrors: options?.maxErrors
       };

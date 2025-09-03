@@ -67,7 +67,7 @@ export class ConsistencyGuardian {
             chunk,
             globalIndex,
             chunks.length,
-            request.checkTypes || Object.values(LogicErrorType),
+            request.checkTypes || ['timeline', 'character', 'plot', 'dialogue', 'scene'],
             request.severityThreshold,
             globalIndex > 0 ? this.getChunkContext(chunks[globalIndex - 1]) : undefined
           );
@@ -294,12 +294,14 @@ export class ConsistencyGuardian {
 
   private normalizeErrorType(type: string): LogicErrorType {
     const normalized = type?.toLowerCase();
-    return Object.values(LogicErrorType).find(t => t === normalized) || LogicErrorType.PLOT;
+    const errorTypes: LogicErrorType[] = ['timeline', 'character', 'plot', 'dialogue', 'scene'];
+    return errorTypes.find(t => t === normalized) || 'plot';
   }
 
   private normalizeSeverity(severity: string): ErrorSeverity {
     const normalized = severity?.toLowerCase();
-    return Object.values(ErrorSeverity).find(s => s === normalized) || ErrorSeverity.MEDIUM;
+    const severities: ErrorSeverity[] = ['critical', 'high', 'medium', 'low'];
+    return severities.find(s => s === normalized) || 'medium';
   }
 
   private filterAndDeduplicateErrors(
@@ -310,7 +312,7 @@ export class ConsistencyGuardian {
     let filtered = errors;
     
     if (severityThreshold) {
-      const severityOrder = [ErrorSeverity.LOW, ErrorSeverity.MEDIUM, ErrorSeverity.HIGH, ErrorSeverity.CRITICAL];
+      const severityOrder: ErrorSeverity[] = ['low', 'medium', 'high', 'critical'];
       const thresholdIndex = severityOrder.indexOf(severityThreshold);
       filtered = errors.filter(error => 
         severityOrder.indexOf(error.severity) >= thresholdIndex
@@ -320,7 +322,7 @@ export class ConsistencyGuardian {
     const uniqueErrors = this.deduplicateErrors(filtered);
     
     uniqueErrors.sort((a, b) => {
-      const severityOrder = [ErrorSeverity.CRITICAL, ErrorSeverity.HIGH, ErrorSeverity.MEDIUM, ErrorSeverity.LOW];
+      const severityOrder: ErrorSeverity[] = ['critical', 'high', 'medium', 'low'];
       return severityOrder.indexOf(a.severity) - severityOrder.indexOf(b.severity);
     });
     
@@ -345,7 +347,8 @@ export class ConsistencyGuardian {
   }
 
   private groupErrorsByType(errors: LogicError[]): Record<LogicErrorType, number> {
-    const grouped = Object.values(LogicErrorType).reduce((acc, type) => {
+    const errorTypes: LogicErrorType[] = ['timeline', 'character', 'plot', 'dialogue', 'scene'];
+    const grouped = errorTypes.reduce((acc, type) => {
       acc[type] = 0;
       return acc;
     }, {} as Record<LogicErrorType, number>);
@@ -358,7 +361,8 @@ export class ConsistencyGuardian {
   }
 
   private groupErrorsBySeverity(errors: LogicError[]): Record<ErrorSeverity, number> {
-    const grouped = Object.values(ErrorSeverity).reduce((acc, severity) => {
+    const severities: ErrorSeverity[] = ['critical', 'high', 'medium', 'low'];
+    const grouped = severities.reduce((acc, severity) => {
       acc[severity] = 0;
       return acc;
     }, {} as Record<ErrorSeverity, number>);
@@ -371,8 +375,8 @@ export class ConsistencyGuardian {
   }
 
   private generateReport(result: ConsistencyAnalysisResult): AnalysisReport {
-    const criticalCount = result.errorsBySeverity[ErrorSeverity.CRITICAL] || 0;
-    const highCount = result.errorsBySeverity[ErrorSeverity.HIGH] || 0;
+    const criticalCount = result.errorsBySeverity['critical'] || 0;
+    const highCount = result.errorsBySeverity['high'] || 0;
     
     let overallConsistency: 'excellent' | 'good' | 'fair' | 'poor';
     if (result.totalErrors === 0) {
@@ -415,8 +419,8 @@ export class ConsistencyGuardian {
       }
     });
     
-    if (result.errorsBySeverity[ErrorSeverity.CRITICAL] > 0) {
-      concerns.unshift(`${result.errorsBySeverity[ErrorSeverity.CRITICAL]} critical issues requiring immediate attention`);
+    if (result.errorsBySeverity['critical'] > 0) {
+      concerns.unshift(`${result.errorsBySeverity['critical']} critical issues requiring immediate attention`);
     }
     
     return concerns.slice(0, 3);
@@ -425,18 +429,18 @@ export class ConsistencyGuardian {
   private generateRecommendations(result: ConsistencyAnalysisResult): string[] {
     const recommendations: string[] = [];
     
-    if (result.errorsBySeverity[ErrorSeverity.CRITICAL] > 0) {
+    if (result.errorsBySeverity['critical'] > 0) {
       recommendations.push('Priority: Address all critical errors before proceeding with production');
     }
     
     const dominantErrorType = this.findDominantErrorType(result.errorsByType);
     if (dominantErrorType) {
       const typeRecommendations: Record<LogicErrorType, string> = {
-        [LogicErrorType.TIMELINE]: 'Create a detailed timeline document to track all temporal references',
-        [LogicErrorType.CHARACTER]: 'Develop character bibles with consistent traits and knowledge states',
-        [LogicErrorType.PLOT]: 'Review plot structure and ensure all setups have payoffs',
-        [LogicErrorType.DIALOGUE]: 'Conduct dialogue passes to ensure natural conversation flow',
-        [LogicErrorType.SCENE]: 'Map out location geography and movement logistics'
+        'timeline': 'Create a detailed timeline document to track all temporal references',
+        'character': 'Develop character bibles with consistent traits and knowledge states',
+        'plot': 'Review plot structure and ensure all setups have payoffs',
+        'dialogue': 'Conduct dialogue passes to ensure natural conversation flow',
+        'scene': 'Map out location geography and movement logistics'
       };
       recommendations.push(typeRecommendations[dominantErrorType]);
     }

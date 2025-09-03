@@ -1,17 +1,6 @@
-export enum LogicErrorType {
-  TIMELINE = 'timeline',
-  CHARACTER = 'character',
-  PLOT = 'plot',
-  DIALOGUE = 'dialogue',
-  SCENE = 'scene'
-}
+export type LogicErrorType = 'timeline' | 'character' | 'plot' | 'dialogue' | 'scene';
 
-export enum ErrorSeverity {
-  CRITICAL = 'critical',
-  HIGH = 'high',
-  MEDIUM = 'medium',
-  LOW = 'low'
-}
+export type ErrorSeverity = 'critical' | 'high' | 'medium' | 'low';
 
 export interface ErrorLocation {
   sceneId?: string;
@@ -19,6 +8,8 @@ export interface ErrorLocation {
   characterName?: string;
   dialogueIndex?: number;
   lineNumber?: number;
+  line?: number;
+  column?: number;
   timeReference?: string;
 }
 

@@ -1,9 +1,6 @@
-export enum SuggestionPriority {
-  CRITICAL = 'critical',
-  HIGH = 'high',
-  MEDIUM = 'medium',
-  LOW = 'low'
-}
+export type SuggestionPriority = 'critical' | 'high' | 'medium' | 'low';
+
+export type Suggestion = RevisionSuggestion;
 
 export interface RevisionSuggestion {
   id: string;
