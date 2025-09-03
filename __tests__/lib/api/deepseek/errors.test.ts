@@ -118,14 +118,22 @@ describe('DeepSeek Errors', () => {
 
     it('should not log in production', () => {
       const originalEnv = process.env.NODE_ENV
-      process.env.NODE_ENV = 'production'
+      Object.defineProperty(process.env, 'NODE_ENV', {
+        value: 'production',
+        writable: true,
+        configurable: true
+      })
 
       const error = new Error('Test error')
       logError(error)
 
       expect(consoleErrorSpy).not.toHaveBeenCalled()
 
-      process.env.NODE_ENV = originalEnv
+      Object.defineProperty(process.env, 'NODE_ENV', {
+        value: originalEnv,
+        writable: true,
+        configurable: true
+      })
     })
   })
 })

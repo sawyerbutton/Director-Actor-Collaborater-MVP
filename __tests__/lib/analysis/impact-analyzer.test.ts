@@ -1,51 +1,68 @@
 import { ImpactAnalyzer } from '@/lib/analysis/impact-analyzer';
 import { ChangeEvent } from '@/types/change-tracking';
-import { Script } from '@/types/script';
+import { ParsedScript } from '@/types/script';
 
 describe('ImpactAnalyzer', () => {
   let analyzer: ImpactAnalyzer;
-  let testScript: Script;
+  let testScript: ParsedScript;
   let testChanges: ChangeEvent[];
 
   beforeEach(() => {
     analyzer = new ImpactAnalyzer();
     
     testScript = {
-      id: 'script-1',
-      title: 'Test Script',
+      metadata: {
+        parseVersion: '1.0.0',
+        parseTime: new Date(),
+        language: 'en',
+        originalLength: 0
+      },
       scenes: [
         {
           id: 'scene-1',
+          index: 1,
           title: 'Scene 1',
           description: 'First scene',
+          characters: ['char-1', 'char-2'],
           dialogues: [
-            { id: 'd1', character: 'char-1', text: 'Hello' },
-            { id: 'd2', character: 'char-2', text: 'Hi there' }
-          ]
+            { id: 'd1', characterId: 'char-1', characterName: 'Alice', content: 'Hello', sceneId: 'scene-1' },
+            { id: 'd2', characterId: 'char-2', characterName: 'Bob', content: 'Hi there', sceneId: 'scene-1' }
+          ],
+          actions: []
         },
         {
           id: 'scene-2',
+          index: 2,
           title: 'Scene 2',
           description: 'Second scene',
+          characters: ['char-1', 'char-3'],
           dialogues: [
-            { id: 'd3', character: 'char-1', text: 'Continuing' },
-            { id: 'd4', character: 'char-3', text: 'New character' }
-          ]
+            { id: 'd3', characterId: 'char-1', characterName: 'Alice', content: 'Continuing', sceneId: 'scene-2' },
+            { id: 'd4', characterId: 'char-3', characterName: 'Charlie', content: 'New character', sceneId: 'scene-2' }
+          ],
+          actions: []
         },
         {
           id: 'scene-3',
+          index: 3,
           title: 'Scene 3',
           description: 'Third scene',
+          characters: ['char-2'],
           dialogues: [
-            { id: 'd5', character: 'char-2', text: 'Back again' }
-          ]
+            { id: 'd5', characterId: 'char-2', characterName: 'Bob', content: 'Back again', sceneId: 'scene-3' }
+          ],
+          actions: []
         }
       ],
       characters: [
-        { id: 'char-1', name: 'Alice', role: 'protagonist' },
-        { id: 'char-2', name: 'Bob', role: 'supporting' },
-        { id: 'char-3', name: 'Charlie', role: 'antagonist' }
-      ]
+        { id: 'char-1', name: 'Alice', dialogueCount: 2, scenes: ['scene-1', 'scene-2'], firstAppearance: { sceneId: 'scene-1' } },
+        { id: 'char-2', name: 'Bob', dialogueCount: 2, scenes: ['scene-1', 'scene-3'], firstAppearance: { sceneId: 'scene-1' } },
+        { id: 'char-3', name: 'Charlie', dialogueCount: 1, scenes: ['scene-2'], firstAppearance: { sceneId: 'scene-2' } }
+      ],
+      dialogues: [],
+      actions: [],
+      totalDialogues: 5,
+      totalActions: 0
     };
 
     testChanges = [

@@ -1,39 +1,57 @@
 import { ChangeTracker } from '@/lib/analysis/change-tracker';
-import { Script } from '@/types/script';
+import { ParsedScript } from '@/types/script';
 import { ChangeEvent } from '@/types/change-tracking';
+import { createMockParsedScript } from '../../test-utils/mock-factories';
 
 describe('ChangeTracker', () => {
   let tracker: ChangeTracker;
-  let oldScript: Script;
-  let newScript: Script;
+  let oldScript: ParsedScript;
+  let newScript: ParsedScript;
 
   beforeEach(() => {
     tracker = new ChangeTracker();
     
     oldScript = {
-      id: 'script-1',
-      title: 'Test Script',
+      metadata: {
+        parseVersion: '1.0.0',
+        parseTime: new Date(),
+        language: 'en',
+        originalLength: 0
+      },
       scenes: [
         {
           id: 'scene-1',
+          index: 1,
           title: 'Opening Scene',
           description: 'The beginning',
+          characters: ['char-1'],
           dialogues: [
             {
               id: 'dialogue-1',
-              character: 'char-1',
-              text: 'Hello world'
+              characterId: 'char-1',
+              characterName: 'Alice',
+              content: 'Hello world',
+              sceneId: 'scene-1'
             }
-          ]
+          ],
+          actions: []
         }
       ],
       characters: [
         {
           id: 'char-1',
           name: 'Alice',
-          role: 'protagonist'
+          dialogueCount: 1,
+          scenes: ['scene-1'],
+          firstAppearance: {
+            sceneId: 'scene-1'
+          }
         }
-      ]
+      ],
+      dialogues: [],
+      actions: [],
+      totalDialogues: 1,
+      totalActions: 0
     };
 
     newScript = JSON.parse(JSON.stringify(oldScript));
@@ -64,7 +82,7 @@ describe('ChangeTracker', () => {
     });
 
     it('should detect dialogue text changes', () => {
-      newScript.scenes[0].dialogues![0].text = 'Goodbye world';
+      newScript.scenes[0].dialogues![0].content = 'Goodbye world';
       
       const events = tracker.trackChange('script-1', oldScript, newScript);
       
@@ -90,8 +108,12 @@ describe('ChangeTracker', () => {
     it('should detect structural changes when scenes are added', () => {
       newScript.scenes.push({
         id: 'scene-2',
+        index: 2,
         title: 'New Scene',
-        description: 'A new addition'
+        description: 'A new addition',
+        characters: [],
+        dialogues: [],
+        actions: []
       });
       
       const events = tracker.trackChange('script-1', oldScript, newScript);

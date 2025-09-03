@@ -1,5 +1,5 @@
 import { ContinuousAnalysisSystem } from '@/lib/analysis';
-import { Script } from '@/types/script';
+import { ParsedScript } from '@/types/script';
 import { LogicErrorType, ErrorSeverity } from '@/types/analysis';
 
 jest.mock('@/lib/agents/consistency-guardian', () => {
@@ -11,9 +11,9 @@ jest.mock('@/lib/agents/consistency-guardian', () => {
         errors: [
           {
             id: 'mock-error-1',
-            type: LogicErrorType.PLOT_HOLE,
+            type: LogicErrorType.PLOT,
             severity: ErrorSeverity.MEDIUM,
-            message: 'Mock error',
+            description: 'Mock error',
             timestamp: new Date().toISOString()
           }
         ],
@@ -23,7 +23,7 @@ jest.mock('@/lib/agents/consistency-guardian', () => {
           highErrors: 0,
           mediumErrors: 1,
           lowErrors: 0,
-          byType: { [LogicErrorType.PLOT_HOLE]: 1 }
+          byType: { [LogicErrorType.PLOT]: 1 }
         }
       })
     }))
@@ -32,8 +32,8 @@ jest.mock('@/lib/agents/consistency-guardian', () => {
 
 describe('ContinuousAnalysisSystem Integration', () => {
   let system: ContinuousAnalysisSystem;
-  let testScript: Script;
-  let modifiedScript: Script;
+  let testScript: ParsedScript;
+  let modifiedScript: ParsedScript;
 
   beforeEach(() => {
     system = new ContinuousAnalysisSystem({
@@ -43,35 +43,49 @@ describe('ContinuousAnalysisSystem Integration', () => {
     });
 
     testScript = {
-      id: 'script-1',
-      title: 'Test Script',
+      metadata: {
+        parseVersion: '1.0.0',
+        parseTime: new Date(),
+        language: 'en',
+        originalLength: 0
+      },
       scenes: [
         {
           id: 'scene-1',
+          index: 1,
           title: 'Opening',
           description: 'The beginning',
+          characters: ['char-1', 'char-2'],
           dialogues: [
-            { id: 'd1', character: 'char-1', text: 'Hello world' },
-            { id: 'd2', character: 'char-2', text: 'Hi there' }
-          ]
+            { id: 'd1', characterId: 'char-1', characterName: 'Alice', content: 'Hello world', sceneId: 'scene-1' },
+            { id: 'd2', characterId: 'char-2', characterName: 'Bob', content: 'Hi there', sceneId: 'scene-1' }
+          ],
+          actions: []
         },
         {
           id: 'scene-2',
+          index: 2,
           title: 'Middle',
           description: 'The middle part',
+          characters: ['char-1'],
           dialogues: [
-            { id: 'd3', character: 'char-1', text: 'Continuing' }
-          ]
+            { id: 'd3', characterId: 'char-1', characterName: 'Alice', content: 'Continuing', sceneId: 'scene-2' }
+          ],
+          actions: []
         }
       ],
       characters: [
-        { id: 'char-1', name: 'Alice', role: 'protagonist' },
-        { id: 'char-2', name: 'Bob', role: 'supporting' }
-      ]
+        { id: 'char-1', name: 'Alice', dialogueCount: 2, scenes: ['scene-1', 'scene-2'], firstAppearance: { sceneId: 'scene-1' } },
+        { id: 'char-2', name: 'Bob', dialogueCount: 1, scenes: ['scene-1'], firstAppearance: { sceneId: 'scene-1' } }
+      ],
+      dialogues: [],
+      actions: [],
+      totalDialogues: 3,
+      totalActions: 0
     };
 
     modifiedScript = JSON.parse(JSON.stringify(testScript));
-    modifiedScript.scenes[0].dialogues![0].text = 'Goodbye world';
+    modifiedScript.scenes[0].dialogues![0].content = 'Goodbye world';
   });
 
   describe('analyzeChanges', () => {
@@ -154,7 +168,7 @@ describe('ContinuousAnalysisSystem Integration', () => {
         null,
         testScript,
         {
-          checkTypes: [LogicErrorType.PLOT_HOLE],
+          checkTypes: [LogicErrorType.PLOT],
           severityThreshold: ErrorSeverity.HIGH,
           maxErrors: 10
         }
@@ -268,7 +282,7 @@ describe('ContinuousAnalysisSystem Integration', () => {
       await system.analyzeChanges('script-1', null, testScript);
       
       const minorChange = { ...modifiedScript };
-      minorChange.scenes[0].dialogues![0].text = 'Minor edit';
+      minorChange.scenes[0].dialogues![0].content = 'Minor edit';
       
       const result = await system.analyzeChanges(
         'script-1',

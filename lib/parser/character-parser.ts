@@ -245,7 +245,7 @@ export class CharacterParser {
     }
     
     // Look for character names in Chinese
-    for (const character of this.characterMap.values()) {
+    for (const character of Array.from(this.characterMap.values())) {
       if (actionText.includes(character.name)) {
         if (!characters.includes(character.name)) {
           characters.push(character.name)
@@ -265,7 +265,7 @@ export class CharacterParser {
       let foundGroup = false
       
       // Check if this name is similar to any existing group
-      for (const [key, group] of nameGroups.entries()) {
+      for (const [key, group] of Array.from(nameGroups.entries())) {
         if (this.areNamesSimilar(name, key)) {
           group.push(name)
           foundGroup = true
@@ -279,13 +279,13 @@ export class CharacterParser {
     }
     
     // Update character aliases
-    for (const [primary, aliases] of nameGroups.entries()) {
+    for (const [primary, aliases] of Array.from(nameGroups.entries())) {
       if (aliases.length > 1) {
         const character = Array.from(this.characterMap.values()).find(
           char => char.name === primary
         )
         if (character) {
-          character.aliases = aliases.filter(a => a !== primary)
+          character.aliases = aliases.filter((a: string) => a !== primary)
         }
       }
     }
