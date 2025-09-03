@@ -8,10 +8,10 @@ import {
   ConsistencyCheckRequest,
   AnalysisReport,
   LogicErrorType,
-  ErrorSeverity,
-  ParsedScript
+  ErrorSeverity
 } from '@/types/analysis';
-import { Script } from '@/types/script';
+import { ParsedScript } from '@/types/script';
+import { ParsedScript as AnalysisParsedScript } from '@/types/analysis';
 import { ConsistencyGuardian } from '@/lib/agents/consistency-guardian';
 import { ImpactAnalyzer } from './impact-analyzer';
 import { v4 as uuidv4 } from 'uuid';
@@ -41,15 +41,40 @@ export class IncrementalAnalysisEngine {
   constructor(apiKey: string) {
     this.consistencyGuardian = new ConsistencyGuardian(apiKey, {
       enableCaching: true,
-      timeout: 30000,
-      maxConcurrentRequests: 3
+      timeout: 30000
     });
     this.impactAnalyzer = new ImpactAnalyzer();
   }
 
+  private convertToAnalysisScript(script: ParsedScript): AnalysisParsedScript {
+    return {
+      id: uuidv4(),
+      title: script.metadata?.parseVersion || 'Script',
+      scenes: script.scenes.map(scene => ({
+        id: scene.id,
+        number: scene.index,
+        location: scene.location || '',
+        time: scene.timeOfDay,
+        description: scene.description,
+        dialogues: scene.dialogues.map(d => ({
+          character: d.characterName,
+          text: d.content,
+          emotion: undefined,
+          direction: d.parentheticals?.join(', ')
+        })),
+        actions: scene.actions.map(a => ({
+          description: a.description,
+          characters: a.characters,
+          type: undefined
+        }))
+      })),
+      characters: script.characters
+    };
+  }
+
   public async analyzeChanges(
     changes: ChangeEvent[],
-    script: Script,
+    script: ParsedScript,
     options?: {
       checkTypes?: LogicErrorType[];
       severityThreshold?: ErrorSeverity;
@@ -69,7 +94,7 @@ export class IncrementalAnalysisEngine {
 
   private createAnalysisTasks(
     impact: ImpactAnalysis,
-    script: Script
+    script: ParsedScript
   ): IncrementalAnalysisTask[] {
     const tasks: IncrementalAnalysisTask[] = [];
     const processedElements = new Set<string>();
@@ -149,7 +174,7 @@ export class IncrementalAnalysisEngine {
    * @returns Map of element IDs to analysis reports
    */
   private async executeAnalysisQueue(
-    script: Script,
+    script: ParsedScript,
     options?: {
       checkTypes?: LogicErrorType[];
       severityThreshold?: ErrorSeverity;
@@ -221,7 +246,7 @@ export class IncrementalAnalysisEngine {
 
   private async analyzeElement(
     task: IncrementalAnalysisTask,
-    script: Script,
+    script: ParsedScript,
     options?: {
       checkTypes?: LogicErrorType[];
       severityThreshold?: ErrorSeverity;
@@ -240,11 +265,10 @@ export class IncrementalAnalysisEngine {
 
     try {
       const request: ConsistencyCheckRequest = {
-        script: elementScript,
+        script: this.convertToAnalysisScript(elementScript),
         checkTypes: options?.checkTypes || Object.values(LogicErrorType),
         severityThreshold: options?.severityThreshold,
-        maxErrors: options?.maxErrors,
-        enableCaching: true
+        maxErrors: options?.maxErrors
       };
 
       const report = await this.consistencyGuardian.analyzeScript(request);
@@ -258,18 +282,21 @@ export class IncrementalAnalysisEngine {
     }
   }
 
-  private extractElementScript(elementId: string, script: Script): ParsedScript | null {
+  private extractElementScript(elementId: string, script: ParsedScript): ParsedScript | null {
     if (elementId.startsWith('scene_') || script.scenes.some(s => s.id === elementId)) {
       const scene = script.scenes.find(s => s.id === elementId);
       if (!scene) return null;
 
       return {
-        title: script.title,
-        metadata: script.metadata || {},
+        metadata: script.metadata,
         scenes: [scene],
         characters: script.characters?.filter(c => 
-          scene.dialogues?.some(d => d.character === c.id)
-        ) || []
+          scene.dialogues?.some(d => d.characterId === c.id)
+        ) || [],
+        dialogues: script.dialogues || [],
+        actions: script.actions || [],
+        totalDialogues: script.totalDialogues || 0,
+        totalActions: script.totalActions || 0
       };
     }
 
@@ -278,22 +305,28 @@ export class IncrementalAnalysisEngine {
       if (!character) return null;
 
       const characterScenes = script.scenes.filter(scene =>
-        scene.dialogues?.some(d => d.character === elementId)
+        scene.dialogues?.some(d => d.characterId === elementId)
       );
 
       return {
-        title: script.title,
-        metadata: script.metadata || {},
+        metadata: script.metadata,
         scenes: characterScenes,
-        characters: [character]
+        characters: [character],
+        dialogues: script.dialogues || [],
+        actions: script.actions || [],
+        totalDialogues: script.totalDialogues || 0,
+        totalActions: script.totalActions || 0
       };
     }
 
     return {
-      title: script.title,
-      metadata: script.metadata || {},
+      metadata: script.metadata,
       scenes: script.scenes,
-      characters: script.characters || []
+      characters: script.characters || [],
+      dialogues: script.dialogues || [],
+      actions: script.actions || [],
+      totalDialogues: script.totalDialogues || 0,
+      totalActions: script.totalActions || 0
     };
   }
 
@@ -376,7 +409,7 @@ export class IncrementalAnalysisEngine {
   }
 
   public async preloadAnalysis(
-    script: Script,
+    script: ParsedScript,
     elementIds: string[]
   ): Promise<void> {
     const tasks = elementIds.map(elementId => ({

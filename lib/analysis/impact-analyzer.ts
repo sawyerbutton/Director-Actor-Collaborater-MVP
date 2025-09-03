@@ -2,7 +2,7 @@ import {
   ChangeEvent, 
   ImpactAnalysis 
 } from '@/types/change-tracking';
-import { Script, Scene } from '@/types/script';
+import { ParsedScript, Scene } from '@/types/script';
 
 interface DependencyNode {
   id: string;
@@ -13,7 +13,7 @@ interface DependencyNode {
 
 export class ImpactAnalyzer {
   private dependencyGraph: Map<string, DependencyNode> = new Map();
-  private script: Script | null = null;
+  private script: ParsedScript | null = null;
 
   constructor() {
     this.dependencyGraph = new Map();
@@ -30,7 +30,7 @@ export class ImpactAnalyzer {
    */
   public analyzeImpact(
     changes: ChangeEvent[],
-    script: Script
+    script: ParsedScript
   ): ImpactAnalysis {
     this.script = script;
     this.buildDependencyGraph(script);
@@ -76,7 +76,7 @@ export class ImpactAnalyzer {
     };
   }
 
-  private buildDependencyGraph(script: Script): void {
+  private buildDependencyGraph(script: ParsedScript): void {
     this.dependencyGraph.clear();
 
     for (const character of script.characters || []) {
@@ -99,9 +99,9 @@ export class ImpactAnalyzer {
           
           this.addDependency(dialogueId, scene.id);
           
-          if (dialogue.character) {
-            this.addDependency(dialogueId, dialogue.character);
-            this.addDependency(scene.id, dialogue.character);
+          if (dialogue.characterId) {
+            this.addDependency(dialogueId, dialogue.characterId);
+            this.addDependency(scene.id, dialogue.characterId);
           }
         }
       }
@@ -118,20 +118,21 @@ export class ImpactAnalyzer {
       }
     }
 
-    if (script.characters) {
-      for (const character of script.characters) {
-        if (character.relationships) {
-          for (const [targetId, relationship] of Object.entries(character.relationships)) {
-            const relationshipId = `rel_${character.id}_${targetId}`;
-            if (!this.dependencyGraph.has(relationshipId)) {
-              this.addNode(relationshipId, 'relationship');
-              this.addDependency(relationshipId, character.id);
-              this.addDependency(relationshipId, targetId);
-            }
-          }
-        }
-      }
-    }
+    // TODO: Implement when relationships are added to Character interface
+    // if (script.characters) {
+    //   for (const character of script.characters) {
+    //     if (character.relationships) {
+    //       for (const [targetId, relationship] of Object.entries(character.relationships)) {
+    //         const relationshipId = `rel_${character.id}_${targetId}`;
+    //         if (!this.dependencyGraph.has(relationshipId)) {
+    //           this.addNode(relationshipId, 'relationship');
+    //           this.addDependency(relationshipId, character.id);
+    //           this.addDependency(relationshipId, targetId);
+    //         }
+    //       }
+    //     }
+    //   }
+    // }
   }
 
   private addNode(id: string, type: DependencyNode['type']): void {
@@ -228,8 +229,8 @@ export class ImpactAnalyzer {
     
     if (scene.dialogues) {
       for (const dialogue of scene.dialogues) {
-        if (dialogue.character) {
-          characters.add(dialogue.character);
+        if (dialogue.characterId) {
+          characters.add(dialogue.characterId);
         }
       }
     }
@@ -240,7 +241,7 @@ export class ImpactAnalyzer {
   private calculateImpactLevel(
     directCount: number,
     indirectCount: number,
-    script: Script
+    script: ParsedScript
   ): 'low' | 'medium' | 'high' | 'critical' {
     const totalElements = 
       (script.scenes?.length || 0) + 
@@ -280,7 +281,7 @@ export class ImpactAnalyzer {
     
     const scenes: string[] = [];
     for (const scene of this.script.scenes) {
-      if (scene.dialogues?.some(d => d.character === characterId)) {
+      if (scene.dialogues?.some(d => d.characterId === characterId)) {
         scenes.push(scene.id);
       }
     }

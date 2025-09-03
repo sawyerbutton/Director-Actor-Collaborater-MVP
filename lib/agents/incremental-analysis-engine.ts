@@ -1,5 +1,6 @@
 import { IncrementalAnalysisEngine as CoreEngine } from '@/lib/analysis/incremental-engine';
 import { ChangeEvent, ImpactAnalysis } from '@/types/change-tracking';
+import { ParsedScript } from '@/types/script';
 
 export class IncrementalAnalysisEngine {
   private engine: CoreEngine;
@@ -21,34 +22,43 @@ export class IncrementalAnalysisEngine {
       description: change.description
     };
     
-    const analysis = await this.engine.analyzeChanges([fullChange], {
-      id: change.changeId,
-      title: 'Change Analysis',
+    const mockScript: ParsedScript = {
+      metadata: {
+        parseVersion: '1.0.0',
+        parseTime: new Date(),
+        language: 'en',
+        originalLength: 0
+      },
       scenes: [],
       characters: [],
-      dialogues: []
-    });
+      dialogues: [],
+      actions: [],
+      totalDialogues: 0,
+      totalActions: 0
+    };
+    
+    const analysis = await this.engine.analyzeChanges([fullChange], mockScript);
 
     // The analyzeChanges returns a Map, get the first entry
     const results = Array.from(analysis.values())[0];
     
     if (!results || !results.detailedAnalysis) {
       return {
-        affectedScenes: [],
-        rippleEffects: [],
-        severity: 'low',
-        requiresFullReanalysis: false,
-        confidenceScore: 0
+        directImpact: [],
+        indirectImpact: [],
+        propagationPath: [],
+        estimatedAnalysisTime: 0,
+        impactLevel: 'low'
       } as ImpactAnalysis;
     }
 
     // Convert analysis result to ImpactAnalysis format
     return {
-      affectedScenes: change.affectedElements || [],
-      rippleEffects: [],
-      severity: 'low',
-      requiresFullReanalysis: false,
-      confidenceScore: 0.7
+      directImpact: change.affectedElements || [],
+      indirectImpact: [],
+      propagationPath: [],
+      estimatedAnalysisTime: 10,
+      impactLevel: 'low'
     } as ImpactAnalysis;
   }
 }

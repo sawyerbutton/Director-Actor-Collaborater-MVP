@@ -85,7 +85,7 @@ export class DeepSeekClient {
           continue
         }
         
-        if (error instanceof DeepSeekAPIError && error.status >= 500) {
+        if (error instanceof DeepSeekAPIError && error.status && error.status >= 500) {
           const waitTime = Math.pow(2, attempt) * 1000
           await this.delay(waitTime)
           continue

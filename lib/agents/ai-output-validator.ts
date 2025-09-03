@@ -19,7 +19,7 @@ export class AIOutputValidator {
         lineNumber: z.number().optional(),
         characterName: z.string().optional()
       }),
-      z.record(z.unknown())
+      z.record(z.string(), z.unknown())
     ]),
     rationale: z.string().max(AIOutputValidator.MAX_STRING_LENGTH),
     impact: z.string().max(AIOutputValidator.MAX_STRING_LENGTH).optional()
@@ -67,7 +67,7 @@ export class AIOutputValidator {
       const result = AIOutputValidator.suggestionsArraySchema.safeParse(input);
       
       if (!result.success) {
-        console.warn('AI output validation failed:', result.error.errors);
+        console.warn('AI output validation failed:', result.error.issues);
         return null;
       }
 

@@ -3,6 +3,7 @@ import { ImpactAnalyzer } from './impact-analyzer';
 import { IncrementalAnalysisEngine } from './incremental-engine';
 import { ResultMerger } from './result-merger';
 import { DiffReportGenerator, DiffReportOptions, EnhancedDiffReport } from './diff-reporter';
+import { v4 as uuidv4 } from 'uuid';
 import { 
   ChangeEvent,
   ImpactAnalysis,
@@ -10,13 +11,14 @@ import {
   VersionedAnalysisResult
 } from '@/types/change-tracking';
 import { 
-  Script 
+  ParsedScript 
 } from '@/types/script';
 import { 
   AnalysisReport,
   ConsistencyCheckRequest,
   LogicErrorType,
-  ErrorSeverity
+  ErrorSeverity,
+  ParsedScript as AnalysisParsedScript
 } from '@/types/analysis';
 
 export interface ContinuousAnalysisConfig {
@@ -26,6 +28,13 @@ export interface ContinuousAnalysisConfig {
   maxConcurrentAnalyses?: number;
   enableSmartBatching?: boolean;
   performanceMode?: 'aggressive' | 'balanced' | 'conservative';
+}
+
+interface PerformanceMetrics {
+  totalAnalyses: number;
+  cacheHits: number;
+  averageAnalysisTime: number;
+  lastAnalysisTime: number;
 }
 
 export class ContinuousAnalysisSystem {
@@ -41,7 +50,7 @@ export class ContinuousAnalysisSystem {
     version: string;
   }> = new Map();
   
-  private performanceMetrics = {
+  private performanceMetrics: PerformanceMetrics = {
     totalAnalyses: 0,
     cacheHits: 0,
     averageAnalysisTime: 0,
@@ -69,8 +78,8 @@ export class ContinuousAnalysisSystem {
 
   public async analyzeChanges(
     scriptId: string,
-    oldScript: Script | null,
-    newScript: Script,
+    oldScript: ParsedScript | null,
+    newScript: ParsedScript,
     options?: {
       userId?: string;
       checkTypes?: LogicErrorType[];
@@ -84,7 +93,7 @@ export class ContinuousAnalysisSystem {
     changes: ChangeEvent[];
     impact: ImpactAnalysis;
     diffReport?: EnhancedDiffReport;
-    performance: typeof this.performanceMetrics;
+    performance: PerformanceMetrics;
   }> {
     const startTime = Date.now();
 
@@ -204,7 +213,7 @@ export class ContinuousAnalysisSystem {
   }
 
   private async performFullAnalysis(
-    script: Script,
+    script: ParsedScript,
     options?: {
       checkTypes?: LogicErrorType[];
       severityThreshold?: ErrorSeverity;
@@ -216,17 +225,35 @@ export class ContinuousAnalysisSystem {
       timeout: 30000
     });
 
+    const analysisScript: AnalysisParsedScript = {
+      id: uuidv4(),
+      title: 'Script Analysis',
+      scenes: script.scenes.map(scene => ({
+        id: scene.id,
+        number: scene.index,
+        location: scene.location || '',
+        time: scene.timeOfDay,
+        description: scene.description,
+        dialogues: scene.dialogues.map(d => ({
+          character: d.characterName,
+          text: d.content,
+          emotion: undefined,
+          direction: d.parentheticals?.join(', ')
+        })),
+        actions: scene.actions?.map(a => ({
+          description: a.description,
+          characters: a.characters,
+          type: undefined
+        }))
+      })),
+      characters: script.characters
+    };
+
     const request: ConsistencyCheckRequest = {
-      script: {
-        title: script.title,
-        metadata: script.metadata || {},
-        scenes: script.scenes,
-        characters: script.characters || []
-      },
+      script: analysisScript,
       checkTypes: options?.checkTypes,
       severityThreshold: options?.severityThreshold,
-      maxErrors: options?.maxErrors,
-      enableCaching: true
+      maxErrors: options?.maxErrors
     };
 
     return await guardian.analyzeScript(request);
@@ -234,7 +261,7 @@ export class ContinuousAnalysisSystem {
 
   private getOldAnalysisResults(
     scriptId: string,
-    oldScript: Script | null
+    oldScript: ParsedScript | null
   ): Map<string, AnalysisReport> {
     const results = new Map<string, AnalysisReport>();
     
@@ -270,19 +297,21 @@ export class ContinuousAnalysisSystem {
     this.analysisCache.set(scriptId, {
       result: analysis,
       expires: Date.now() + (this.config.cacheExpirationMs || 30 * 60 * 1000),
-      version: analysis.id
+      version: uuidv4()
     });
 
     if (this.analysisCache.size > 100) {
       const oldestKey = this.analysisCache.keys().next().value;
-      this.analysisCache.delete(oldestKey);
+      if (oldestKey) {
+        this.analysisCache.delete(oldestKey);
+      }
     }
   }
 
   private createVersionedResult(analysis: AnalysisReport): VersionedAnalysisResult {
     return {
-      version: analysis.id,
-      timestamp: new Date(analysis.timestamp),
+      version: uuidv4(),
+      timestamp: new Date(),
       result: analysis,
       isValid: true,
       affectedBy: []
@@ -301,7 +330,7 @@ export class ContinuousAnalysisSystem {
   }
 
   private async preloadFutureAnalyses(
-    script: Script,
+    script: ParsedScript,
     impact: ImpactAnalysis
   ): Promise<void> {
     const adjacentElements = new Set<string>();
@@ -334,7 +363,7 @@ export class ContinuousAnalysisSystem {
     return this.changeTracker.getRecentChanges(scriptId, 50);
   }
 
-  public getPerformanceMetrics(): typeof this.performanceMetrics {
+  public getPerformanceMetrics(): PerformanceMetrics {
     return { ...this.performanceMetrics };
   }
 
@@ -359,7 +388,10 @@ export {
   ImpactAnalyzer,
   IncrementalAnalysisEngine,
   ResultMerger,
-  DiffReportGenerator,
+  DiffReportGenerator
+};
+
+export type {
   EnhancedDiffReport,
   DiffReportOptions
 };

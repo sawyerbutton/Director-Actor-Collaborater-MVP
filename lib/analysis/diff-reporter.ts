@@ -46,8 +46,8 @@ export class DiffReportGenerator {
     changes?: ChangeEvent[],
     options: DiffReportOptions = {}
   ): EnhancedDiffReport {
-    const beforeErrors = (beforeAnalysis.result as AnalysisReport).errors || [];
-    const afterErrors = (afterAnalysis.result as AnalysisReport).errors || [];
+    const beforeErrors = (beforeAnalysis.result as AnalysisReport).detailedAnalysis.errors || [];
+    const afterErrors = (afterAnalysis.result as AnalysisReport).detailedAnalysis.errors || [];
 
     const { added, removed, unchanged, modified } = this.categorizeErrors(
       beforeErrors,
@@ -134,7 +134,7 @@ export class DiffReportGenerator {
   private hasErrorChanged(before: LogicError, after: LogicError): boolean {
     return (
       before.severity !== after.severity ||
-      before.message !== after.message ||
+      before.description !== after.description ||
       before.suggestion !== after.suggestion
     );
   }
@@ -184,7 +184,7 @@ export class DiffReportGenerator {
       ? `Scene ${error.location.sceneId || 'unknown'}, Line ${error.location.lineNumber || 'N/A'}`
       : 'Global';
     
-    return `${prefix} [${error.severity}] ${error.type}: ${error.message} (${location})`;
+    return `${prefix} [${error.severity}] ${error.type}: ${error.description} (${location})`;
   }
 
   private generateRecommendations(
@@ -258,8 +258,7 @@ export class DiffReportGenerator {
           [ErrorSeverity.CRITICAL]: 10,
           [ErrorSeverity.HIGH]: 5,
           [ErrorSeverity.MEDIUM]: 3,
-          [ErrorSeverity.LOW]: 1,
-          [ErrorSeverity.INFO]: 0.5
+          [ErrorSeverity.LOW]: 1
         };
         return score + (weights[error.severity] || 0);
       }, 0);

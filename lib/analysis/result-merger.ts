@@ -41,7 +41,7 @@ export class ResultMerger {
     for (const [elementId, oldReport] of oldResults) {
       if (!affectedElements.has(elementId)) {
         const validErrors = this.filterValidErrors(
-          oldReport.errors || [],
+          oldReport.detailedAnalysis?.errors || [],
           processedErrorIds
         );
         mergedErrors.push(...validErrors);
@@ -63,7 +63,7 @@ export class ResultMerger {
         mergedErrors.push(...merged);
       } else {
         const validErrors = this.filterValidErrors(
-          newReport.errors || [],
+          newReport.detailedAnalysis?.errors || [],
           processedErrorIds
         );
         mergedErrors.push(...validErrors);
@@ -75,17 +75,22 @@ export class ResultMerger {
     const deduplicatedErrors = this.deduplicateErrors(mergedErrors);
     
     const finalReport: AnalysisReport = {
-      id: uuidv4(),
-      timestamp: new Date().toISOString(),
-      errors: deduplicatedErrors,
       summary: this.generateSummary(deduplicatedErrors),
-      metadata: {
-        totalElementsAnalyzed: oldResults.size + newResults.size,
-        elementsUpdated: newResults.size,
-        elementsPreserved: oldResults.size - affectedElements.size,
-        mergeConflicts: this.mergeConflicts.length,
-        changes: changes.length
-      }
+      detailedAnalysis: {
+        scriptId: uuidv4(),
+        analyzedAt: new Date(),
+        totalErrors: deduplicatedErrors.length,
+        errors: deduplicatedErrors,
+        errorsByType: this.groupErrorsByType(deduplicatedErrors),
+        errorsBySeverity: this.groupErrorsBySeverity(deduplicatedErrors),
+        analysisMetadata: {
+          processingTime: 0,
+          modelUsed: 'merged',
+          version: '1.0.0'
+        }
+      },
+      recommendations: this.generateRecommendations(deduplicatedErrors),
+      confidence: 0.95
     };
 
     return finalReport;
@@ -98,8 +103,8 @@ export class ResultMerger {
     processedIds: Set<string>
   ): LogicError[] {
     const merged: LogicError[] = [];
-    const oldErrors = oldReport.errors || [];
-    const newErrors = newReport.errors || [];
+    const oldErrors = oldReport.detailedAnalysis?.errors || [];
+    const newErrors = newReport.detailedAnalysis?.errors || [];
 
     const oldErrorMap = new Map(
       oldErrors.map(e => [this.getErrorKey(e), e])
@@ -151,14 +156,8 @@ export class ResultMerger {
     }
 
     for (const [key, oldError] of oldErrorMap) {
-      if (!newErrorMap.has(key) && oldError.isResolved !== true) {
-        merged.push({
-          ...oldError,
-          metadata: {
-            ...oldError.metadata,
-            preservedFromPrevious: true
-          }
-        });
+      if (!newErrorMap.has(key)) {
+        merged.push(oldError);
       }
     }
 
@@ -184,7 +183,7 @@ export class ResultMerger {
     }
     
     // Now they have the same key, determine the type of conflict
-    if (oldError.message === newError.message && 
+    if (oldError.description === newError.description && 
         oldError.severity === newError.severity) {
       return 'duplicate';
     }
@@ -193,7 +192,7 @@ export class ResultMerger {
       return 'version_mismatch';
     }
     
-    if (oldError.message !== newError.message) {
+    if (oldError.description !== newError.description) {
       return 'contradiction';
     }
     
@@ -207,7 +206,7 @@ export class ResultMerger {
   ): 'keep_old' | 'keep_new' | 'merge' | 'discard' {
     switch (conflictType) {
       case 'duplicate':
-        return newError.timestamp > oldError.timestamp ? 'keep_new' : 'keep_old';
+        return 'keep_new';
       
       case 'version_mismatch':
         return this.getSeverityPriority(newError.severity) > 
@@ -228,8 +227,7 @@ export class ResultMerger {
       [ErrorSeverity.CRITICAL]: 4,
       [ErrorSeverity.HIGH]: 3,
       [ErrorSeverity.MEDIUM]: 2,
-      [ErrorSeverity.LOW]: 1,
-      [ErrorSeverity.INFO]: 0
+      [ErrorSeverity.LOW]: 1
     };
     
     return priorities[severity] || 0;
@@ -244,14 +242,6 @@ export class ResultMerger {
         return false;
       }
       
-      if (error.isResolved) {
-        return false;
-      }
-      
-      if (error.metadata?.expires && 
-          new Date(error.metadata.expires) < new Date()) {
-        return false;
-      }
       
       processedIds.add(error.id);
       return true;
@@ -265,7 +255,7 @@ export class ResultMerger {
       const key = this.getErrorKey(error);
       const existing = uniqueErrors.get(key);
       
-      if (!existing || error.timestamp > existing.timestamp) {
+      if (!existing) {
         uniqueErrors.set(key, error);
       }
     }
@@ -274,35 +264,56 @@ export class ResultMerger {
   }
 
   private generateSummary(errors: LogicError[]): AnalysisReport['summary'] {
-    const summary: AnalysisReport['summary'] = {
-      totalErrors: errors.length,
-      criticalErrors: 0,
-      highErrors: 0,
-      mediumErrors: 0,
-      lowErrors: 0,
-      byType: {}
+    const criticalCount = errors.filter(e => e.severity === ErrorSeverity.CRITICAL).length;
+    const highCount = errors.filter(e => e.severity === ErrorSeverity.HIGH).length;
+    
+    return {
+      overallConsistency: 
+        errors.length === 0 ? 'excellent' :
+        criticalCount > 0 ? 'poor' :
+        highCount > 2 ? 'fair' : 'good',
+      criticalIssues: criticalCount,
+      totalIssues: errors.length,
+      primaryConcerns: errors.slice(0, 3).map(e => e.description)
     };
+  }
 
+  private groupErrorsByType(errors: LogicError[]): Record<LogicErrorType, number> {
+    const grouped: Record<string, number> = {};
     for (const error of errors) {
-      switch (error.severity) {
-        case ErrorSeverity.CRITICAL:
-          summary.criticalErrors++;
-          break;
-        case ErrorSeverity.HIGH:
-          summary.highErrors++;
-          break;
-        case ErrorSeverity.MEDIUM:
-          summary.mediumErrors++;
-          break;
-        case ErrorSeverity.LOW:
-          summary.lowErrors++;
-          break;
-      }
-
-      summary.byType[error.type] = (summary.byType[error.type] || 0) + 1;
+      grouped[error.type] = (grouped[error.type] || 0) + 1;
     }
+    return grouped as Record<LogicErrorType, number>;
+  }
 
-    return summary;
+  private groupErrorsBySeverity(errors: LogicError[]): Record<ErrorSeverity, number> {
+    const grouped: Record<string, number> = {};
+    for (const error of errors) {
+      grouped[error.severity] = (grouped[error.severity] || 0) + 1;
+    }
+    return grouped as Record<ErrorSeverity, number>;
+  }
+
+  private generateRecommendations(errors: LogicError[]): string[] {
+    const recommendations: string[] = [];
+    
+    if (errors.length === 0) {
+      recommendations.push('Script appears consistent. Continue development.');
+    } else {
+      const critical = errors.filter(e => e.severity === ErrorSeverity.CRITICAL);
+      if (critical.length > 0) {
+        recommendations.push(`Address ${critical.length} critical issues immediately.`);
+      }
+      
+      const byType = this.groupErrorsByType(errors);
+      for (const [type, count] of Object.entries(byType)) {
+        if (count > 2) {
+          recommendations.push(`Review ${type} consistency across the script.`);
+        }
+      }
+    }
+    
+    return recommendations.slice(0, 5);
   }
 
   private recordVersion(

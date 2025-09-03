@@ -4,12 +4,12 @@ import {
   ChangeType, 
   ScriptLocation 
 } from '@/types/change-tracking';
-import { Script } from '@/types/script';
+import { ParsedScript } from '@/types/script';
 import { v4 as uuidv4 } from 'uuid';
 
 export class ChangeTracker {
   private history: Map<string, ChangeHistory> = new Map();
-  private currentScriptVersion: Map<string, Script> = new Map();
+  private currentScriptVersion: Map<string, ParsedScript> = new Map();
   private changeListeners: ((event: ChangeEvent) => void)[] = [];
   private maxHistorySize = 100; // Maximum number of script histories to keep
   private maxEventsPerScript = 1000; // Maximum events per script history
@@ -21,8 +21,8 @@ export class ChangeTracker {
 
   public trackChange(
     scriptId: string,
-    oldScript: Script | null,
-    newScript: Script,
+    oldScript: ParsedScript | null,
+    newScript: ParsedScript,
     userId?: string
   ): ChangeEvent[] {
     const events: ChangeEvent[] = [];
@@ -71,7 +71,7 @@ export class ChangeTracker {
     return events;
   }
 
-  private detectChanges(oldScript: Script, newScript: Script): Array<{
+  private detectChanges(oldScript: ParsedScript, newScript: ParsedScript): Array<{
     type: ChangeType;
     location: ScriptLocation;
     oldValue: any;
@@ -335,7 +335,7 @@ export class ChangeTracker {
     return changes;
   }
 
-  private identifyAffectedElements(change: any, script: Script): string[] {
+  private identifyAffectedElements(change: any, script: ParsedScript): string[] {
     const affected = new Set<string>();
 
     if (change.location.sceneId) {
@@ -346,7 +346,7 @@ export class ChangeTracker {
       affected.add(change.location.characterId);
       
       for (const scene of script.scenes) {
-        if (scene.dialogues?.some(d => d.character === change.location.characterId)) {
+        if (scene.dialogues?.some(d => d.characterId === change.location.characterId)) {
           affected.add(scene.id);
         }
       }
@@ -423,8 +423,8 @@ export class ChangeTracker {
 
   public compareVersions(
     scriptId: string,
-    oldVersion: Script,
-    newVersion: Script
+    oldVersion: ParsedScript,
+    newVersion: ParsedScript
   ): ChangeEvent[] {
     return this.trackChange(scriptId, oldVersion, newVersion);
   }
