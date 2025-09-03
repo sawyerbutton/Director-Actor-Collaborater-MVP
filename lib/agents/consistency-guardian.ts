@@ -497,7 +497,7 @@ export class ConsistencyGuardian {
   private maintainCacheSize(): void {
     // Remove expired entries first
     const now = Date.now();
-    for (const [key, value] of this.cache.entries()) {
+    for (const [key, value] of Array.from(this.cache.entries())) {
       if (value.expires <= now) {
         this.cache.delete(key);
       }
