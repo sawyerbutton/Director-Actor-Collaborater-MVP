@@ -32,7 +32,7 @@ describe('Consistency Prompts', () => {
     });
 
     it('should include selected check types', () => {
-      const checkTypes = [LogicErrorType.TIMELINE, LogicErrorType.CHARACTER];
+      const checkTypes = ['timeline', 'character'];
       const prompt = buildUserPrompt(testScript, checkTypes);
       
       expect(prompt).toContain('Timeline Consistency');
@@ -125,7 +125,7 @@ describe('Consistency Prompts', () => {
       it('should include custom check types', () => {
         builder = new PromptBuilder(
           testScript,
-          [LogicErrorType.TIMELINE]
+          ['timeline']
         );
         const result = builder.buildFullPrompt();
         
@@ -137,7 +137,7 @@ describe('Consistency Prompts', () => {
     describe('buildPromptForRule', () => {
       it('should create rule-specific prompt', () => {
         const rule = {
-          type: LogicErrorType.CHARACTER,
+          type: 'character',
           name: 'Character Consistency',
           description: 'Test description',
           checkPrompt: 'Check for character issues',
@@ -175,11 +175,11 @@ describe('Consistency Prompts', () => {
       const { ERROR_DETECTION_RULES } = require('@/lib/agents/types');
       
       const types = ERROR_DETECTION_RULES.map((r: any) => r.type);
-      expect(types).toContain(LogicErrorType.TIMELINE);
-      expect(types).toContain(LogicErrorType.CHARACTER);
-      expect(types).toContain(LogicErrorType.PLOT);
-      expect(types).toContain(LogicErrorType.DIALOGUE);
-      expect(types).toContain(LogicErrorType.SCENE);
+      expect(types).toContain('timeline');
+      expect(types).toContain('character');
+      expect(types).toContain('plot');
+      expect(types).toContain('dialogue');
+      expect(types).toContain('scene');
     });
 
     it('should have complete rule definitions', () => {

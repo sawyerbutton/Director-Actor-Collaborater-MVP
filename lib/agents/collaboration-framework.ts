@@ -184,15 +184,21 @@ export class CollaborationFramework extends EventEmitter {
       }
     }, this.SESSION_TIMEOUT);
 
-    this.broadcastMessage({
+    const startMessage = {
       id: this.generateMessageId(),
       type: MessageType.COLLABORATION_START,
       from: AgentRole.CONSISTENCY_GUARDIAN,
-      to: 'broadcast',
+      to: 'broadcast' as const,
       payload: { sessionId, agents },
       timestamp: new Date().toISOString(),
       sessionId
-    });
+    };
+
+    // Add to processed queue to ensure history tracking
+    this.messageQueue.processed.push(startMessage);
+    session.metrics.totalMessages++;
+
+    this.broadcastMessage(startMessage);
 
     return sessionId;
   }
@@ -218,6 +224,9 @@ export class CollaborationFramework extends EventEmitter {
     
     // Emit event for new message
     this.emit('message_queued', fullMessage);
+    
+    // Process immediately if possible
+    await this.processMessageQueue();
   }
 
   private broadcastMessage(message: AgentMessage): void {
@@ -557,10 +566,11 @@ export class CollaborationPipeline {
           sessionId
         });
 
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Wait longer to ensure all messages are processed through the queue
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
       const messages = this.framework.getMessageHistory(sessionId);
       const suggestionMessages = messages.filter(
@@ -568,13 +578,16 @@ export class CollaborationPipeline {
       );
 
       for (const msg of suggestionMessages) {
-        const errorId = (msg.payload as any).errorId;
-        const errorSuggestions = (msg.payload as any).suggestions;
+        const payload = msg.payload as any;
+        const errorId = payload.errorId || payload.id;  // Handle both possible formats
+        const errorSuggestions = payload.suggestions || [];
         
-        if (!suggestions.has(errorId)) {
-          suggestions.set(errorId, []);
+        if (errorId && errorSuggestions.length > 0) {
+          if (!suggestions.has(errorId)) {
+            suggestions.set(errorId, []);
+          }
+          suggestions.get(errorId)!.push(...errorSuggestions);
         }
-        suggestions.get(errorId)!.push(...errorSuggestions);
       }
 
       await this.framework.endSession(sessionId);

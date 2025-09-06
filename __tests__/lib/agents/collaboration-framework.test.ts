@@ -362,6 +362,14 @@ describe('CollaborationPipeline', () => {
         new Map()
       );
 
+      // Debug: Check if the mock was called
+      expect(mockRevisionAgent.handleMessage).toHaveBeenCalled();
+      
+      // Debug: Get history to see what messages were processed
+      const history = framework.getMessageHistory(framework.getActiveSessionCount() > 0 ? 'session_test' : '');
+      console.log('Message history length:', history.length);
+      console.log('Message types:', history.map(m => m.type));
+      
       expect(suggestions.size).toBe(1);
       expect(suggestions.get('error-1')).toBeDefined();
       expect(suggestions.get('error-1')?.length).toBeGreaterThan(0);
