@@ -350,8 +350,8 @@ describe('CollaborationPipeline', () => {
       const errors: LogicError[] = [
         {
           id: 'error-1',
-          type: LogicErrorType.TIMELINE,
-          severity: ErrorSeverity.HIGH,
+          type: 'timeline',
+          severity: 'high',
           location: {},
           description: 'Test error'
         }
@@ -395,8 +395,8 @@ describe('CollaborationPipeline', () => {
 
       const errors: LogicError[] = Array(5).fill(null).map((_, i) => ({
         id: `error-${i}`,
-        type: LogicErrorType.PLOT,
-        severity: ErrorSeverity.MEDIUM,
+        type: 'plot',
+        severity: 'medium',
         location: {},
         description: `Test error ${i}`
       }));

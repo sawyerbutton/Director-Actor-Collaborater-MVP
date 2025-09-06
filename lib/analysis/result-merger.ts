@@ -224,10 +224,10 @@ export class ResultMerger {
 
   private getSeverityPriority(severity: ErrorSeverity): number {
     const priorities: Record<ErrorSeverity, number> = {
-      [ErrorSeverity.CRITICAL]: 4,
-      [ErrorSeverity.HIGH]: 3,
-      [ErrorSeverity.MEDIUM]: 2,
-      [ErrorSeverity.LOW]: 1
+      ['critical']: 4,
+      ['high']: 3,
+      ['medium']: 2,
+      ['low']: 1
     };
     
     return priorities[severity] || 0;
@@ -264,8 +264,8 @@ export class ResultMerger {
   }
 
   private generateSummary(errors: LogicError[]): AnalysisReport['summary'] {
-    const criticalCount = errors.filter(e => e.severity === ErrorSeverity.CRITICAL).length;
-    const highCount = errors.filter(e => e.severity === ErrorSeverity.HIGH).length;
+    const criticalCount = errors.filter(e => e.severity === 'critical').length;
+    const highCount = errors.filter(e => e.severity === 'high').length;
     
     return {
       overallConsistency: 
@@ -300,7 +300,7 @@ export class ResultMerger {
     if (errors.length === 0) {
       recommendations.push('Script appears consistent. Continue development.');
     } else {
-      const critical = errors.filter(e => e.severity === ErrorSeverity.CRITICAL);
+      const critical = errors.filter(e => e.severity === 'critical');
       if (critical.length > 0) {
         recommendations.push(`Address ${critical.length} critical issues immediately.`);
       }

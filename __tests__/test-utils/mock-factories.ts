@@ -30,18 +30,18 @@ export const createMockAnalysisReport = (overrides?: Partial<AnalysisReport>): A
     totalErrors: 0,
     errors: [],
     errorsByType: {
-      [LogicErrorType.TIMELINE]: 0,
-      [LogicErrorType.CHARACTER]: 0,
-      [LogicErrorType.PLOT]: 0,
-      [LogicErrorType.DIALOGUE]: 0,
-      [LogicErrorType.SCENE]: 0
-    },
+      'timeline': 0,
+      'character': 0,
+      'plot': 0,
+      'dialogue': 0,
+      'scene': 0
+    } as Record<LogicErrorType, number>,
     errorsBySeverity: {
-      [ErrorSeverity.CRITICAL]: 0,
-      [ErrorSeverity.HIGH]: 0,
-      [ErrorSeverity.MEDIUM]: 0,
-      [ErrorSeverity.LOW]: 0
-    },
+      'critical': 0,
+      'high': 0,
+      'medium': 0,
+      'low': 0
+    } as Record<ErrorSeverity, number>,
     analysisMetadata: {
       processingTime: 0,
       modelUsed: 'test',
@@ -55,8 +55,8 @@ export const createMockAnalysisReport = (overrides?: Partial<AnalysisReport>): A
 
 export const createMockLogicError = (overrides?: Partial<LogicError>): LogicError => ({
   id: 'error-' + Math.random().toString(36).substr(2, 9),
-  type: LogicErrorType.PLOT,
-  severity: ErrorSeverity.MEDIUM,
+  type: 'plot',
+  severity: 'medium',
   location: {},
   description: 'Test error description',
   ...overrides
@@ -64,8 +64,8 @@ export const createMockLogicError = (overrides?: Partial<LogicError>): LogicErro
 
 // Helper to create legacy enum mappings for tests
 export const TestLogicErrorType = {
-  PLOT_HOLE: LogicErrorType.PLOT,
-  CHARACTER_INCONSISTENCY: LogicErrorType.CHARACTER,
-  DIALOGUE_INCONSISTENCY: LogicErrorType.DIALOGUE,
-  TIMELINE_CONFLICT: LogicErrorType.TIMELINE
+  PLOT_HOLE: 'plot',
+  CHARACTER_INCONSISTENCY: 'character',
+  DIALOGUE_INCONSISTENCY: 'dialogue',
+  TIMELINE_CONFLICT: 'timeline'
 };

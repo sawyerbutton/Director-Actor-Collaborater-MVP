@@ -15,7 +15,7 @@ describe('DiffReportGenerator', () => {
     createError = (
       id: string,
       severity: ErrorSeverity,
-      type: LogicErrorType = LogicErrorType.PLOT,
+      type: LogicErrorType = 'plot',
       sceneId: string = 'scene-1',
       lineNumber: number = 10
     ): LogicError => ({
@@ -39,12 +39,12 @@ describe('DiffReportGenerator', () => {
         analyzedAt: new Date(),
         totalErrors: 3,
         errors: [
-          createError('error-1', ErrorSeverity.HIGH, LogicErrorType.PLOT, 'scene-1', 10),
-          createError('error-2', ErrorSeverity.MEDIUM, LogicErrorType.PLOT, 'scene-1', 20),
-          createError('error-3', ErrorSeverity.LOW, LogicErrorType.PLOT, 'scene-1', 30)
+          createError('error-1', 'high', 'plot', 'scene-1', 10),
+          createError('error-2', 'medium', 'plot', 'scene-1', 20),
+          createError('error-3', 'low', 'plot', 'scene-1', 30)
         ],
-        errorsByType: { [LogicErrorType.PLOT]: 3, [LogicErrorType.CHARACTER]: 0, [LogicErrorType.DIALOGUE]: 0, [LogicErrorType.TIMELINE]: 0, [LogicErrorType.SCENE]: 0 },
-        errorsBySeverity: { [ErrorSeverity.CRITICAL]: 0, [ErrorSeverity.HIGH]: 1, [ErrorSeverity.MEDIUM]: 1, [ErrorSeverity.LOW]: 1 },
+        errorsByType: { ['plot']: 3, ['character']: 0, ['dialogue']: 0, ['timeline']: 0, ['scene']: 0 },
+        errorsBySeverity: { ['critical']: 0, ['high']: 1, ['medium']: 1, ['low']: 1 },
         analysisMetadata: {
           processingTime: 0,
           modelUsed: 'test',
@@ -67,12 +67,12 @@ describe('DiffReportGenerator', () => {
         analyzedAt: new Date(),
         totalErrors: 3,
         errors: [
-          createError('error-1', ErrorSeverity.CRITICAL, LogicErrorType.PLOT, 'scene-1', 10),
-          createError('error-4', ErrorSeverity.HIGH, LogicErrorType.PLOT, 'scene-2', 10),
-          createError('error-5', ErrorSeverity.MEDIUM, LogicErrorType.PLOT, 'scene-2', 20)
+          createError('error-1', 'critical', 'plot', 'scene-1', 10),
+          createError('error-4', 'high', 'plot', 'scene-2', 10),
+          createError('error-5', 'medium', 'plot', 'scene-2', 20)
         ],
-        errorsByType: { [LogicErrorType.PLOT]: 3, [LogicErrorType.CHARACTER]: 0, [LogicErrorType.DIALOGUE]: 0, [LogicErrorType.TIMELINE]: 0, [LogicErrorType.SCENE]: 0 },
-        errorsBySeverity: { [ErrorSeverity.CRITICAL]: 1, [ErrorSeverity.HIGH]: 1, [ErrorSeverity.MEDIUM]: 1, [ErrorSeverity.LOW]: 0 },
+        errorsByType: { ['plot']: 3, ['character']: 0, ['dialogue']: 0, ['timeline']: 0, ['scene']: 0 },
+        errorsBySeverity: { ['critical']: 1, ['high']: 1, ['medium']: 1, ['low']: 0 },
         analysisMetadata: {
           processingTime: 0,
           modelUsed: 'test',
@@ -162,7 +162,7 @@ describe('DiffReportGenerator', () => {
           errors: [
             // Keep error-1 exactly the same
             (beforeAnalysis.result as AnalysisReport).detailedAnalysis.errors[0],
-            createError('error-4', ErrorSeverity.HIGH, LogicErrorType.PLOT, 'scene-2', 10),
+            createError('error-4', 'high', 'plot', 'scene-2', 10),
           ]
         }
       };
@@ -339,8 +339,8 @@ describe('DiffReportGenerator', () => {
       (criticalAfter.result as AnalysisReport).detailedAnalysis.errors = [
         {
           id: 'critical-1',
-          type: LogicErrorType.PLOT,
-          severity: ErrorSeverity.CRITICAL,
+          type: 'plot',
+          severity: 'critical',
           description: 'Critical issue',
           location: {}
         }

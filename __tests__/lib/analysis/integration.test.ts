@@ -11,8 +11,8 @@ jest.mock('@/lib/agents/consistency-guardian', () => {
         errors: [
           {
             id: 'mock-error-1',
-            type: LogicErrorType.PLOT,
-            severity: ErrorSeverity.MEDIUM,
+            type: 'plot',
+            severity: 'medium',
             description: 'Mock error',
             timestamp: new Date().toISOString()
           }
@@ -23,7 +23,7 @@ jest.mock('@/lib/agents/consistency-guardian', () => {
           highErrors: 0,
           mediumErrors: 1,
           lowErrors: 0,
-          byType: { [LogicErrorType.PLOT]: 1 }
+          byType: { ['plot']: 1 }
         }
       })
     }))
@@ -168,8 +168,8 @@ describe('ContinuousAnalysisSystem Integration', () => {
         null,
         testScript,
         {
-          checkTypes: [LogicErrorType.PLOT],
-          severityThreshold: ErrorSeverity.HIGH,
+          checkTypes: ['plot'],
+          severityThreshold: 'high',
           maxErrors: 10
         }
       );

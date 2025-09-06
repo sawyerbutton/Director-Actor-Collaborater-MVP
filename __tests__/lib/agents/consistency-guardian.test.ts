@@ -105,7 +105,7 @@ describe('ConsistencyGuardian', () => {
 
       const request: ConsistencyCheckRequest = {
         script: mockScript,
-        checkTypes: [LogicErrorType.CHARACTER, LogicErrorType.TIMELINE]
+        checkTypes: ['character', 'timeline']
       };
 
       const report = await guardian.analyzeScript(request);
@@ -113,7 +113,7 @@ describe('ConsistencyGuardian', () => {
       expect(report).toBeDefined();
       expect(report.summary.totalIssues).toBeGreaterThan(0);
       expect(report.detailedAnalysis.errors).toHaveLength(1);
-      expect(report.detailedAnalysis.errors[0].type).toBe(LogicErrorType.CHARACTER);
+      expect(report.detailedAnalysis.errors[0].type).toBe('character');
       expect(report.recommendations).toBeDefined();
       expect(report.confidence).toBeGreaterThan(0);
     });
@@ -175,13 +175,13 @@ describe('ConsistencyGuardian', () => {
 
       const request: ConsistencyCheckRequest = {
         script: mockScript,
-        severityThreshold: ErrorSeverity.HIGH
+        severityThreshold: 'high'
       };
 
       const report = await guardian.analyzeScript(request);
       
       expect(report.detailedAnalysis.errors).toHaveLength(1);
-      expect(report.detailedAnalysis.errors[0].severity).toBe(ErrorSeverity.HIGH);
+      expect(report.detailedAnalysis.errors[0].severity).toBe('high');
     });
 
     it('should respect maxErrors limit', async () => {
@@ -262,10 +262,10 @@ describe('ConsistencyGuardian', () => {
           return acc;
         }, {} as any),
         errorsBySeverity: {
-          [ErrorSeverity.CRITICAL]: 0,
-          [ErrorSeverity.HIGH]: 0,
-          [ErrorSeverity.MEDIUM]: 0,
-          [ErrorSeverity.LOW]: 0
+          ['critical']: 0,
+          ['high']: 0,
+          ['medium']: 0,
+          ['low']: 0
         },
         analysisMetadata: {
           processingTime: 1000,
@@ -278,11 +278,11 @@ describe('ConsistencyGuardian', () => {
       expect(report.summary.overallConsistency).toBe('excellent');
 
       mockResult.totalErrors = 5;
-      mockResult.errorsBySeverity[ErrorSeverity.HIGH] = 2;
+      mockResult.errorsBySeverity['high'] = 2;
       const report2 = (guardian as any).generateReport(mockResult);
       expect(report2.summary.overallConsistency).toBe('good');
 
-      mockResult.errorsBySeverity[ErrorSeverity.CRITICAL] = 2;
+      mockResult.errorsBySeverity['critical'] = 2;
       const report3 = (guardian as any).generateReport(mockResult);
       expect(report3.summary.overallConsistency).toBe('poor');
     });
@@ -294,17 +294,17 @@ describe('ConsistencyGuardian', () => {
         totalErrors: 10,
         errors: [],
         errorsByType: {
-          [LogicErrorType.TIMELINE]: 8,
-          [LogicErrorType.CHARACTER]: 2,
-          [LogicErrorType.PLOT]: 0,
-          [LogicErrorType.DIALOGUE]: 0,
-          [LogicErrorType.SCENE]: 0
+          ['timeline']: 8,
+          ['character']: 2,
+          ['plot']: 0,
+          ['dialogue']: 0,
+          ['scene']: 0
         },
         errorsBySeverity: {
-          [ErrorSeverity.CRITICAL]: 2,
-          [ErrorSeverity.HIGH]: 3,
-          [ErrorSeverity.MEDIUM]: 3,
-          [ErrorSeverity.LOW]: 2
+          ['critical']: 2,
+          ['high']: 3,
+          ['medium']: 3,
+          ['low']: 2
         },
         analysisMetadata: {
           processingTime: 1000,

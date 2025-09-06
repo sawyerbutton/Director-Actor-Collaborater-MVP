@@ -295,13 +295,13 @@ Output format: JSON array of suggestions, each with:
 
   private calculatePriority(severity: ErrorSeverity): SuggestionPriority {
     switch (severity) {
-      case ErrorSeverity.CRITICAL:
+      case 'critical':
         return SuggestionPriority.CRITICAL;
-      case ErrorSeverity.HIGH:
+      case 'high':
         return SuggestionPriority.HIGH;
-      case ErrorSeverity.MEDIUM:
+      case 'medium':
         return SuggestionPriority.MEDIUM;
-      case ErrorSeverity.LOW:
+      case 'low':
         return SuggestionPriority.LOW;
       default:
         return SuggestionPriority.MEDIUM;

@@ -14,17 +14,17 @@ describe('ReportGenerator', () => {
     totalErrors: 0,
     errors: [],
     errorsByType: {
-      [LogicErrorType.TIMELINE]: 0,
-      [LogicErrorType.CHARACTER]: 0,
-      [LogicErrorType.PLOT]: 0,
-      [LogicErrorType.DIALOGUE]: 0,
-      [LogicErrorType.SCENE]: 0
+      ['timeline']: 0,
+      ['character']: 0,
+      ['plot']: 0,
+      ['dialogue']: 0,
+      ['scene']: 0
     },
     errorsBySeverity: {
-      [ErrorSeverity.CRITICAL]: 0,
-      [ErrorSeverity.HIGH]: 0,
-      [ErrorSeverity.MEDIUM]: 0,
-      [ErrorSeverity.LOW]: 0
+      ['critical']: 0,
+      ['high']: 0,
+      ['medium']: 0,
+      ['low']: 0
     },
     analysisMetadata: {
       processingTime: 1500,
@@ -52,10 +52,10 @@ describe('ReportGenerator', () => {
       const result = createMockResult({
         totalErrors: 3,
         errorsBySeverity: {
-          [ErrorSeverity.CRITICAL]: 0,
-          [ErrorSeverity.HIGH]: 1,
-          [ErrorSeverity.MEDIUM]: 1,
-          [ErrorSeverity.LOW]: 1
+          ['critical']: 0,
+          ['high']: 1,
+          ['medium']: 1,
+          ['low']: 1
         }
       });
       generator = new ReportGenerator(result);
@@ -69,10 +69,10 @@ describe('ReportGenerator', () => {
       const result = createMockResult({
         totalErrors: 8,
         errorsBySeverity: {
-          [ErrorSeverity.CRITICAL]: 1,
-          [ErrorSeverity.HIGH]: 3,
-          [ErrorSeverity.MEDIUM]: 2,
-          [ErrorSeverity.LOW]: 2
+          ['critical']: 1,
+          ['high']: 3,
+          ['medium']: 2,
+          ['low']: 2
         }
       });
       generator = new ReportGenerator(result);
@@ -86,10 +86,10 @@ describe('ReportGenerator', () => {
       const result = createMockResult({
         totalErrors: 15,
         errorsBySeverity: {
-          [ErrorSeverity.CRITICAL]: 3,
-          [ErrorSeverity.HIGH]: 6,
-          [ErrorSeverity.MEDIUM]: 4,
-          [ErrorSeverity.LOW]: 2
+          ['critical']: 3,
+          ['high']: 6,
+          ['medium']: 4,
+          ['low']: 2
         }
       });
       generator = new ReportGenerator(result);
@@ -103,17 +103,17 @@ describe('ReportGenerator', () => {
       const result = createMockResult({
         totalErrors: 10,
         errorsByType: {
-          [LogicErrorType.TIMELINE]: 6,
-          [LogicErrorType.CHARACTER]: 2,
-          [LogicErrorType.PLOT]: 1,
-          [LogicErrorType.DIALOGUE]: 1,
-          [LogicErrorType.SCENE]: 0
+          ['timeline']: 6,
+          ['character']: 2,
+          ['plot']: 1,
+          ['dialogue']: 1,
+          ['scene']: 0
         },
         errorsBySeverity: {
-          [ErrorSeverity.CRITICAL]: 2,
-          [ErrorSeverity.HIGH]: 3,
-          [ErrorSeverity.MEDIUM]: 3,
-          [ErrorSeverity.LOW]: 2
+          ['critical']: 2,
+          ['high']: 3,
+          ['medium']: 3,
+          ['low']: 2
         }
       });
       generator = new ReportGenerator(result);
@@ -129,17 +129,17 @@ describe('ReportGenerator', () => {
       const result = createMockResult({
         totalErrors: 12,
         errorsByType: {
-          [LogicErrorType.TIMELINE]: 2,
-          [LogicErrorType.CHARACTER]: 8,
-          [LogicErrorType.PLOT]: 1,
-          [LogicErrorType.DIALOGUE]: 1,
-          [LogicErrorType.SCENE]: 0
+          ['timeline']: 2,
+          ['character']: 8,
+          ['plot']: 1,
+          ['dialogue']: 1,
+          ['scene']: 0
         },
         errorsBySeverity: {
-          [ErrorSeverity.CRITICAL]: 1,
-          [ErrorSeverity.HIGH]: 4,
-          [ErrorSeverity.MEDIUM]: 4,
-          [ErrorSeverity.LOW]: 3
+          ['critical']: 1,
+          ['high']: 4,
+          ['medium']: 4,
+          ['low']: 3
         }
       });
       generator = new ReportGenerator(result);
@@ -157,8 +157,8 @@ describe('ReportGenerator', () => {
         errors: [
           {
             id: '1',
-            type: LogicErrorType.TIMELINE,
-            severity: ErrorSeverity.HIGH,
+            type: 'timeline',
+            severity: 'high',
             location: {},
             description: 'Test error',
             context: 'Some context',
@@ -188,25 +188,25 @@ describe('ReportGenerator', () => {
         errors: [
           {
             id: '1',
-            type: LogicErrorType.TIMELINE,
-            severity: ErrorSeverity.HIGH,
+            type: 'timeline',
+            severity: 'high',
             location: { sceneNumber: 1 },
             description: 'Time inconsistency detected',
             suggestion: 'Fix the timeline'
           }
         ],
         errorsByType: {
-          [LogicErrorType.TIMELINE]: 1,
-          [LogicErrorType.CHARACTER]: 1,
-          [LogicErrorType.PLOT]: 1,
-          [LogicErrorType.DIALOGUE]: 0,
-          [LogicErrorType.SCENE]: 0
+          ['timeline']: 1,
+          ['character']: 1,
+          ['plot']: 1,
+          ['dialogue']: 0,
+          ['scene']: 0
         },
         errorsBySeverity: {
-          [ErrorSeverity.CRITICAL]: 0,
-          [ErrorSeverity.HIGH]: 1,
-          [ErrorSeverity.MEDIUM]: 1,
-          [ErrorSeverity.LOW]: 1
+          ['critical']: 0,
+          ['high']: 1,
+          ['medium']: 1,
+          ['low']: 1
         }
       });
       generator = new ReportGenerator(result);
@@ -227,11 +227,11 @@ describe('ReportGenerator', () => {
       const result = createMockResult({
         totalErrors: 5,
         errorsByType: {
-          [LogicErrorType.TIMELINE]: 2,
-          [LogicErrorType.CHARACTER]: 3,
-          [LogicErrorType.PLOT]: 0,
-          [LogicErrorType.DIALOGUE]: 0,
-          [LogicErrorType.SCENE]: 0
+          ['timeline']: 2,
+          ['character']: 3,
+          ['plot']: 0,
+          ['dialogue']: 0,
+          ['scene']: 0
         }
       });
       generator = new ReportGenerator(result);
@@ -250,38 +250,38 @@ describe('ReportGenerator', () => {
         errors: [
           {
             id: '1',
-            type: LogicErrorType.TIMELINE,
-            severity: ErrorSeverity.CRITICAL,
+            type: 'timeline',
+            severity: 'critical',
             location: {},
             description: 'Critical error'
           },
           {
             id: '2',
-            type: LogicErrorType.CHARACTER,
-            severity: ErrorSeverity.HIGH,
+            type: 'character',
+            severity: 'high',
             location: {},
             description: 'High error'
           },
           {
             id: '3',
-            type: LogicErrorType.PLOT,
-            severity: ErrorSeverity.MEDIUM,
+            type: 'plot',
+            severity: 'medium',
             location: {},
             description: 'Medium error'
           },
           {
             id: '4',
-            type: LogicErrorType.DIALOGUE,
-            severity: ErrorSeverity.LOW,
+            type: 'dialogue',
+            severity: 'low',
             location: {},
             description: 'Low error'
           }
         ],
         errorsBySeverity: {
-          [ErrorSeverity.CRITICAL]: 1,
-          [ErrorSeverity.HIGH]: 1,
-          [ErrorSeverity.MEDIUM]: 1,
-          [ErrorSeverity.LOW]: 1
+          ['critical']: 1,
+          ['high']: 1,
+          ['medium']: 1,
+          ['low']: 1
         }
       });
       generator = new ReportGenerator(result);
@@ -302,8 +302,8 @@ describe('ReportGenerator', () => {
         errors: [
           {
             id: '1',
-            type: LogicErrorType.TIMELINE,
-            severity: ErrorSeverity.HIGH,
+            type: 'timeline',
+            severity: 'high',
             location: {},
             description: 'Test error'
           }
@@ -329,18 +329,18 @@ describe('ReportGenerator', () => {
         errors: [
           {
             id: '1',
-            type: LogicErrorType.CHARACTER,
-            severity: ErrorSeverity.HIGH,
+            type: 'character',
+            severity: 'high',
             location: { sceneNumber: 2, characterName: 'John' },
             description: 'Character inconsistency',
             suggestion: 'Review character knowledge'
           }
         ],
         errorsBySeverity: {
-          [ErrorSeverity.CRITICAL]: 0,
-          [ErrorSeverity.HIGH]: 1,
-          [ErrorSeverity.MEDIUM]: 1,
-          [ErrorSeverity.LOW]: 1
+          ['critical']: 0,
+          ['high']: 1,
+          ['medium']: 1,
+          ['low']: 1
         }
       });
       generator = new ReportGenerator(result);
@@ -360,29 +360,29 @@ describe('ReportGenerator', () => {
         errors: [
           {
             id: '1',
-            type: LogicErrorType.TIMELINE,
-            severity: ErrorSeverity.CRITICAL,
+            type: 'timeline',
+            severity: 'critical',
             location: {},
             description: 'Critical'
           },
           {
             id: '2',
-            type: LogicErrorType.CHARACTER,
-            severity: ErrorSeverity.HIGH,
+            type: 'character',
+            severity: 'high',
             location: {},
             description: 'High'
           },
           {
             id: '3',
-            type: LogicErrorType.PLOT,
-            severity: ErrorSeverity.MEDIUM,
+            type: 'plot',
+            severity: 'medium',
             location: {},
             description: 'Medium'
           },
           {
             id: '4',
-            type: LogicErrorType.DIALOGUE,
-            severity: ErrorSeverity.LOW,
+            type: 'dialogue',
+            severity: 'low',
             location: {},
             description: 'Low'
           }
@@ -419,8 +419,8 @@ describe('ReportGenerator', () => {
         errors: [
           {
             id: '1',
-            type: LogicErrorType.TIMELINE,
-            severity: ErrorSeverity.HIGH,
+            type: 'timeline',
+            severity: 'high',
             location: {
               sceneNumber: 3,
               characterName: 'Alice',

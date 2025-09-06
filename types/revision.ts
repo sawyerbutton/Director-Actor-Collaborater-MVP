@@ -1,5 +1,12 @@
 export type SuggestionPriority = 'critical' | 'high' | 'medium' | 'low';
 
+export const SuggestionPriority = {
+  CRITICAL: 'critical' as SuggestionPriority,
+  HIGH: 'high' as SuggestionPriority,
+  MEDIUM: 'medium' as SuggestionPriority,
+  LOW: 'low' as SuggestionPriority
+} as const;
+
 export type Suggestion = RevisionSuggestion;
 
 export interface RevisionSuggestion {

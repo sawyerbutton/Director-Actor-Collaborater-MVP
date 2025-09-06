@@ -50,8 +50,8 @@ describe('RevisionExecutive', () => {
     it('should generate suggestions for timeline errors', async () => {
       const error: LogicError = {
         id: 'error-1',
-        type: LogicErrorType.TIMELINE,
-        severity: ErrorSeverity.HIGH,
+        type: 'timeline',
+        severity: 'high',
         location: { sceneId: 'scene-1', lineNumber: 10 },
         description: 'Character appears before being introduced'
       };
@@ -85,8 +85,8 @@ describe('RevisionExecutive', () => {
     it('should handle character consistency errors', async () => {
       const error: LogicError = {
         id: 'error-2',
-        type: LogicErrorType.CHARACTER,
-        severity: ErrorSeverity.MEDIUM,
+        type: 'character',
+        severity: 'medium',
         location: { characterName: 'char-1' },
         description: 'Character knows information they should not'
       };
@@ -117,8 +117,8 @@ describe('RevisionExecutive', () => {
     it('should generate fallback suggestion on AI failure', async () => {
       const error: LogicError = {
         id: 'error-3',
-        type: LogicErrorType.PLOT,
-        severity: ErrorSeverity.LOW,
+        type: 'plot',
+        severity: 'low',
         location: {},
         description: 'Plot inconsistency detected'
       };
@@ -150,8 +150,8 @@ describe('RevisionExecutive', () => {
       
       const error: LogicError = {
         id: 'error-4',
-        type: LogicErrorType.DIALOGUE,
-        severity: ErrorSeverity.MEDIUM,
+        type: 'dialogue',
+        severity: 'medium',
         location: {},
         description: 'Dialogue flow issue'
       };
@@ -267,7 +267,7 @@ describe('RevisionExecutive', () => {
         const error: LogicError = {
           id: `error-${errorType}`,
           type: errorType,
-          severity: ErrorSeverity.MEDIUM,
+          severity: 'medium',
           location: {},
           description: `Test ${errorType} error`
         };

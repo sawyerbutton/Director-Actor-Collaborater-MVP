@@ -1,6 +1,21 @@
 export type LogicErrorType = 'timeline' | 'character' | 'plot' | 'dialogue' | 'scene';
 
+export const LogicErrorType = {
+  TIMELINE: 'timeline' as LogicErrorType,
+  CHARACTER: 'character' as LogicErrorType,
+  PLOT: 'plot' as LogicErrorType,
+  DIALOGUE: 'dialogue' as LogicErrorType,
+  SCENE: 'scene' as LogicErrorType
+} as const;
+
 export type ErrorSeverity = 'critical' | 'high' | 'medium' | 'low';
+
+export const ErrorSeverity = {
+  CRITICAL: 'critical' as ErrorSeverity,
+  HIGH: 'high' as ErrorSeverity,
+  MEDIUM: 'medium' as ErrorSeverity,
+  LOW: 'low' as ErrorSeverity
+} as const;
 
 export interface ErrorLocation {
   sceneId?: string;
@@ -10,6 +25,8 @@ export interface ErrorLocation {
   lineNumber?: number;
   line?: number;
   column?: number;
+  endLine?: number;
+  endColumn?: number;
   timeReference?: string;
 }
 

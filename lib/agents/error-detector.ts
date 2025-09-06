@@ -42,7 +42,7 @@ export class ErrorDetector {
         if (prevTime && this.isTimeInconsistent(prevTime, scene.time)) {
           this.addError({
             type: LogicErrorType.TIMELINE,
-            severity: ErrorSeverity.HIGH,
+            severity: 'high',
             location: { sceneNumber: scene.number, timeReference: scene.time },
             description: `Time inconsistency: Scene ${scene.number} is set at "${scene.time}" but follows "${prevTime}"`,
             suggestion: 'Verify the chronological order of scenes or add transition explanation'
@@ -56,7 +56,7 @@ export class ErrorDetector {
           if (this.isTimeReferenceProblematic(keyword, scene.number, index)) {
             this.addError({
               type: LogicErrorType.TIMELINE,
-              severity: ErrorSeverity.MEDIUM,
+              severity: 'medium',
               location: {
                 sceneNumber: scene.number,
                 characterName: dialogue.character,
@@ -98,7 +98,7 @@ export class ErrorDetector {
               !this.hasValidTransition(state.lastSeenScene, scene.number)) {
             this.addError({
               type: LogicErrorType.CHARACTER,
-              severity: ErrorSeverity.LOW,
+              severity: 'low',
               location: {
                 sceneNumber: scene.number,
                 characterName: dialogue.character
@@ -119,7 +119,7 @@ export class ErrorDetector {
           knowledgeViolations.forEach(violation => {
             this.addError({
               type: LogicErrorType.CHARACTER,
-              severity: ErrorSeverity.HIGH,
+              severity: 'high',
               location: {
                 sceneNumber: scene.number,
                 characterName: dialogue.character,
@@ -185,7 +185,7 @@ export class ErrorDetector {
         this.areRelatedPlotPoints(setup, payoff))) {
         this.addError({
           type: LogicErrorType.PLOT,
-          severity: ErrorSeverity.MEDIUM,
+          severity: 'medium',
           location: { sceneNumber: sceneNum },
           description: `Setup "${setup}" appears to have no payoff`,
           suggestion: 'Either remove the setup or add a corresponding resolution'
@@ -197,7 +197,7 @@ export class ErrorDetector {
       if (!this.isCausalChainValid(chain, this.script.scenes)) {
         this.addError({
           type: LogicErrorType.PLOT,
-          severity: ErrorSeverity.HIGH,
+          severity: 'high',
           location: { sceneNumber: chain.scene },
           description: `Causal logic issue: "${chain.cause}" doesn't clearly lead to "${chain.effect}"`,
           suggestion: 'Strengthen the causal connection or provide additional context'
@@ -235,7 +235,7 @@ export class ErrorDetector {
         )) {
           this.addError({
             type: LogicErrorType.DIALOGUE,
-            severity: ErrorSeverity.LOW,
+            severity: 'low',
             location: {
               sceneNumber: scene.number,
               characterName: dialogue.character,
@@ -253,7 +253,7 @@ export class ErrorDetector {
         if (q.index < scene.dialogues.length - 2) {
           this.addError({
             type: LogicErrorType.DIALOGUE,
-            severity: ErrorSeverity.MEDIUM,
+            severity: 'medium',
             location: {
               sceneNumber: scene.number,
               characterName: q.asker,
@@ -302,7 +302,7 @@ export class ErrorDetector {
       spatialIssues.forEach(issue => {
         this.addError({
           type: LogicErrorType.SCENE,
-          severity: ErrorSeverity.MEDIUM,
+          severity: 'medium',
           location: { sceneNumber: scene.number },
           description: issue,
           suggestion: 'Verify spatial descriptions and character positions'
@@ -642,7 +642,7 @@ export class ErrorDetector {
       return {
         description: `Instant transition from ${from.name} to ${to.name} without time passage`,
         suggestion: 'Add a transition scene or indicate time passage',
-        severity: ErrorSeverity.LOW
+        severity: 'low'
       };
     }
     
@@ -686,7 +686,7 @@ export class ErrorDetector {
             return {
               description: `Impossible transition from ${from.name} to ${to.name} in ${timeDiff} minute(s)`,
               suggestion: 'Adjust time stamps to allow realistic travel time',
-              severity: ErrorSeverity.HIGH
+              severity: 'high'
             };
           }
         }

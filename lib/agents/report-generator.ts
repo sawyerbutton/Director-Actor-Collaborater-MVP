@@ -48,7 +48,7 @@ export class ReportGenerator {
     sections.push(`\n## Detailed Findings`);
     const errorsBySeverity = this.groupErrorsBySeverity();
     
-    [ErrorSeverity.CRITICAL, ErrorSeverity.HIGH, ErrorSeverity.MEDIUM, ErrorSeverity.LOW].forEach(severity => {
+    (['critical', 'high', 'medium', 'low'] as ErrorSeverity[]).forEach(severity => {
       const errors = errorsBySeverity[severity];
       if (errors && errors.length > 0) {
         sections.push(`\n### ${this.formatSeverity(severity)} Issues (${errors.length})`);
@@ -186,8 +186,8 @@ export class ReportGenerator {
   }
 
   private generateSummary() {
-    const criticalCount = this.result.errorsBySeverity[ErrorSeverity.CRITICAL] || 0;
-    const highCount = this.result.errorsBySeverity[ErrorSeverity.HIGH] || 0;
+    const criticalCount = this.result.errorsBySeverity['critical'] || 0;
+    const highCount = this.result.errorsBySeverity['high'] || 0;
     
     let overallConsistency: 'excellent' | 'good' | 'fair' | 'poor';
     if (this.result.totalErrors === 0) {
@@ -233,22 +233,22 @@ export class ReportGenerator {
   private generateRecommendations(): string[] {
     const recommendations: string[] = [];
     
-    if (this.result.errorsBySeverity[ErrorSeverity.CRITICAL] > 0) {
+    if (this.result.errorsBySeverity['critical'] > 0) {
       recommendations.push('Priority 1: Address all critical errors immediately - these break fundamental story logic');
     }
 
-    if (this.result.errorsBySeverity[ErrorSeverity.HIGH] > 3) {
+    if (this.result.errorsBySeverity['high'] > 3) {
       recommendations.push('Priority 2: Review and fix high-severity issues that disrupt audience understanding');
     }
 
     const dominantErrorType = this.findDominantErrorType();
     if (dominantErrorType) {
       const typeRecommendations: Record<LogicErrorType, string> = {
-        [LogicErrorType.TIMELINE]: 'Create a detailed timeline document mapping all temporal references and events',
-        [LogicErrorType.CHARACTER]: 'Develop comprehensive character bibles tracking traits, knowledge, and relationships',
-        [LogicErrorType.PLOT]: 'Review plot structure ensuring all setups have payoffs and causal chains are clear',
-        [LogicErrorType.DIALOGUE]: 'Conduct dialogue passes to ensure natural conversation flow and answered questions',
-        [LogicErrorType.SCENE]: 'Map location geography and verify all scene transitions are logically possible'
+        'timeline': 'Create a detailed timeline document mapping all temporal references and events',
+        'character': 'Develop comprehensive character bibles tracking traits, knowledge, and relationships',
+        'plot': 'Review plot structure ensuring all setups have payoffs and causal chains are clear',
+        'dialogue': 'Conduct dialogue passes to ensure natural conversation flow and answered questions',
+        'scene': 'Map location geography and verify all scene transitions are logically possible'
       };
       recommendations.push(typeRecommendations[dominantErrorType]);
     }
@@ -284,10 +284,10 @@ export class ReportGenerator {
 
   private groupErrorsBySeverity(): Record<ErrorSeverity, LogicError[]> {
     const grouped: Record<ErrorSeverity, LogicError[]> = {
-      [ErrorSeverity.CRITICAL]: [],
-      [ErrorSeverity.HIGH]: [],
-      [ErrorSeverity.MEDIUM]: [],
-      [ErrorSeverity.LOW]: []
+      'critical': [],
+      'high': [],
+      'medium': [],
+      'low': []
     };
     
     this.result.errors.forEach(error => {
@@ -367,7 +367,7 @@ export class ReportGenerator {
     const errorsBySeverity = this.groupErrorsBySeverity();
     let html = '';
     
-    [ErrorSeverity.CRITICAL, ErrorSeverity.HIGH, ErrorSeverity.MEDIUM, ErrorSeverity.LOW].forEach(severity => {
+    (['critical', 'high', 'medium', 'low'] as ErrorSeverity[]).forEach(severity => {
       const errors = errorsBySeverity[severity];
       if (errors && errors.length > 0) {
         html += `<h3>${this.formatSeverity(severity)} Issues (${errors.length})</h3>`;
@@ -418,11 +418,11 @@ export class ReportGenerator {
 
   private formatErrorType(type: LogicErrorType): string {
     const formatted: Record<LogicErrorType, string> = {
-      [LogicErrorType.TIMELINE]: 'Timeline',
-      [LogicErrorType.CHARACTER]: 'Character',
-      [LogicErrorType.PLOT]: 'Plot',
-      [LogicErrorType.DIALOGUE]: 'Dialogue',
-      [LogicErrorType.SCENE]: 'Scene'
+      'timeline': 'Timeline',
+      'character': 'Character',
+      'plot': 'Plot',
+      'dialogue': 'Dialogue',
+      'scene': 'Scene'
     };
     return formatted[type] || type;
   }

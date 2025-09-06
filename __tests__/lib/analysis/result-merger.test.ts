@@ -38,22 +38,22 @@ describe('ResultMerger', () => {
           analyzedAt: new Date(),
           totalErrors: 3,
           errors: [
-            createError('error-1', LogicErrorType.CHARACTER, ErrorSeverity.HIGH, 'scene-1'),
-            createError('error-2', LogicErrorType.PLOT, ErrorSeverity.MEDIUM, 'scene-1'),
-            createError('error-3', LogicErrorType.TIMELINE, ErrorSeverity.LOW, 'scene-2')
+            createError('error-1', 'character', 'high', 'scene-1'),
+            createError('error-2', 'plot', 'medium', 'scene-1'),
+            createError('error-3', 'timeline', 'low', 'scene-2')
           ],
           errorsByType: {
-            [LogicErrorType.CHARACTER]: 1,
-            [LogicErrorType.PLOT]: 1,
-            [LogicErrorType.TIMELINE]: 1,
-            [LogicErrorType.DIALOGUE]: 0,
-            [LogicErrorType.SCENE]: 0
+            ['character']: 1,
+            ['plot']: 1,
+            ['timeline']: 1,
+            ['dialogue']: 0,
+            ['scene']: 0
           },
           errorsBySeverity: {
-            [ErrorSeverity.CRITICAL]: 0,
-            [ErrorSeverity.HIGH]: 1,
-            [ErrorSeverity.MEDIUM]: 1,
-            [ErrorSeverity.LOW]: 1
+            ['critical']: 0,
+            ['high']: 1,
+            ['medium']: 1,
+            ['low']: 1
           },
           analysisMetadata: {
             processingTime: 0,
@@ -79,21 +79,21 @@ describe('ResultMerger', () => {
           analyzedAt: new Date(),
           totalErrors: 2,
           errors: [
-            createError('error-1', LogicErrorType.CHARACTER, ErrorSeverity.CRITICAL, 'scene-1'),
-            createError('error-4', LogicErrorType.DIALOGUE, ErrorSeverity.HIGH, 'scene-1')
+            createError('error-1', 'character', 'critical', 'scene-1'),
+            createError('error-4', 'dialogue', 'high', 'scene-1')
           ],
           errorsByType: {
-            [LogicErrorType.CHARACTER]: 1,
-            [LogicErrorType.DIALOGUE]: 1,
-            [LogicErrorType.PLOT]: 0,
-            [LogicErrorType.TIMELINE]: 0,
-            [LogicErrorType.SCENE]: 0
+            ['character']: 1,
+            ['dialogue']: 1,
+            ['plot']: 0,
+            ['timeline']: 0,
+            ['scene']: 0
           },
           errorsBySeverity: {
-            [ErrorSeverity.CRITICAL]: 1,
-            [ErrorSeverity.HIGH]: 1,
-            [ErrorSeverity.MEDIUM]: 0,
-            [ErrorSeverity.LOW]: 0
+            ['critical']: 1,
+            ['high']: 1,
+            ['medium']: 0,
+            ['low']: 0
           },
           analysisMetadata: {
             processingTime: 0,
@@ -203,8 +203,8 @@ describe('ResultMerger', () => {
       // Create a true duplicate - same type, location, message, and severity
       const duplicateError: LogicError = {
         id: 'error-dup',
-        type: LogicErrorType.CHARACTER,
-        severity: ErrorSeverity.HIGH,
+        type: 'character',
+        severity: 'high',
         description: 'Duplicate error message',
         location: { sceneId: 'scene-99', lineNumber: 100 },
         suggestion: 'Fix duplicate'

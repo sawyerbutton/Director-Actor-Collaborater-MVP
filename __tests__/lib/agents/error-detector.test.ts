@@ -40,7 +40,7 @@ describe('ErrorDetector', () => {
       detector = new ErrorDetector(script);
       const errors = detector.detectAllErrors();
       
-      const timelineErrors = errors.filter(e => e.type === LogicErrorType.TIMELINE);
+      const timelineErrors = errors.filter(e => e.type === 'timeline');
       expect(timelineErrors.length).toBeGreaterThan(0);
       expect(timelineErrors[0].description).toContain('Time inconsistency');
     });
@@ -66,7 +66,7 @@ describe('ErrorDetector', () => {
       detector = new ErrorDetector(script);
       const errors = detector.detectAllErrors();
       
-      const timelineErrors = errors.filter(e => e.type === LogicErrorType.TIMELINE);
+      const timelineErrors = errors.filter(e => e.type === 'timeline');
       expect(timelineErrors.some(e => e.description.includes('yesterday'))).toBe(true);
     });
   });
@@ -111,7 +111,7 @@ describe('ErrorDetector', () => {
       detector = new ErrorDetector(script);
       const errors = detector.detectAllErrors();
       
-      const characterErrors = errors.filter(e => e.type === LogicErrorType.CHARACTER);
+      const characterErrors = errors.filter(e => e.type === 'character');
       expect(characterErrors.length).toBeGreaterThan(0);
     });
 
@@ -143,7 +143,7 @@ describe('ErrorDetector', () => {
       detector = new ErrorDetector(script);
       const errors = detector.detectAllErrors();
       
-      const characterErrors = errors.filter(e => e.type === LogicErrorType.CHARACTER);
+      const characterErrors = errors.filter(e => e.type === 'character');
       const transitionErrors = characterErrors.filter(e => 
         e.description.includes('transition')
       );
@@ -183,7 +183,7 @@ describe('ErrorDetector', () => {
       detector = new ErrorDetector(script);
       const errors = detector.detectAllErrors();
       
-      const plotErrors = errors.filter(e => e.type === LogicErrorType.PLOT);
+      const plotErrors = errors.filter(e => e.type === 'plot');
       expect(plotErrors.some(e => e.description.includes('no payoff'))).toBe(true);
     });
 
@@ -238,7 +238,7 @@ describe('ErrorDetector', () => {
       detector = new ErrorDetector(script);
       const errors = detector.detectAllErrors();
       
-      const dialogueErrors = errors.filter(e => e.type === LogicErrorType.DIALOGUE);
+      const dialogueErrors = errors.filter(e => e.type === 'dialogue');
       expect(dialogueErrors.some(e => e.description.includes('unanswered'))).toBe(true);
     });
 
@@ -266,7 +266,7 @@ describe('ErrorDetector', () => {
       detector = new ErrorDetector(script);
       const errors = detector.detectAllErrors();
       
-      const dialogueErrors = errors.filter(e => e.type === LogicErrorType.DIALOGUE);
+      const dialogueErrors = errors.filter(e => e.type === 'dialogue');
       expect(dialogueErrors.some(e => 
         e.description.includes('flow') || e.description.includes('coherent')
       )).toBe(true);
@@ -301,7 +301,7 @@ describe('ErrorDetector', () => {
       detector = new ErrorDetector(script);
       const errors = detector.detectAllErrors();
       
-      const sceneErrors = errors.filter(e => e.type === LogicErrorType.SCENE);
+      const sceneErrors = errors.filter(e => e.type === 'scene');
       expect(sceneErrors.some(e => e.description.includes('transition'))).toBe(true);
     });
 
@@ -367,8 +367,8 @@ describe('ErrorDetector', () => {
       detector = new ErrorDetector(script);
       const errors = detector.detectAllErrors();
       
-      const criticalErrors = errors.filter(e => e.severity === ErrorSeverity.CRITICAL);
-      const highErrors = errors.filter(e => e.severity === ErrorSeverity.HIGH);
+      const criticalErrors = errors.filter(e => e.severity === 'critical');
+      const highErrors = errors.filter(e => e.severity === 'high');
       
       expect(errors.length).toBeGreaterThan(0);
     });

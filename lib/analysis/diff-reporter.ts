@@ -146,17 +146,17 @@ export class DiffReportGenerator {
     unchanged: LogicError[]
   ): DiffReport['summary'] {
     const criticalChanges = [
-      ...added.filter(e => e.severity === ErrorSeverity.CRITICAL),
-      ...removed.filter(e => e.severity === ErrorSeverity.CRITICAL),
-      ...modified.filter(e => e.severity === ErrorSeverity.CRITICAL)
+      ...added.filter(e => e.severity === 'critical'),
+      ...removed.filter(e => e.severity === 'critical'),
+      ...modified.filter(e => e.severity === 'critical')
     ].length;
 
     const improvements = removed.filter(
-      e => e.severity === ErrorSeverity.HIGH || e.severity === ErrorSeverity.CRITICAL
+      e => e.severity === 'high' || e.severity === 'critical'
     ).length;
 
     const degradations = added.filter(
-      e => e.severity === ErrorSeverity.HIGH || e.severity === ErrorSeverity.CRITICAL
+      e => e.severity === 'high' || e.severity === 'critical'
     ).length;
 
     return {
@@ -195,21 +195,21 @@ export class DiffReportGenerator {
   ): string[] {
     const recommendations: string[] = [];
 
-    const criticalAdded = added.filter(e => e.severity === ErrorSeverity.CRITICAL);
+    const criticalAdded = added.filter(e => e.severity === 'critical');
     if (criticalAdded.length > 0) {
       recommendations.push(
         `⚠️ ${criticalAdded.length} critical issue(s) introduced. Immediate attention required.`
       );
     }
 
-    const highAdded = added.filter(e => e.severity === ErrorSeverity.HIGH);
+    const highAdded = added.filter(e => e.severity === 'high');
     if (highAdded.length > 0) {
       recommendations.push(
         `Review ${highAdded.length} high-severity issue(s) before proceeding.`
       );
     }
 
-    const resolvedCritical = removed.filter(e => e.severity === ErrorSeverity.CRITICAL);
+    const resolvedCritical = removed.filter(e => e.severity === 'critical');
     if (resolvedCritical.length > 0) {
       recommendations.push(
         `✅ Successfully resolved ${resolvedCritical.length} critical issue(s).`
@@ -255,10 +255,10 @@ export class DiffReportGenerator {
     const severityScore = (errors: LogicError[]): number => {
       return errors.reduce((score, error) => {
         const weights: Record<ErrorSeverity, number> = {
-          [ErrorSeverity.CRITICAL]: 10,
-          [ErrorSeverity.HIGH]: 5,
-          [ErrorSeverity.MEDIUM]: 3,
-          [ErrorSeverity.LOW]: 1
+          ['critical']: 10,
+          ['high']: 5,
+          ['medium']: 3,
+          ['low']: 1
         };
         return score + (weights[error.severity] || 0);
       }, 0);
