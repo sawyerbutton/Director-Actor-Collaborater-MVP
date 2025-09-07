@@ -80,6 +80,10 @@ interface AnalysisState {
   
   resetAnalysis: () => void;
   resetAll: () => void;
+  
+  // Convenience getters
+  errors: LogicError[];
+  setErrors: (errors: LogicError[]) => void;
 }
 
 export const useAnalysisStore = create<AnalysisState>()(
@@ -365,6 +369,23 @@ export const useAnalysisStore = create<AnalysisState>()(
           selectedError: null,
           activeFilter: null,
           analysisHistory: []
+        });
+      },
+      
+      // Convenience getters
+      get errors() {
+        return get().analysisResults?.errors || [];
+      },
+      
+      setErrors: (errors: LogicError[]) => {
+        const currentResults = get().analysisResults;
+        set({
+          analysisResults: {
+            errors,
+            suggestions: currentResults?.suggestions || [],
+            metadata: currentResults?.metadata
+          },
+          filteredErrors: errors
         });
       }
     }),
