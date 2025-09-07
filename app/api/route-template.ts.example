@@ -1,0 +1,66 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createApiResponse, createErrorResponse } from '@/lib/api/response';
+import { withMiddleware } from '@/lib/api/middleware';
+import { z } from 'zod';
+
+// Define validation schemas
+const querySchema = z.object({
+  // Define query parameters
+});
+
+const bodySchema = z.object({
+  // Define request body structure
+});
+
+export async function GET(request: NextRequest) {
+  return withMiddleware(request, async () => {
+    try {
+      // Parse and validate query parameters
+      const { searchParams } = new URL(request.url);
+      const query = Object.fromEntries(searchParams);
+      
+      // Business logic here
+      const result = {};
+      
+      return NextResponse.json(
+        createApiResponse(result),
+        { status: 200 }
+      );
+    } catch (error) {
+      return NextResponse.json(
+        createErrorResponse('INTERNAL_ERROR', 'An error occurred'),
+        { status: 500 }
+      );
+    }
+  });
+}
+
+export async function POST(request: NextRequest) {
+  return withMiddleware(request, async () => {
+    try {
+      // Parse and validate request body
+      const body = await request.json();
+      const validated = bodySchema.parse(body);
+      
+      // Business logic here
+      const result = {};
+      
+      return NextResponse.json(
+        createApiResponse(result),
+        { status: 201 }
+      );
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json(
+          createErrorResponse('VALIDATION_ERROR', 'Invalid request data', error.errors),
+          { status: 400 }
+        );
+      }
+      
+      return NextResponse.json(
+        createErrorResponse('INTERNAL_ERROR', 'An error occurred'),
+        { status: 500 }
+      );
+    }
+  });
+}
