@@ -19,11 +19,11 @@ const envSchema = z.object({
   
   // Monitoring
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
-  ENABLE_API_DOCS: z.string().optional().transform(val => val === 'true').default(() => 'true'),
+  ENABLE_API_DOCS: z.string().optional().default('true').transform(val => val === 'true'),
   
   // Rate Limiting
-  RATE_LIMIT_WINDOW_MS: z.string().optional().transform(val => Number(val || 60000)).default(() => '60000'),
-  RATE_LIMIT_MAX_REQUESTS: z.string().optional().transform(val => Number(val || 100)).default(() => '100')
+  RATE_LIMIT_WINDOW_MS: z.string().optional().default('60000').transform(val => Number(val)),
+  RATE_LIMIT_MAX_REQUESTS: z.string().optional().default('100').transform(val => Number(val))
 });
 
 export type Env = z.infer<typeof envSchema>;

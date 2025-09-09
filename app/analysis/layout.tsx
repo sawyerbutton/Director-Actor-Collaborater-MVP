@@ -1,10 +1,6 @@
-import { Metadata } from 'next';
-import { ErrorBoundary } from '@/components/error-boundary';
+'use client';
 
-export const metadata: Metadata = {
-  title: '剧本分析 | Director-Actor-Collaborater',
-  description: '上传并分析您的剧本，检测逻辑错误并获得修改建议',
-};
+import { ErrorBoundary } from '@/components/error-boundary';
 
 export default function AnalysisLayout({
   children,

@@ -9,9 +9,9 @@ export type CreateAnalysisInput = {
 
 export type UpdateAnalysisInput = {
   status?: string;
-  result?: Prisma.JsonValue;
-  errors?: Prisma.JsonValue;
-  suggestions?: Prisma.JsonValue;
+  result?: Prisma.InputJsonValue;
+  errors?: Prisma.InputJsonValue;
+  suggestions?: Prisma.InputJsonValue;
   startedAt?: Date;
   completedAt?: Date;
 };
@@ -103,8 +103,8 @@ export class AnalysisService extends BaseService {
 
   async completeAnalysis(
     id: string,
-    result: Prisma.JsonValue,
-    suggestions?: Prisma.JsonValue
+    result: Prisma.InputJsonValue,
+    suggestions?: Prisma.InputJsonValue
   ): Promise<Analysis> {
     try {
       return await prisma.analysis.update({
@@ -121,7 +121,7 @@ export class AnalysisService extends BaseService {
     }
   }
 
-  async failAnalysis(id: string, errors: Prisma.JsonValue): Promise<Analysis> {
+  async failAnalysis(id: string, errors: Prisma.InputJsonValue): Promise<Analysis> {
     try {
       return await prisma.analysis.update({
         where: { id },

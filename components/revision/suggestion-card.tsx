@@ -6,21 +6,21 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Check, X, AlertCircle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { LogicError, ErrorLocation } from '@/types/analysis';
+import type { LogicError, ErrorLocation, LogicErrorType, ErrorSeverity } from '@/types/analysis';
 
 // Extended error type to handle different error formats
-interface ExtendedError extends Partial<LogicError> {
+interface ExtendedError extends Omit<Partial<LogicError>, 'type' | 'severity' | 'context'> {
   id: string;
   status?: 'pending' | 'accepted' | 'rejected';
   // Support for alternative field names
   category?: string;
   message?: string;
-  type?: string;
+  type?: LogicErrorType | string;
   description?: string;
-  severity: string;
+  severity: ErrorSeverity | string;
   suggestion?: string;
   location?: ErrorLocation;
-  context?: {
+  context?: string | {
     line?: number;
     character?: number;
     snippet?: string;
@@ -123,11 +123,11 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
           <div className="space-y-1">
             <p className="text-sm font-medium">位置</p>
             <p className="text-sm text-muted-foreground">
-              {error.location?.line || error.location?.lineNumber || error.context?.line ? (
+              {error.location?.line || error.location?.lineNumber || (typeof error.context === 'object' && error.context?.line) ? (
                 <>
-                  第 {error.location?.line || error.location?.lineNumber || error.context?.line} 行
-                  {(error.location?.column || error.context?.character) && 
-                    `, 第 ${error.location?.column || error.context?.character} 个字符`}
+                  第 {error.location?.line || error.location?.lineNumber || (typeof error.context === 'object' && error.context?.line)} 行
+                  {(error.location?.column || (typeof error.context === 'object' && error.context?.character)) && 
+                    `, 第 ${error.location?.column || (typeof error.context === 'object' && error.context?.character)} 个字符`}
                 </>
               ) : (
                 '位置未知'

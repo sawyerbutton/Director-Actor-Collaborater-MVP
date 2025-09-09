@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
  * Security headers middleware
  * Adds security headers to responses to protect against common vulnerabilities
  */
-export function securityHeadersMiddleware(response: NextResponse): NextResponse {
+export function securityHeadersMiddleware(response: NextResponse | Response): NextResponse {
   // Clone the response to avoid mutating the original
   const secureResponse = response instanceof NextResponse 
     ? response 
