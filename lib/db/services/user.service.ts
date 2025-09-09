@@ -1,6 +1,7 @@
 import { User, Prisma } from '@prisma/client';
 import { prisma } from '../client';
 import { BaseService, PaginationOptions } from './base.service';
+import bcrypt from 'bcryptjs';
 
 export type CreateUserInput = Omit<Prisma.UserCreateInput, 'projects'>;
 export type UpdateUserInput = Partial<CreateUserInput>;
@@ -8,12 +9,26 @@ export type UpdateUserInput = Partial<CreateUserInput>;
 export class UserService extends BaseService {
   async create(data: CreateUserInput): Promise<User> {
     try {
+      const createData = { ...data };
+      
+      if ('password' in createData && createData.password) {
+        createData.password = await this.hashPassword(createData.password);
+      }
+      
       return await prisma.user.create({
-        data,
+        data: createData,
       });
     } catch (error) {
       this.handleError(error);
     }
+  }
+
+  async hashPassword(password: string): Promise<string> {
+    return await bcrypt.hash(password, 10);
+  }
+
+  async verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
+    return await bcrypt.compare(password, hashedPassword);
   }
 
   async findById(id: string): Promise<User | null> {
@@ -22,9 +37,18 @@ export class UserService extends BaseService {
     });
   }
 
-  async findByEmail(email: string): Promise<User | null> {
+  async findByEmail(email: string, includePassword: boolean = false): Promise<User | null> {
     return await prisma.user.findUnique({
       where: { email },
+      select: includePassword ? undefined : {
+        id: true,
+        email: true,
+        name: true,
+        image: true,
+        emailVerified: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 

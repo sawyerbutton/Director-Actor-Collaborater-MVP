@@ -98,6 +98,12 @@ export class ProjectService extends BaseService {
       where: { status },
     });
   }
+
+  async countByUser(userId: string): Promise<number> {
+    return await prisma.project.count({
+      where: { userId },
+    });
+  }
 }
 
 export const projectService = new ProjectService();

@@ -64,6 +64,13 @@ export class ConflictError extends ApiError {
   }
 }
 
+export class BusinessError extends ApiError {
+  constructor(message: string = 'Business logic error', details?: any) {
+    super(ERROR_CODES.BIZ_001, message, HTTP_STATUS.CONFLICT, details);
+    this.name = 'BusinessError';
+  }
+}
+
 export class ServiceUnavailableError extends ApiError {
   constructor(message: string = 'Service temporarily unavailable') {
     super(ERROR_CODES.SERVICE_UNAVAILABLE, message, HTTP_STATUS.SERVICE_UNAVAILABLE);

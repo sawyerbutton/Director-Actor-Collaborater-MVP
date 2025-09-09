@@ -1,0 +1,16 @@
+schema: 1
+story: '3.3'
+gate: CONCERNS
+status_reason: 'Functionally complete with good quality. Mock auth remains but is documented dependency for Story 3.4.'
+reviewer: 'Quinn'
+updated: '2025-01-09T15:00:00Z'
+top_issues:
+  - id: 'SEC-001'
+    severity: high
+    finding: 'Mock authentication middleware accepts any token'
+    suggested_action: 'Replace with NextAuth.js implementation in Story 3.4 before production'
+  - id: 'ARCH-001'
+    severity: low
+    finding: 'CORS configuration not implemented'
+    suggested_action: 'Add production CORS settings before deployment'
+waiver: { active: false }

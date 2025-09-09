@@ -10,6 +10,8 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    '^next-auth': '<rootDir>/__mocks__/next-auth.js',
+    '^next-auth/next': '<rootDir>/__mocks__/next-auth.js',
   },
   testMatch: [
     '**/__tests__/**/*.test.ts?(x)',
