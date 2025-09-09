@@ -132,7 +132,7 @@ Director-Actor-Collaborater-MVP/
 ### Prerequisites
 
 - Node.js 18+ and npm/yarn/pnpm
-- PostgreSQL 15+ (or Supabase account)
+- Docker Desktop (for local PostgreSQL)
 - DeepSeek API key
 
 ### Installation
@@ -148,25 +148,40 @@ cd Director-Actor-Collaborater-MVP
 npm install
 ```
 
-3. Set up environment variables:
+3. Set up PostgreSQL with Docker:
 ```bash
-cp .env.example .env.local
+# Pull PostgreSQL image
+docker pull postgres:16-alpine
+
+# Run PostgreSQL container
+docker run -d \
+  --name director-actor-postgres \
+  -e POSTGRES_USER=director_user \
+  -e POSTGRES_PASSWORD=director_pass_2024 \
+  -e POSTGRES_DB=director_actor_db \
+  -p 5432:5432 \
+  -v director-actor-pgdata:/var/lib/postgresql/data \
+  postgres:16-alpine
 ```
 
-Edit `.env.local` with your configuration:
+4. Set up environment variables:
+```bash
+cp .env.local.example .env.local
+```
+
+The `.env.local` file is pre-configured with the Docker PostgreSQL credentials:
 ```env
-DATABASE_URL="postgresql://..."
-DEEPSEEK_API_KEY="your_api_key"
-NEXTAUTH_SECRET="your_secret"
-NEXTAUTH_URL="http://localhost:3000"
+DATABASE_URL="postgresql://director_user:director_pass_2024@localhost:5432/director_actor_db?schema=public&pgbouncer=true"
+DIRECT_DATABASE_URL="postgresql://director_user:director_pass_2024@localhost:5432/director_actor_db?schema=public"
+DEEPSEEK_API_KEY="your_api_key_here"
 ```
 
-4. Run database migrations:
+5. Run database migrations:
 ```bash
 npx prisma migrate dev
 ```
 
-5. Start the development server:
+6. Start the development server:
 ```bash
 npm run dev
 ```
@@ -243,14 +258,18 @@ npm run format
 ### Database Management
 
 ```bash
-# Create migration
-npx prisma migrate dev --name your_migration_name
+# Docker PostgreSQL commands
+docker start director-actor-postgres    # Start container
+docker stop director-actor-postgres     # Stop container
+docker logs director-actor-postgres     # View logs
+docker exec -it director-actor-postgres psql -U director_user -d director_actor_db  # Access psql
 
-# Apply migrations
-npx prisma migrate deploy
-
-# Open Prisma Studio
-npx prisma studio
+# Prisma commands
+npx prisma migrate dev --name your_migration_name  # Create migration
+npx prisma migrate deploy                          # Apply migrations
+npx prisma studio                                  # Open Prisma Studio
+npx prisma db push                                 # Push schema changes
+npx prisma generate                                # Generate Prisma Client
 ```
 
 ## Deployment
