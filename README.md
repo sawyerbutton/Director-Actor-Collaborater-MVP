@@ -1,5 +1,7 @@
 # ScriptAI MVP - Intelligent Script Analysis Assistant
 
+[中文版本](./README_CN.md) | English
+
 > An AI-powered collaborative system that helps screenwriters detect and fix common logical errors in scripts within 10 seconds.
 
 ## Overview
@@ -341,7 +343,7 @@ Configure these in Vercel dashboard:
 
 ## Development Progress
 
-### Current Status: Epic C - Backend Infrastructure (In Progress)
+### Current Status: MVP Complete! 🎉
 
 #### ✅ Completed Stories
 1. **Story 1.1: DeepSeek API Integration** 
@@ -466,6 +468,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Project Status**: 🚧 Active Development - Backend Infrastructure Final Phase (83% Complete)
+**Project Status**: ✅ MVP Development Complete - Ready for Production (100% Complete)
 
 *Built with a focus on simplicity, functionality, and real-world usability.*
