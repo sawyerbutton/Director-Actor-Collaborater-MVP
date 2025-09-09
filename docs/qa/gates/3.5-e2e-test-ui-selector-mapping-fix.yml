@@ -1,0 +1,74 @@
+schema: 1
+story: '3.5'
+story_title: 'E2E测试UI选择器映射修复'
+gate: CONCERNS
+status_reason: 'All acceptance criteria met but rate limiting not properly integrated with login endpoint'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-01-09T16:15:00Z'
+
+top_issues:
+  - issue: 'Rate limiting not applied to NextAuth login endpoint'
+    severity: medium
+    refs: ['app/api/auth/[...nextauth]/route.ts']
+    impact: 'E2E test expects rate limiting after 5 attempts but middleware not integrated'
+    suggested_owner: dev
+
+quality_score: 85  # 100 - (0*20) - (1*10) - 5 for missing integration
+
+expires: '2025-01-23T16:15:00Z'
+
+evidence:
+  tests_reviewed: 8
+  risks_identified: 1
+  trace:
+    ac_covered: [1, 2, 3, 4]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: CONCERNS
+    notes: 'Rate limiting middleware exists but not applied to login endpoint, potential brute force vulnerability'
+  performance:
+    status: PASS
+    notes: 'Loading states properly implemented, no performance concerns'
+  reliability:
+    status: PASS
+    notes: 'Error handling properly implemented with user-friendly messages'
+  maintainability:
+    status: PASS
+    notes: 'Clean component architecture, proper separation of concerns'
+
+recommendations:
+  immediate:
+    - action: 'Apply authRateLimiter middleware to NextAuth routes'
+      refs: ['app/api/auth/[...nextauth]/route.ts', 'lib/api/middleware/rate-limit.ts']
+      rationale: 'Security requirement for preventing brute force attacks'
+  future:
+    - action: 'Consider implementing CAPTCHA after multiple failed attempts'
+      refs: ['components/auth/login-form.tsx']
+      rationale: 'Additional layer of bot protection'
+    - action: 'Add session timeout UI feedback'
+      refs: ['middleware.ts']
+      rationale: 'Better UX for session expiry scenarios'
+
+test_coverage_analysis:
+  unit_tests: 
+    status: 'Not Required'
+    notes: 'UI components tested via E2E'
+  integration_tests:
+    status: 'Covered'
+    notes: 'Auth flow tested through E2E scenarios'
+  e2e_tests:
+    status: 'Comprehensive'
+    notes: 'All critical paths covered, 6/8 tests expected to pass'
+
+implementation_quality:
+  strengths:
+    - 'All required data-testid attributes properly implemented'
+    - 'Clean component structure with proper state management'
+    - 'Password validation comprehensive with clear error messages'
+    - 'Proper use of NextAuth v5 with JWT strategy'
+    - 'Middleware properly protects routes'
+  improvements_needed:
+    - 'Rate limiting integration gap with NextAuth routes'
+    - 'Missing auth message display in login page for redirects'

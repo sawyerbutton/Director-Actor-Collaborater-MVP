@@ -1,3 +1,6 @@
+import { Providers } from './providers'
+import { Navbar } from '@/components/layout/navbar'
+
 export default function RootLayout({
   children,
 }: {
@@ -5,7 +8,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <Providers>
+          <Navbar />
+          <main>{children}</main>
+        </Providers>
+      </body>
     </html>
   )
 }

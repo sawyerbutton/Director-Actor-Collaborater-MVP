@@ -29,7 +29,7 @@ export default defineConfig({
   // Shared settings for all browsers
   use: {
     // Base URL for the application
-    baseURL: process.env.BASE_URL || 'http://localhost:3001',
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
     
     // Browser settings
     headless: true, // Required for WSL
