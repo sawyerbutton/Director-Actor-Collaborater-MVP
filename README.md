@@ -112,7 +112,8 @@ ScriptAI is a Next.js monolithic application that leverages three collaborative 
 | **ORM** | Prisma | 5.x |
 | **Authentication** | NextAuth.js | v5 (beta) |
 | **AI Service** | DeepSeek API | v1 |
-| **Testing** | Jest + RTL, Playwright | latest |
+| **Unit Testing** | Jest + React Testing Library | latest |
+| **E2E Testing** | Playwright | 1.55.0 |
 | **Deployment** | Vercel & Supabase | - |
 
 ## Project Structure
@@ -140,8 +141,13 @@ Director-Actor-Collaborater-MVP/
 │   ├── architecture/     # Architecture docs (sharded)
 │   ├── stories/          # User stories and epics
 │   └── qa/               # QA gates and assessments
-├── __tests__/            # Test suites
+├── __tests__/            # Unit test suites
 │   └── lib/              # Unit tests for lib modules
+├── e2e/                  # End-to-end tests (Playwright)
+│   ├── tests/            # E2E test specifications
+│   ├── fixtures/         # Test data and mocks
+│   ├── helpers/          # Test utility functions
+│   └── README.md         # E2E testing documentation
 └── .bmad-core/           # Project management tools
 ```
 
@@ -239,8 +245,10 @@ Detects 5+ core logical error types:
 
 ### Running Tests
 
+#### Unit Tests
+
 ```bash
-# Run all tests
+# Run all unit tests
 npm test
 
 # Run tests in watch mode
@@ -258,6 +266,62 @@ npm test -- lib/agents           # Agent tests
 # - Total: 319 tests (293 + 26 database tests)
 # - Passing: 287 tests (261 + 26) (89.9%)
 # - Coverage: ~87%
+```
+
+#### E2E Tests (New!)
+
+```bash
+# Prerequisites for WSL users
+export NO_PROXY="localhost,127.0.0.1,::1"  # Required for WSL proxy bypass
+export DISPLAY=:0                          # Display configuration
+
+# Run all E2E tests
+npm run test:e2e
+
+# Run E2E tests with UI
+npm run test:e2e:ui
+
+# Run E2E tests in debug mode
+npm run test:e2e:debug
+
+# Run E2E tests in headed mode (see browser)
+npm run test:e2e:headed
+
+# View HTML test report
+npm run test:e2e:report
+
+# Run specific test suites
+npx playwright test auth.spec.ts           # Authentication tests
+npx playwright test script-analysis.spec.ts # Script analysis tests
+npx playwright test --grep "P0"            # Run P0 priority tests only
+
+# Quick test with helper script
+./test-e2e.sh                              # Run all tests with environment setup
+./test-e2e.sh smoke.spec.ts                # Run specific test file
+
+# E2E Test Statistics
+# - Total: 48 tests across 6 files
+# - Test Files: auth, script-analysis, error-detection, modifications, smoke, wsl-test
+# - Coverage: Authentication, Script Upload, Analysis, Error Detection, Modifications, Export
+```
+
+##### WSL-Specific Setup
+
+If you're using WSL and experiencing issues:
+
+1. Install system dependencies:
+```bash
+sudo ./install-e2e-deps.sh
+```
+
+2. Fix WSL environment:
+```bash
+./fix-wsl-e2e.sh
+```
+
+3. Run tests with proxy bypass:
+```bash
+./run-e2e-no-proxy.sh
 ```
 
 ### Code Quality
@@ -420,6 +484,15 @@ Configure these in Vercel dashboard:
     - Docker-based local development setup
     - Test coverage: 26 tests passing (100%)
     - QA Gate: PASS (Score: 91/100)
+
+11. **E2E Testing Infrastructure** (Completed Post-MVP)
+    - Playwright framework with WSL optimization
+    - 48 comprehensive E2E tests covering all user journeys
+    - Authentication, script analysis, error detection, modifications
+    - Proxy bypass solution for WSL environments
+    - Multiple test runner scripts for different scenarios
+    - HTML and JSON reporting for CI/CD integration
+    - Complete troubleshooting documentation
 
 ### MVP Development Complete! 🎉
 
