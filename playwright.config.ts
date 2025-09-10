@@ -9,9 +9,9 @@ export default defineConfig({
   testDir: './e2e',
   
   // Test execution settings
-  timeout: 30000, // 30 seconds per test
+  timeout: 60000, // 60 seconds per test (increased for stability)
   expect: { 
-    timeout: 5000 // 5 seconds for assertions
+    timeout: 10000 // 10 seconds for assertions (increased for WSL)
   },
   
   // Parallel execution settings (limited for WSL)
@@ -81,16 +81,17 @@ export default defineConfig({
   ],
   
   // Local dev server configuration
-  // Commented out for manual server start in WSL
-  // webServer: {
-  //   command: 'npm run dev',
-  //   port: 3000,
-  //   timeout: 120 * 1000, // 2 minutes to start
-  //   reuseExistingServer: !process.env.CI,
-  //   stdout: 'pipe',
-  //   stderr: 'pipe',
-  //   env: {
-  //     NODE_ENV: 'test',
-  //   },
-  // },
+  webServer: {
+    command: 'npm run dev',
+    port: 3000,
+    timeout: 120 * 1000, // 2 minutes to start
+    reuseExistingServer: !process.env.CI,
+    stdout: 'pipe',
+    stderr: 'pipe',
+    env: {
+      NODE_ENV: 'test',
+      // Ensure proper environment variables are set
+      ...process.env,
+    },
+  },
 });

@@ -7,18 +7,43 @@ global.TextDecoder = TextDecoder as any;
 // Mock Request/Response APIs
 if (typeof global.Request === 'undefined') {
   global.Request = class Request {
-    url: string;
+    private _url: string;
     method: string;
     headers: Headers;
+    body: any;
     
     constructor(url: string | URL, init?: RequestInit) {
-      this.url = url.toString();
+      this._url = url.toString();
       this.method = init?.method || 'GET';
       this.headers = new Headers(init?.headers);
+      this.body = init?.body;
+    }
+    
+    get url() {
+      return this._url;
     }
     
     json() {
-      return Promise.resolve({});
+      if (typeof this.body === 'string') {
+        try {
+          return Promise.resolve(JSON.parse(this.body));
+        } catch {
+          return Promise.resolve({});
+        }
+      }
+      return Promise.resolve(this.body || {});
+    }
+    
+    text() {
+      return Promise.resolve(this.body?.toString() || '');
+    }
+    
+    clone() {
+      return new Request(this._url, {
+        method: this.method,
+        headers: this.headers,
+        body: this.body
+      });
     }
   } as any;
 }
