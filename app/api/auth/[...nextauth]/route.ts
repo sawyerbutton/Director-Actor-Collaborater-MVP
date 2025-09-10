@@ -1,3 +1,3 @@
-import { handlers } from "@/lib/auth";
+import { GET, POST } from "./route-with-rate-limit";
 
-export const { GET, POST } = handlers;
+export { GET, POST };

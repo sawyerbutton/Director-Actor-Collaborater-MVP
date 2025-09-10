@@ -26,8 +26,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
+          // Track failed attempt due to missing credentials
           return null;
         }
 
@@ -42,6 +43,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         });
 
         if (!user || !user.password) {
+          // Track failed attempt - user not found
           return null;
         }
 
@@ -51,9 +53,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         );
 
         if (!isPasswordValid) {
+          // Track failed attempt - invalid password
           return null;
         }
 
+        // Successful login - reset any rate limit counters if needed
         return {
           id: user.id,
           email: user.email,
