@@ -102,3 +102,24 @@ export const registrationRateLimiter = createRateLimiter('registration', {
   max: 3, // 3 registration attempts per hour
   message: 'Too many registration attempts, please try again later'
 });
+
+// Legacy exports for backward compatibility with middleware/index.ts
+export const rateLimitMiddleware = (req: NextRequest, options: RateLimitConfig = {}) => {
+  const limiter = createRateLimiter('default', options);
+  return limiter(req);
+};
+
+export const addRateLimitHeaders = (res: NextResponse, req: NextRequest, options: RateLimitConfig = {}) => {
+  // Add rate limit headers to response
+  const config = { ...defaultConfig, ...options };
+  const keyGen = config.keyGenerator || defaultConfig.keyGenerator;
+  const key = keyGen!(req);
+  
+  res.headers.set('X-RateLimit-Limit', String(config.max));
+  res.headers.set('X-RateLimit-Window', String(config.windowMs));
+  
+  return res;
+};
+
+export type { RateLimitConfig as RateLimitOptions };
+export const rateLimiter = createRateLimiter;

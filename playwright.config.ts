@@ -89,9 +89,9 @@ export default defineConfig({
     stdout: 'pipe',
     stderr: 'pipe',
     env: {
-      NODE_ENV: 'test',
       // Ensure proper environment variables are set
       ...process.env,
+      NODE_ENV: 'test',
     },
   },
 });

@@ -1,8 +1,8 @@
 import { authenticateRequest } from '@/lib/auth/middleware';
-import { getServerSession } from 'next-auth/next';
+import { auth } from '@/lib/auth';
 import { UnauthorizedError } from '@/lib/api/errors';
 
-jest.mock('next-auth/next');
+jest.mock('@/lib/auth');
 
 describe('Authentication Middleware', () => {
   beforeEach(() => {
@@ -19,7 +19,7 @@ describe('Authentication Middleware', () => {
         }
       };
 
-      (getServerSession as jest.Mock).mockResolvedValue(mockSession);
+      (auth as jest.Mock).mockResolvedValue(mockSession);
 
       const result = await authenticateRequest();
 
@@ -31,7 +31,7 @@ describe('Authentication Middleware', () => {
     });
 
     it('should throw UnauthorizedError when no session exists', async () => {
-      (getServerSession as jest.Mock).mockResolvedValue(null);
+      (auth as jest.Mock).mockResolvedValue(null);
 
       await expect(authenticateRequest()).rejects.toThrow(UnauthorizedError);
       await expect(authenticateRequest()).rejects.toThrow('Authentication required');
@@ -39,7 +39,7 @@ describe('Authentication Middleware', () => {
 
     it('should throw UnauthorizedError when session has no user', async () => {
       const mockSession = {};
-      (getServerSession as jest.Mock).mockResolvedValue(mockSession);
+      (auth as jest.Mock).mockResolvedValue(mockSession);
 
       await expect(authenticateRequest()).rejects.toThrow(UnauthorizedError);
     });

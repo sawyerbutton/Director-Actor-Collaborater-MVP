@@ -34,7 +34,7 @@ export async function withMiddleware(
     // Rate limiting middleware
     if (rateLimit) {
       const rateLimitOptions = typeof rateLimit === 'object' ? rateLimit : {};
-      const rateLimitResponse = rateLimitMiddleware(request, rateLimitOptions);
+      const rateLimitResponse = await rateLimitMiddleware(request, rateLimitOptions);
       
       if (rateLimitResponse) {
         if (logging && logContext) {

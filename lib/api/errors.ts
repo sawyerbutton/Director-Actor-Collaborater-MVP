@@ -66,7 +66,7 @@ export class ConflictError extends ApiError {
 
 export class BusinessError extends ApiError {
   constructor(message: string = 'Business logic error', details?: any) {
-    super(ERROR_CODES.BIZ_001, message, HTTP_STATUS.CONFLICT, details);
+    super(ERROR_CODES.CONFLICT, message, HTTP_STATUS.CONFLICT, details);
     this.name = 'BusinessError';
   }
 }
@@ -158,6 +158,7 @@ export const ERROR_MESSAGES: Record<string, string> = {
   [ERROR_CODES.NOT_FOUND]: 'Resource not found',
   [ERROR_CODES.UNAUTHORIZED]: 'Authentication required',
   [ERROR_CODES.FORBIDDEN]: 'Access denied',
+  [ERROR_CODES.RATE_LIMIT]: 'Too many requests, please try again later',
   [ERROR_CODES.RATE_LIMIT_EXCEEDED]: 'Too many requests',
   [ERROR_CODES.BAD_REQUEST]: 'Bad request',
   [ERROR_CODES.CONFLICT]: 'Resource conflict',

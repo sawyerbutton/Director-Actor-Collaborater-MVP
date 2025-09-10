@@ -1,5 +1,4 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth/config";
+import { auth } from "@/lib/auth";
 import { UnauthorizedError } from "@/lib/api/errors";
 import { NextRequest } from "next/server";
 
@@ -10,7 +9,7 @@ export interface AuthUser {
 }
 
 export async function authenticateRequest(request?: NextRequest): Promise<AuthUser> {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   
   if (!session?.user) {
     throw new UnauthorizedError('Authentication required');
@@ -24,7 +23,7 @@ export async function authenticateRequest(request?: NextRequest): Promise<AuthUs
 }
 
 export async function getOptionalAuth(): Promise<AuthUser | null> {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   
   if (!session?.user) {
     return null;

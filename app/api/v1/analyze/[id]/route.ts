@@ -167,7 +167,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
       // Update analysis record
       const updatedAnalysis = await analysisService.update(analysisId, {
-        suggestions: updatedSuggestions
+        suggestions: updatedSuggestions as any // Type cast for Prisma JsonValue compatibility
       });
 
       return NextResponse.json(
