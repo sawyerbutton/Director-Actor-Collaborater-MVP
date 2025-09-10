@@ -114,6 +114,7 @@ ScriptAI is a Next.js monolithic application that leverages three collaborative 
 | **AI Service** | DeepSeek API | v1 |
 | **Unit Testing** | Jest + React Testing Library | latest |
 | **E2E Testing** | Playwright | 1.55.0 |
+| **Cache** | Redis (optional) | 7.x |
 | **Deployment** | Vercel & Supabase | - |
 
 ## Project Structure
@@ -492,9 +493,19 @@ Configure these in Vercel dashboard:
     - User navigation menu components
     - Protected route middleware
     - E2E test pass rate achieved (6/8 tests passing)
-    - QA Gate: CONCERNS (rate limiting integration pending)
+    - QA Gate: PASS
 
-12. **E2E Testing Infrastructure** (Completed Post-MVP)
+12. **Story 3.6: E2E Test Environment & Rate Limiting Integration**
+    - WSL environment auto-configuration for stable testing
+    - Redis-based rate limiter with intelligent fallback to in-memory storage
+    - NextAuth login endpoint integrated with rate limiting (5 failures trigger)
+    - Jest unit test configuration fixed for NextAuth v5 compatibility
+    - Playwright webServer configuration enabled for automated test runs
+    - E2E test pass rate >80% achieved
+    - Comprehensive test reporting and error logging
+    - QA Gate: PASS (Score: 95/100)
+
+13. **E2E Testing Infrastructure** (Completed Post-MVP)
     - Playwright framework with WSL optimization
     - 48 comprehensive E2E tests covering all user journeys
     - Authentication, script analysis, error detection, modifications
@@ -505,10 +516,10 @@ Configure these in Vercel dashboard:
 
 ### MVP Development Complete! 🎉
 
-**All 13 user stories successfully completed across 3 epics:**
+**All 14 user stories successfully completed across 3 epics:**
 - Epic A: Core AI Engine (5/5 stories) ✅
 - Epic B: User Interface (3/3 stories) ✅  
-- Epic C: Backend Infrastructure (5/5 stories) ✅
+- Epic C: Backend Infrastructure (6/6 stories) ✅
 
 ### Development Timeline
 
@@ -531,6 +542,7 @@ Configure these in Vercel dashboard:
 - [x] Core business APIs (Story 3.3)
 - [x] Authentication system (Story 3.4)
 - [x] E2E test UI selector mapping fix (Story 3.5)
+- [x] E2E test environment & rate limiting integration (Story 3.6)
 
 ## Support
 

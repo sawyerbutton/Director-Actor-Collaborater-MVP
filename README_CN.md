@@ -121,6 +121,15 @@ ScriptAI是一个Next.js单体应用程序，利用三个协作AI代理来分析
 - 受保护路由中间件
 - auth.spec.ts测试通过率达标（6/8测试通过）
 
+#### ✅ E2E测试环境完善与速率限制集成（Story 3.6）
+- WSL环境配置自动化，测试稳定运行
+- Redis基础速率限制器，智能回退到内存存储
+- NextAuth登录端点集成速率限制（5次失败后触发）
+- Jest单元测试配置修复，NextAuth v5兼容
+- Playwright webServer配置启用，自动化测试运行
+- E2E测试通过率>80%达成
+- 完整的测试报告和错误日志生成
+
 ## 技术栈
 
 | 类别 | 技术 | 版本 |
@@ -135,6 +144,7 @@ ScriptAI是一个Next.js单体应用程序，利用三个协作AI代理来分析
 | **认证** | NextAuth.js | v5 (beta) |
 | **AI服务** | DeepSeek API | v1 |
 | **测试** | Jest + RTL, Playwright | latest |
+| **缓存** | Redis (可选) | 7.x |
 | **部署** | Vercel & Supabase | - |
 
 ## 项目结构
@@ -352,10 +362,10 @@ npx prisma generate                                # 生成Prisma客户端
 
 ### 当前状态：MVP完成！🎉
 
-**所有13个用户故事成功完成，横跨3个史诗：**
+**所有14个用户故事成功完成，横跨3个史诗：**
 - Epic A：核心AI引擎（5/5故事）✅
 - Epic B：用户界面（3/3故事）✅
-- Epic C：后端基础设施（5/5故事）✅
+- Epic C：后端基础设施（6/6故事）✅
 
 ### 开发时间线
 
@@ -378,6 +388,7 @@ npx prisma generate                                # 生成Prisma客户端
 - [x] 核心业务API（Story 3.3）
 - [x] 认证系统（Story 3.4）
 - [x] E2E测试UI选择器映射修复（Story 3.5）
+- [x] E2E测试环境完善与速率限制集成（Story 3.6）
 
 ## 贡献
 
