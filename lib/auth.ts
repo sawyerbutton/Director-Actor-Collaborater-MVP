@@ -17,8 +17,22 @@ declare module "next-auth" {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
+  // TODO: REMOVE FOR PRODUCTION - Local testing only
+  trustHost: true, // Allow any host in development/testing
   session: {
     strategy: "jwt",
+  },
+  // TODO: REVERT FOR PRODUCTION - Cookie configuration for local testing
+  cookies: {
+    csrfToken: {
+      name: `next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: false, // TODO: MUST BE true IN PRODUCTION - Allow HTTP for local testing
+      },
+    },
   },
   providers: [
     Credentials({

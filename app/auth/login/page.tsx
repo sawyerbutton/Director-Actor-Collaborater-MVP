@@ -1,6 +1,6 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
-import { LoginForm } from '@/components/auth/login-form'
+import { SimpleLoginForm } from '@/components/auth/simple-login-form'
 
 export const metadata: Metadata = {
   title: 'Sign In',
@@ -22,7 +22,7 @@ export default function LoginPage() {
             </Link>
           </p>
         </div>
-        <LoginForm />
+        <SimpleLoginForm />
         <div className="text-center">
           <Link href="/auth/forgot-password" className="text-sm text-muted-foreground hover:underline">
             Forgot password?
