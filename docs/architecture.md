@@ -1,26 +1,80 @@
-# 全栈架构文档: ScriptAI MVP
+# ScriptAI MVP 全栈架构文档 v2.0
 
-## 1. 高层架构
-* **技术摘要**: 本项目将采用基于Next.js的全栈单体架构，部署在Vercel平台上。前端将利用`shadcn/ui`组件库构建，后端逻辑通过Vercel的Serverless Functions实现。数据将存储在由Supabase托管的PostgreSQL数据库中。整个架构的核心是与DeepSeek AI API的集成。
-* **平台与基础设施**: **Vercel + Supabase**。
-* **代码仓库结构**: **单体仓库 (Single Repository)**。
-* **高层架构图**:
-    ```mermaid
-    graph TD
-        subgraph "用户端 (Browser)"
-            A[Next.js Frontend on Vercel]
-        end
-        subgraph "Vercel平台"
-            B[API Routes / Serverless Functions]
-        end
-        subgraph "第三方服务"
-            C[DeepSeek AI API]
-            D[Supabase (PostgreSQL DB)]
-        end
-        A -- "HTTP请求" --> B;
-        B -- "调用AI分析" --> C;
-        B -- "读写数据 (Prisma)" --> D;
-    ```
+## 1. 引言
+
+本文档定义了ScriptAI MVP的完整全栈架构，包含前端、后端及其集成设计。此文档作为AI驱动开发的单一事实来源，确保整个技术栈的一致性。
+
+本架构针对**Epic D: 简化MVP - 移除认证模块**进行了重大更新，创建了一个零门槛的演示版本。
+
+### 项目基础
+- **基于现有项目**: Director-Actor-Collaborator MVP
+- **核心变更**: 移除NextAuth认证系统，实现默认用户模式
+- **保留架构**: Next.js 14 App Router、Prisma、PostgreSQL、TailwindCSS
+- **新增特性**: 演示模式、默认用户系统、自动数据清理
+
+### 变更日志
+| 日期 | 版本 | 描述 | 作者 |
+|:-----|:-----|:-----|:-----|
+| 2025-09-15 | 2.0 | 基于Epic D更新，移除认证系统 | Winston |
+| 2025-08-31 | 1.0 | 初始架构文档 | Winston |
+
+## 2. 高层架构
+
+### 技术摘要
+ScriptAI MVP采用Next.js 14单体架构部署于Vercel平台，前端使用React Server Components和Tailwind CSS构建响应式界面，后端通过API Routes处理业务逻辑并集成DeepSeek API进行AI分析。系统使用PostgreSQL存储剧本数据和分析结果，通过Prisma ORM管理数据访问，在演示模式下使用默认用户系统实现零门槛访问。整体架构优先考虑快速迭代和简单部署，通过移除认证障碍让用户能在10秒内体验核心的多Agent剧本分析功能。
+
+### 平台与基础设施选择
+**平台**: Vercel + Supabase
+**核心服务**:
+- Vercel: Next.js托管、Edge Functions、静态资源CDN
+- Supabase: PostgreSQL数据库、存储服务
+- DeepSeek API: AI Agent分析引擎
+
+### 代码仓库结构
+**结构**: 单体仓库（Monorepo）
+**包组织**:
+- `/app` - Next.js应用路由和页面
+- `/components` - 共享UI组件
+- `/lib` - 业务逻辑和工具函数
+- `/prisma` - 数据库schema和迁移
+
+### 高层架构图
+```mermaid
+graph TB
+    subgraph "用户端"
+        U[用户浏览器]
+    end
+
+    subgraph "Vercel Edge"
+        NC[Next.js Client Components]
+        NS[Next.js Server Components]
+        API[API Routes]
+    end
+
+    subgraph "业务逻辑层"
+        DU[默认用户服务]
+        SA[剧本分析服务]
+        RM[修改管理服务]
+    end
+
+    subgraph "外部服务"
+        DS[DeepSeek API]
+        DB[(PostgreSQL/Supabase)]
+    end
+
+    U -->|无需登录| NC
+    NC <--> NS
+    NS --> API
+    API --> DU
+    API --> SA
+    API --> RM
+    SA --> DS
+    SA --> DB
+    RM --> DB
+    DU --> DB
+
+    style DU fill:#ffe4b5
+```
 
 ## 2. 技术栈
 | 类别 | 技术 | 版本 |
