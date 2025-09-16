@@ -1,19 +1,11 @@
 import { Metadata } from 'next'
-import { redirect } from 'next/navigation'
-import { auth } from '@/lib/auth'
 
 export const metadata: Metadata = {
   title: 'Settings',
   description: 'Account settings'
 }
 
-export default async function SettingsPage() {
-  const session = await auth()
-  
-  if (!session) {
-    redirect('/auth/login')
-  }
-
+export default function SettingsPage() {
   return (
     <div className="container mx-auto py-8">
       <div className="max-w-4xl mx-auto">
@@ -23,11 +15,11 @@ export default async function SettingsPage() {
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium text-muted-foreground">Email</label>
-              <p className="mt-1">{session.user?.email}</p>
+              <p className="mt-1">demo@example.com</p>
             </div>
             <div>
               <label className="text-sm font-medium text-muted-foreground">Name</label>
-              <p className="mt-1">{session.user?.name || 'Not set'}</p>
+              <p className="mt-1">Demo User</p>
             </div>
           </div>
         </div>

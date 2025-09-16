@@ -40,24 +40,6 @@ async function checkRedisHealth(): Promise<'healthy' | 'not_configured' | 'unhea
   }
 }
 
-async function checkAuthHealth(): Promise<'healthy' | 'degraded' | 'unhealthy'> {
-  try {
-    // Check if NextAuth configuration is present
-    if (!process.env.NEXTAUTH_SECRET || !process.env.NEXTAUTH_URL) {
-      return 'unhealthy';
-    }
-    
-    // Check if the secret meets minimum requirements
-    if (process.env.NEXTAUTH_SECRET.length < 32) {
-      return 'degraded';
-    }
-    
-    return 'healthy';
-  } catch (error) {
-    console.error('Auth health check failed:', error);
-    return 'unhealthy';
-  }
-}
 
 export async function GET(request: NextRequest) {
   return withMiddleware(request, async () => {
@@ -65,20 +47,18 @@ export async function GET(request: NextRequest) {
       const startTime = Date.now();
       
       // Perform health checks in parallel
-      const [databaseHealth, redisHealth, authHealth] = await Promise.all([
+      const [databaseHealth, redisHealth] = await Promise.all([
         checkDatabaseHealth(),
         checkRedisHealth(),
-        checkAuthHealth(),
       ]);
       
       // Determine overall status
       let overallStatus: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
       
-      if (databaseHealth === 'unhealthy' || authHealth === 'unhealthy') {
+      if (databaseHealth === 'unhealthy') {
         overallStatus = 'unhealthy';
       } else if (
-        databaseHealth === 'degraded' || 
-        authHealth === 'degraded' || 
+        databaseHealth === 'degraded' ||
         (redisHealth === 'unhealthy' && process.env.NODE_ENV === 'production')
       ) {
         overallStatus = 'degraded';
@@ -100,7 +80,6 @@ export async function GET(request: NextRequest) {
           api: 'healthy',
           database: databaseHealth,
           redis: redisHealth,
-          auth: authHealth,
         },
         system: {
           nodeVersion: process.version,

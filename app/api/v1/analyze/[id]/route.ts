@@ -6,7 +6,6 @@ import { handleApiError, ValidationError, UnauthorizedError, NotFoundError, Forb
 import { analysisService } from '@/lib/db/services/analysis.service';
 import { ERROR_CODES, HTTP_STATUS } from '@/lib/config/constants';
 import { sanitizeInput } from '@/lib/api/sanitization';
-import { authenticateRequest } from '@/lib/auth/middleware';
 import { prisma } from '@/lib/db/client';
 
 // Validation schemas
@@ -30,9 +29,8 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   return withMiddleware(request, async () => {
     try {
-      // Authenticate user
-      const user = await authenticateRequest(request);
-      const userId = user.id;
+      // Use demo user for now
+      const userId = 'demo-user';
 
       // Get analysis ID from params
       const analysisId = params.id;
@@ -107,9 +105,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   return withMiddleware(request, async () => {
     try {
-      // Authenticate user
-      const user = await authenticateRequest(request);
-      const userId = user.id;
+      // Use demo user for now
+      const userId = 'demo-user';
 
       // Get analysis ID from params
       const analysisId = params.id;

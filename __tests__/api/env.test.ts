@@ -13,29 +13,42 @@ describe('Environment Configuration', () => {
   });
 
   it('should validate and return environment variables', () => {
-    process.env.NODE_ENV = 'test';
+    // Use Object.defineProperty to modify readonly NODE_ENV
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'test',
+      configurable: true
+    });
     process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
     process.env.NEXT_PUBLIC_API_VERSION = 'v1';
-    
+
     const config = env.getAll();
-    
+
     expect(config.NODE_ENV).toBe('test');
     expect(config.NEXT_PUBLIC_APP_URL).toBe('http://localhost:3000');
     expect(config.NEXT_PUBLIC_API_VERSION).toBe('v1');
   });
 
   it('should provide environment check methods', () => {
-    process.env.NODE_ENV = 'development';
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'development',
+      configurable: true
+    });
     expect(env.isDevelopment()).toBe(true);
     expect(env.isProduction()).toBe(false);
     expect(env.isTest()).toBe(false);
-    
-    process.env.NODE_ENV = 'production';
+
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'production',
+      configurable: true
+    });
     expect(env.isDevelopment()).toBe(false);
     expect(env.isProduction()).toBe(true);
     expect(env.isTest()).toBe(false);
-    
-    process.env.NODE_ENV = 'test';
+
+    Object.defineProperty(process.env, 'NODE_ENV', {
+      value: 'test',
+      configurable: true
+    });
     expect(env.isDevelopment()).toBe(false);
     expect(env.isProduction()).toBe(false);
     expect(env.isTest()).toBe(true);

@@ -8,7 +8,6 @@ import { analysisService } from '@/lib/db/services/analysis.service';
 import { ERROR_CODES, HTTP_STATUS } from '@/lib/config/constants';
 import { sanitizeInput, sanitizeScriptContent, validateRequestSize, RequestSizeError } from '@/lib/api/sanitization';
 import { analysisQueue } from '@/lib/api/job-queue';
-import { authenticateRequest } from '@/lib/auth/middleware';
 
 // Validation schema
 const analyzeRequestSchema = z.object({
@@ -22,9 +21,8 @@ const analyzeRequestSchema = z.object({
 export async function POST(request: NextRequest) {
   return withMiddleware(request, async () => {
     try {
-      // Authenticate user
-      const user = await authenticateRequest(request);
-      const userId = user.id;
+      // Use demo user for now
+      const userId = 'demo-user';
 
       // Parse and validate request body
       const body = await request.json();

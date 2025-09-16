@@ -6,7 +6,6 @@ import { handleApiError, ValidationError, UnauthorizedError } from '@/lib/api/er
 import { projectService } from '@/lib/db/services/project.service';
 import { ERROR_CODES, HTTP_STATUS } from '@/lib/config/constants';
 import { sanitizeInput, sanitizeScriptContent, validateRequestSize, RequestSizeError } from '@/lib/api/sanitization';
-import { authenticateRequest } from '@/lib/auth/middleware';
 
 // Validation schemas
 const createProjectSchema = z.object({
@@ -25,9 +24,8 @@ const querySchema = z.object({
 export async function POST(request: NextRequest) {
   return withMiddleware(request, async () => {
     try {
-      // Authenticate user
-      const user = await authenticateRequest(request);
-      const userId = user.id;
+      // Use demo user for now
+      const userId = 'demo-user';
 
       // Parse and validate request body
       const body = await request.json();
@@ -76,9 +74,8 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   return withMiddleware(request, async () => {
     try {
-      // Authenticate user
-      const user = await authenticateRequest(request);
-      const userId = user.id;
+      // Use demo user for now
+      const userId = 'demo-user';
 
       // Parse query parameters
       const searchParams = request.nextUrl.searchParams;

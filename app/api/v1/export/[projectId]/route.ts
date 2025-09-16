@@ -5,7 +5,6 @@ import { handleApiError, ValidationError, UnauthorizedError, NotFoundError, Forb
 import { projectService } from '@/lib/db/services/project.service';
 import { analysisService } from '@/lib/db/services/analysis.service';
 import { ERROR_CODES, HTTP_STATUS } from '@/lib/config/constants';
-import { authenticateRequest } from '@/lib/auth/middleware';
 
 // Validation schema for query params
 const exportQuerySchema = z.object({
@@ -65,9 +64,8 @@ function formatProjectAsMarkdown(project: any, analysis?: any): string {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   return withMiddleware(request, async () => {
     try {
-      // Authenticate user
-      const user = await authenticateRequest(request);
-      const userId = user.id;
+      // Use demo user for now
+      const userId = 'demo-user';
 
       // Get project ID from params
       const projectId = params.projectId;

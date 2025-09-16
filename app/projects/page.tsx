@@ -1,19 +1,11 @@
 import { Metadata } from 'next'
-import { redirect } from 'next/navigation'
-import { auth } from '@/lib/auth'
 
 export const metadata: Metadata = {
   title: 'Projects',
   description: 'Manage your projects'
 }
 
-export default async function ProjectsPage() {
-  const session = await auth()
-  
-  if (!session) {
-    redirect('/auth/login')
-  }
-
+export default function ProjectsPage() {
   return (
     <div className="container mx-auto py-8">
       <div className="max-w-6xl mx-auto">

@@ -8,11 +8,7 @@ declare global {
       
       // Database
       DATABASE_URL?: string;
-      
-      // Authentication
-      NEXTAUTH_URL?: string;
-      NEXTAUTH_SECRET?: string;
-      
+
       // AI Service
       DEEPSEEK_API_KEY?: string;
       DEEPSEEK_API_URL?: string;
