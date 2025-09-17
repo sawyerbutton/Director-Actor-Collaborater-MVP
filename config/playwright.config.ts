@@ -6,8 +6,8 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   // Test directory
-  testDir: './e2e',
-  
+  testDir: '../tests/e2e',
+
   // Test execution settings
   timeout: 60000, // 60 seconds per test (increased for stability)
   expect: { 
@@ -21,8 +21,8 @@ export default defineConfig({
   
   // Reporter configuration
   reporter: [
-    ['html', { outputFolder: 'playwright-report' }],
-    ['json', { outputFile: 'test-results.json' }],
+    ['html', { outputFolder: '../tests/results/playwright-report' }],
+    ['json', { outputFile: '../tests/results/test-results.json' }],
     ['list'] // Console output
   ],
   

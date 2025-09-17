@@ -1,25 +1,26 @@
 const nextJest = require('next/jest')
 
 const createJestConfig = nextJest({
-  dir: './',
+  dir: '../',
 })
 
 const customJestConfig = {
-  setupFiles: ['<rootDir>/__tests__/api/setup.ts'],
-  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  rootDir: '../',
+  setupFiles: ['<rootDir>/tests/__tests__/api/setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/config/jest.setup.js'],
   testEnvironment: 'jest-environment-jsdom',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
-    '^next-auth': '<rootDir>/__mocks__/next-auth.js',
-    '^next-auth/next': '<rootDir>/__mocks__/next-auth.js',
+    '^next-auth': '<rootDir>/tests/__mocks__/next-auth.js',
+    '^next-auth/next': '<rootDir>/tests/__mocks__/next-auth.js',
   },
   testMatch: [
-    '**/__tests__/**/*.test.ts?(x)',
-    '**/__tests__/**/*.spec.ts?(x)'
+    '**/tests/__tests__/**/*.test.ts?(x)',
+    '**/tests/__tests__/**/*.spec.ts?(x)'
   ],
   testPathIgnorePatterns: [
     '/node_modules/',
-    '/__tests__/.*samples/.*'
+    '/tests/__tests__/.*samples/.*'
   ],
   collectCoverageFrom: [
     'lib/**/*.{ts,tsx}',
