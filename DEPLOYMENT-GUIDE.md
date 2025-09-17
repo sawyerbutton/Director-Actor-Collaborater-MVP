@@ -39,41 +39,100 @@ npm run build
 1. 访问 https://app.supabase.com
 2. 点击 **"New Project"**
 3. 填写项目信息：
-   - **Project name**: director-actor-mvp
-   - **Database Password**: 设置一个强密码（保存好！）
-   - **Region**: 选择 Southeast Asia (新加坡) - 离中国最近
-   - **Pricing Plan**: Free (免费套餐)
+   - **Name**: director-actor-mvp
+   - **Database Password**: 设置一个强密码（⚠️ 重要：请保存好这个密码！）
+   - **Region**: 选择 Southeast Asia (Singapore) - 离中国最近
+   - **Pricing Plan**: Free tier (免费套餐)
 4. 点击 **"Create new project"** (创建需要1-2分钟)
 
-### 步骤 2: 获取数据库连接字符串
-1. 项目创建完成后，进入项目仪表板
-2. 点击左侧菜单的 **"Settings"** (设置)
-3. 点击 **"Database"**
-4. 找到 **"Connection string"** 部分
-5. 选择 **"URI"** 标签
-6. 复制连接字符串，格式如下：
-   ```
-   postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+### 步骤 2: 获取数据库连接字符串（2024年最新流程）
+
+1. 项目创建完成后，在项目仪表板中
+2. 点击顶部的 **"Connect"** 按钮（或进入 Settings → Database）
+3. 您会看到三种连接字符串类型：
+   - **Direct Database Connection** - 直连数据库
+   - **Transaction Pooler** - 事务模式连接池（无服务器环境推荐）
+   - **Session Pooler** - 会话模式连接池
+
+#### 获取 Prisma 所需的两个连接字符串：
+
+**方法一：使用连接字符串页面**
+
+1. **获取 DATABASE_URL（应用运行时使用）：**
+   - 选择 **"Transaction Pooler"** 选项卡
+   - 复制连接字符串（端口 6543）
+   - 格式：`postgresql://postgres.[项目ref]:[密码]@aws-0-[地区].pooler.supabase.com:6543/postgres`
+   - 在连接字符串末尾添加 `?pgbouncer=true`
+
+2. **获取 DIRECT_URL（数据库迁移使用）：**
+   - 选择 **"Direct Database Connection"** 选项卡
+   - 复制连接字符串（端口 5432）
+   - 格式：`postgresql://postgres.[项目ref]:[密码]@aws-0-[地区].pooler.supabase.com:5432/postgres`
+
+**方法二：为 Prisma 创建专用用户（推荐）**
+
+1. 在 Supabase SQL Editor 中运行：
+   ```sql
+   -- 创建 Prisma 专用用户
+   CREATE USER prisma_user WITH PASSWORD '生成的强密码';
+   GRANT ALL PRIVILEGES ON SCHEMA public TO prisma_user;
    ```
 
-   > ⚠️ 注意：将 `[YOUR-PASSWORD]` 替换为您在步骤1设置的数据库密码
+2. 使用新用户的连接字符串
 
-### 步骤 3: 初始化数据库结构
-在本地终端运行：
+> ⚠️ **重要说明：**
+> - Vercel 等无服务器环境必须使用 **Transaction Pooler**（端口 6543）作为 DATABASE_URL
+> - Prisma 迁移必须使用 **Direct Connection**（端口 5432）作为 DIRECT_URL
+> - Transaction 模式不支持预处理语句，需在连接字符串添加 `?pgbouncer=true`
+
+### 步骤 3: 配置 Prisma 并初始化数据库
+
+#### 3.1 更新 prisma/schema.prisma 文件
+
+确保您的 schema.prisma 包含 directUrl 配置：
+
+```prisma
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")  // Transaction Pooler 连接
+  directUrl = env("DIRECT_URL")    // Direct Connection 连接
+}
+```
+
+#### 3.2 创建本地环境文件
 
 ```bash
-# 1. 创建临时环境文件用于数据库迁移
-echo "DATABASE_URL=postgresql://postgres:[YOUR-PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres" > .env.production
+# 创建 .env.production 文件
+cat > .env.production << 'EOF'
+# Transaction Pooler（应用运行时）
+DATABASE_URL="postgresql://postgres.[你的项目ref]:[密码]@aws-0-singapore.pooler.supabase.com:6543/postgres?pgbouncer=true"
 
-# 2. 运行Prisma迁移
-npx prisma migrate deploy --schema=./prisma/schema.prisma
+# Direct Connection（数据库迁移）
+DIRECT_URL="postgresql://postgres.[你的项目ref]:[密码]@aws-0-singapore.pooler.supabase.com:5432/postgres"
+EOF
+```
 
-# 3. 生成Prisma客户端
+#### 3.3 初始化数据库
+
+```bash
+# 1. 生成 Prisma Client
 npx prisma generate
 
-# 4. (可选) 验证数据库连接
+# 2. 推送数据库结构到 Supabase（使用 DIRECT_URL）
 npx prisma db push
+
+# 3. 验证表创建成功（可选）
+npx prisma studio
 ```
+
+✅ **成功标志：**
+- 看到 "Your database is now in sync with your Prisma schema"
+- Supabase Table Editor 中能看到创建的表
+
+⚠️ **故障排查：**
+- IPv6 连接问题：某些网络环境不支持 IPv6，可尝试使用 VPN
+- 连接超时：确保 Supabase 项目已完全初始化（等待 2-3 分钟）
+- 权限错误：检查数据库密码是否正确
 
 ---
 
@@ -97,19 +156,44 @@ npx prisma db push
 
 **不要点击Deploy！先配置环境变量**
 
-### 步骤 3: 配置环境变量
-在同一页面，展开 **"Environment Variables"** 部分：
+### 步骤 3: 配置环境变量（2024年最新要求）
 
-添加以下环境变量：
+在 Vercel 导入页面，展开 **"Environment Variables"** 部分：
 
-| 变量名 | 值 | 说明 |
-|--------|-----|------|
-| DATABASE_URL | `postgresql://postgres:[密码]@db.[项目REF].supabase.co:5432/postgres` | Supabase数据库连接 |
-| DIRECT_URL | 同上 | Prisma需要的直连URL |
-| DEEPSEEK_API_KEY | `sk-xxxxx` | 您的DeepSeek API密钥 |
-| DEEPSEEK_API_ENDPOINT | `https://api.deepseek.com/v1` | DeepSeek API端点 |
-| NODE_ENV | `production` | 生产环境标识 |
-| NEXT_PUBLIC_APP_URL | `https://[你的项目名].vercel.app` | 应用URL(部署后更新) |
+#### 必需的环境变量
+
+| 变量名 | 值 | 说明 | 环境 |
+|--------|-----|------|------|
+| `DATABASE_URL` | Transaction Pooler 连接 + `?pgbouncer=true` | 应用运行时连接（端口 6543） | Production, Preview, Development |
+| `DIRECT_URL` | Direct Connection 连接 | Prisma 迁移连接（端口 5432） | Production, Preview, Development |
+| `DEEPSEEK_API_KEY` | `sk-xxxxx` | DeepSeek API 密钥 | Production, Preview |
+| `DEEPSEEK_API_ENDPOINT` | `https://api.deepseek.com/v1` | API 端点 | Production, Preview |
+| `NODE_ENV` | `production` | 环境标识 | Production |
+| `NEXT_PUBLIC_APP_URL` | 暂时留空 | 部署后填写实际 URL | Production |
+
+#### 添加步骤：
+
+1. 逐个输入变量名和值
+2. 选择变量应用的环境（Production/Preview/Development）
+3. 点击 "Add" 添加每个变量
+4. **确认所有 6 个变量都已添加**
+5. 点击 "Deploy" 开始部署
+
+#### 正确的连接字符串格式：
+
+```env
+# ✅ 正确格式
+DATABASE_URL="postgresql://postgres.xxx:[密码]@aws-0-singapore.pooler.supabase.com:6543/postgres?pgbouncer=true"
+DIRECT_URL="postgresql://postgres.xxx:[密码]@aws-0-singapore.pooler.supabase.com:5432/postgres"
+
+# ❌ 错误格式（缺少 pgbouncer 参数）
+DATABASE_URL="postgresql://postgres.xxx:[密码]@aws-0-singapore.pooler.supabase.com:6543/postgres"
+```
+
+> ⚠️ **2024 年重要更新：**
+> - 环境变量修改后**必须重新部署**才能生效
+> - 客户端变量必须以 `NEXT_PUBLIC_` 开头
+> - 可使用 `vercel env pull` 同步本地环境变量
 
 ### 步骤 4: 部署项目
 1. 确认所有环境变量已添加
@@ -141,20 +225,40 @@ npx prisma db push
    - 点击最新部署旁的三个点
    - 选择 **"Redeploy"**
 
-### 环境变量清单：
-```env
-# 数据库配置（Supabase）
-DATABASE_URL=postgresql://postgres:你的密码@db.项目ref.supabase.co:5432/postgres
-DIRECT_URL=postgresql://postgres:你的密码@db.项目ref.supabase.co:5432/postgres
+### 环境变量完整模板（2024年版）：
 
-# DeepSeek API配置
-DEEPSEEK_API_KEY=你的API密钥
+```env
+# === Supabase 数据库配置 ===
+# Transaction Pooler（无服务器环境必需，端口 6543）
+DATABASE_URL="postgresql://postgres.[项目ref]:[密码]@aws-0-singapore.pooler.supabase.com:6543/postgres?pgbouncer=true"
+
+# Direct Connection（Prisma 迁移必需，端口 5432）
+DIRECT_URL="postgresql://postgres.[项目ref]:[密码]@aws-0-singapore.pooler.supabase.com:5432/postgres"
+
+# === DeepSeek API 配置 ===
+DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxx
 DEEPSEEK_API_ENDPOINT=https://api.deepseek.com/v1
 
-# 应用配置
+# === 应用配置 ===
 NODE_ENV=production
-NEXT_PUBLIC_APP_URL=https://你的应用.vercel.app
+NEXT_PUBLIC_APP_URL=https://[项目名].vercel.app  # 部署成功后更新
 ```
+
+#### 2024 年关键更新：
+
+1. **连接池模式选择：**
+   - **Transaction Mode**（端口 6543）：用于无服务器/边缘函数
+   - **Session Mode**（端口 5432）：用于持久连接
+   - **Direct Connection**：仅用于迁移和开发
+
+2. **Prisma 配置要求：**
+   - 必须在 schema.prisma 中同时配置 `url` 和 `directUrl`
+   - Transaction 模式必须添加 `?pgbouncer=true` 参数
+
+3. **Vercel 部署注意：**
+   - 环境变量更改后必须重新部署
+   - 使用 `vercel env pull` 保持本地同步
+   - 客户端变量必须以 `NEXT_PUBLIC_` 开头
 
 ---
 
@@ -216,13 +320,22 @@ npm run build
 2. 检查环境变量是否都已设置
 3. 查看浏览器控制台错误信息
 
-#### 4. Prisma错误
+#### 4. Prisma 错误（2024 常见问题）
+
 **错误**: `The table does not exist`
 ```bash
-# 重新运行迁移
-DATABASE_URL="你的连接字符串" npx prisma migrate deploy
-DATABASE_URL="你的连接字符串" npx prisma generate
+# 使用 DIRECT_URL 进行数据库推送
+DIRECT_URL="你的直连字符串" npx prisma db push
 ```
+
+**错误**: `prepared statement "s0" does not exist`
+- 原因：Transaction 模式不支持预处理语句
+- 解决：确保 DATABASE_URL 包含 `?pgbouncer=true`
+
+**错误**: `P1001: Can't reach database server`
+- 检查 IPv6 支持（某些网络不支持）
+- 使用 Session Pooler 代替 Direct Connection
+- 确认端口号正确（6543 vs 5432）
 
 #### 5. API调用失败
 **错误**: `Failed to fetch`
@@ -232,30 +345,40 @@ DATABASE_URL="你的连接字符串" npx prisma generate
 
 ---
 
-## 📝 部署检查清单
+## 📝 2024 部署检查清单
 
-### 部署前：
-- [ ] 代码已推送到GitHub
-- [ ] 本地构建测试通过
-- [ ] 环境变量已准备
+### ✅ 第一步：Supabase 准备
+- [ ] 创建 Supabase 项目，保存数据库密码
+- [ ] 等待项目完全初始化（2-3分钟）
+- [ ] 从 Connect 按钮获取两个连接字符串：
+  - [ ] Transaction Pooler URL（端口 6543）
+  - [ ] Direct Connection URL（端口 5432）
+- [ ] 在 DATABASE_URL 末尾添加 `?pgbouncer=true`
+- [ ] 更新 prisma/schema.prisma 添加 `directUrl`
+- [ ] 本地运行 `npx prisma db push` 成功
 
-### Supabase设置：
-- [ ] 项目创建成功
-- [ ] 数据库密码已保存
-- [ ] 连接字符串已获取
-- [ ] 数据库迁移成功
+### ✅ 第二步：Vercel 配置
+- [ ] GitHub 仓库已准备好
+- [ ] 在 Vercel 导入项目
+- [ ] 添加所有 6 个环境变量
+- [ ] 选择正确的环境（Production/Preview）
+- [ ] 确认 DATABASE_URL 包含 `?pgbouncer=true`
+- [ ] 点击 Deploy 开始部署
 
-### Vercel部署：
-- [ ] 项目导入成功
-- [ ] 环境变量已配置
-- [ ] 首次部署成功
-- [ ] 应用URL可访问
+### ✅ 第三步：部署验证
+- [ ] 部署成功完成
+- [ ] 获取部署 URL
+- [ ] 更新 NEXT_PUBLIC_APP_URL 环境变量
+- [ ] 触发重新部署（Redeploy）
+- [ ] 访问 `/api/health` 验证 API
+- [ ] 测试数据库连接
+- [ ] 测试 DeepSeek API 调用
 
-### 验证测试：
-- [ ] 主页加载正常
-- [ ] API端点响应
-- [ ] 数据库连接正常
-- [ ] 功能测试通过
+### ✅ 第四步：后续优化
+- [ ] 使用 `vercel env pull` 同步本地环境
+- [ ] 配置自定义域名（可选）
+- [ ] 启用 Vercel Analytics（可选）
+- [ ] 设置监控和告警（可选）
 
 ---
 
