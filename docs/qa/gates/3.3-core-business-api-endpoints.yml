@@ -1,0 +1,85 @@
+schema: 1
+story: '3.3'
+story_title: '实现核心业务API端点'
+gate: CONCERNS
+status_reason: 'Mock authentication remains but other critical issues resolved. Story functionally complete pending real auth implementation.'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-01-09T14:30:00Z'
+
+top_issues:
+  - severity: high
+    category: security
+    title: 'Mock authentication middleware in use'
+    description: 'All endpoints use mock auth that accepts any token - critical security vulnerability'
+    refs: ['app/api/v1/projects/route.ts:19-25', 'app/api/v1/analyze/route.ts:18-25']
+    suggested_owner: dev
+  - severity: low
+    category: operational
+    title: 'CORS configuration not implemented'
+    description: 'Production CORS settings still needed'
+    refs: ['app/api/v1/*']
+    suggested_owner: dev
+
+waiver: { active: false }
+
+quality_score: 75  # 100 - (20*1 high) - (10*0 medium) - (5*1 low)
+expires: '2025-01-23T12:00:00Z'
+
+evidence:
+  tests_reviewed: 26
+  risks_identified: 15
+  trace:
+    ac_covered: [1, 2, 3, 4, 5, 6]
+    ac_gaps: []
+
+nfr_validation:
+  security:
+    status: CONCERNS
+    notes: 'Input sanitization and rate limiting addressed. Mock auth remains as known limitation for Story 3.4.'
+  performance:
+    status: PASS
+    notes: 'Database indexes added, request size validation implemented, job queue system in place'
+  reliability:
+    status: PASS
+    notes: 'Error handling implemented correctly with proper status codes and retry logic in queue'
+  maintainability:
+    status: PASS
+    notes: 'Code follows project standards, well-structured with service layer separation'
+
+risk_summary:
+  totals:
+    critical: 1  # Only SEC-001 remains
+    high: 0
+    medium: 1  # CORS config
+    low: 2
+  highest:
+    id: SEC-001
+    score: 9
+    title: 'Mock Authentication on API Endpoints'
+  recommendations:
+    must_fix:
+      - 'Replace mock authentication with real NextAuth.js implementation (Story 3.4)'
+      - 'Add CORS configuration for production deployment'
+    monitor:
+      - 'Track API response times under load'
+      - 'Monitor job queue performance and retry rates'
+      - 'Watch for sanitization bypass attempts'
+
+recommendations:
+  immediate:
+    - action: 'Replace mock authentication with NextAuth.js'
+      refs: ['All API routes']
+      priority: critical
+    - action: 'Add input sanitization using DOMPurify or similar'
+      refs: ['app/api/v1/projects/route.ts']
+      priority: high
+    - action: 'Implement rate limiting middleware'
+      refs: ['app/api/v1/analyze/route.ts']
+      priority: high
+  future:
+    - action: 'Add database query optimization with indexes'
+      refs: ['lib/db/services/*.service.ts']
+      priority: medium
+    - action: 'Implement response streaming for large exports'
+      refs: ['app/api/v1/export/[projectId]/route.ts']
+      priority: low

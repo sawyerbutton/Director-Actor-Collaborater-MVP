@@ -1,0 +1,93 @@
+schema: 1
+story: 'SCP-001'
+story_title: 'Sprint Change Proposal: Test Suite Type System Migration'
+gate: CONCERNS
+status_reason: 'Implementation plan is sound but requires enhanced validation procedures and risk mitigation strategies before execution'
+reviewer: 'Quinn (Test Architect)'
+updated: '2025-01-03T10:00:00Z'
+
+top_issues:
+  - severity: medium
+    issue: 'Incomplete current state assessment - actual test state appears better than documented'
+    suggested_owner: dev
+    refs: ['__tests__/lib/analysis/*.test.ts']
+  - severity: medium
+    issue: 'Missing rollback plan for migration failures'
+    suggested_owner: sm
+    refs: ['Sprint planning']
+  - severity: low
+    issue: 'No automated validation tools specified'
+    suggested_owner: dev
+    refs: ['CI/CD pipeline']
+
+waiver: { active: false }
+
+quality_score: 80  # 100 - (0*FAILs) - (2*CONCERNS)
+
+expires: '2025-01-17T10:00:00Z'  # 2 weeks from review
+
+evidence:
+  tests_reviewed: 5
+  risks_identified: 3
+  trace:
+    changes_proposed: [1, 2, 3, 4, 5, 6]
+    changes_validated: [1, 5, 6]  # Confirmed needed
+    changes_questionable: [2, 3, 4]  # May already be done
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: 'No security implications identified in type migration'
+  performance:
+    status: PASS
+    notes: 'TypeScript compilation performance impact minimal'
+  reliability:
+    status: CONCERNS
+    notes: 'Risk of test suite failures during migration without proper validation'
+  maintainability:
+    status: PASS
+    notes: 'Improves long-term maintainability with better type safety'
+
+recommendations:
+  immediate:  # Must address before implementation
+    - action: 'Verify actual current state of test files'
+      refs: ['__tests__/lib/analysis/*.test.ts']
+      priority: high
+    - action: 'Create rollback plan documentation'
+      refs: ['docs/sprint-change-proposals/SCP-001-TEST-MIGRATION.md']
+      priority: high
+    - action: 'Run type check before starting migration'
+      refs: ['npx tsc --noEmit']
+      priority: high
+  future:  # Can be addressed post-implementation
+    - action: 'Add pre-commit hooks for type checking'
+      refs: ['.husky/pre-commit']
+      priority: medium
+    - action: 'Implement test coverage reporting'
+      refs: ['package.json', 'jest.config.js']
+      priority: low
+
+migration_risks:
+  - risk: 'Tests may already be partially migrated'
+    impact: low
+    mitigation: 'Verify current state before changes'
+  - risk: 'Type errors may cascade'
+    impact: medium
+    mitigation: 'Use incremental compilation and testing'
+  - risk: 'Mock factories may need updates'
+    impact: low
+    mitigation: 'Already exist and appear compatible'
+
+validation_checklist:
+  pre_migration:
+    - 'Run npx tsc --noEmit to baseline errors'
+    - 'Document current test failure count'
+    - 'Create git branch for migration'
+  during_migration:
+    - 'Migrate one file at a time'
+    - 'Run type check after each file'
+    - 'Commit working changes frequently'
+  post_migration:
+    - 'Run full test suite'
+    - 'Compare error counts'
+    - 'Document any remaining issues'
