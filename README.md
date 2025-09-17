@@ -11,8 +11,10 @@ ScriptAI is a Next.js monolithic application that leverages three collaborative 
 ### Key Features
 
 - **Instant Script Analysis**: Detect and fix 5+ types of common logical errors in under 10 seconds
+- **AI-Powered Intelligent Repair**: LLM-based intelligent rewriting that maintains script coherence and style consistency
 - **AI Agent Collaboration**: Three specialized agents working together for comprehensive analysis
 - **Interactive Modifications**: Accept or reject AI suggestions with visual context
+- **Smart Export System**: Pre-export warnings to ensure AI repair is applied for best results
 - **Continuous Consistency Engine**: Maintains script consistency even after setting changes
 - **Clean, Minimal Interface**: Distraction-free writing and editing environment
 
@@ -80,6 +82,14 @@ ScriptAI is a Next.js monolithic application that leverages three collaborative 
 - Export service for .txt and .docx formats
 - Comprehensive state management for modification tracking
 - Auto-save draft functionality
+
+#### ✅ AI-Powered Intelligent Repair System (Epic 1 RAG POC)
+- DeepSeek LLM-based intelligent script repair
+- Batch application of accepted modification suggestions
+- Maintains overall script style and language characteristics
+- Context-aware natural language rewriting
+- Repair preview and comparison functionality
+- Smart export warning system
 
 #### ✅ Database & ORM Configuration (Story 3.2)
 - PostgreSQL 16 Alpine running in Docker container
@@ -218,6 +228,7 @@ Visit `http://localhost:3000` to see the application.
 ### 1. Script Input (FR1)
 - Paste text directly or upload .txt/.docx files
 - Support for standard screenplay formats
+- File preview functionality
 
 ### 2. AI Collaborative Analysis (FR2)
 Three specialized agents working in concert:
@@ -237,10 +248,19 @@ Detects 5+ core logical error types:
 - Visual diff view showing proposed changes
 - One-click accept/reject for each suggestion
 - Real-time script updates
+- Undo decision functionality
 
-### 5. Export Functionality (FR6)
+### 5. AI-Powered Intelligent Repair (FR7)
+- **Batch Intelligent Rewriting**: LLM understands full context before applying fixes
+- **Maintains Coherence**: Changes naturally integrate into context
+- **Style Consistency**: Preserves original script's language characteristics
+- **Repair Preview**: View complete repaired results before export
+
+### 6. Export Functionality (FR6)
 - Export revised script with accepted changes
-- Multiple format support (.txt, .docx, .pdf)
+- Smart export warnings (reminds to apply AI repair first)
+- Automatic filename tagging (Intelligent Repair Version/Original Version)
+- Multiple format support (.txt, .docx in development)
 
 ## Development
 
@@ -526,11 +546,12 @@ Configure these in Vercel dashboard:
 
 ### Production Ready! 🚀
 
-**All 15 user stories successfully completed across 4 epics:**
+**All 16 user stories successfully completed across 5 epics:**
 - Epic A: Core AI Engine (5/5 stories) ✅
-- Epic B: User Interface (3/3 stories) ✅  
+- Epic B: User Interface (3/3 stories) ✅
 - Epic C: Backend Infrastructure (6/6 stories) ✅
 - Epic D: Deployment Preparation (1/1 story) ✅
+- Epic 1: AI-Powered Intelligent Repair System (1/1 story) ✅
 
 ### Development Timeline
 
@@ -557,6 +578,12 @@ Configure these in Vercel dashboard:
 
 ### Phase 4: Deployment Preparation (Week 5) ✅ COMPLETE
 - [x] Production deployment preparation & build fixes (Story 4.1)
+
+### Phase 5: AI Enhancement (Week 6) ✅ COMPLETE
+- [x] LLM-based intelligent repair system (Epic 1 RAG POC)
+- [x] Batch application of modification suggestions
+- [x] Repair preview and comparison functionality
+- [x] Smart export warning system
 
 ## Support
 
