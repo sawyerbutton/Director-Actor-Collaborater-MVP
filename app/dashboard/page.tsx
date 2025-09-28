@@ -152,12 +152,12 @@ export default function DashboardPage() {
                         </label>
                         {' '}或拖拽到此处
                       </p>
-                      <p className="text-xs text-gray-500">支持 .txt, .docx 格式</p>
+                      <p className="text-xs text-gray-500">支持 .txt, .md, .markdown 格式</p>
                       <input
                         id="file-upload"
                         type="file"
                         className="hidden"
-                        accept=".txt,.docx"
+                        accept=".txt,.md,.markdown"
                         onChange={handleFileUpload}
                       />
                     </div>

@@ -5,6 +5,7 @@ import { SceneParser } from './scene-parser'
 import { CharacterParser } from './character-parser'
 import { ScriptAssembler } from './assembler'
 import { ScriptSanitizer } from './sanitizer'
+import { MarkdownToScriptConverter } from './converters/markdown-to-script'
 
 export class ScriptParser {
   private preprocessor: TextPreprocessor
@@ -12,13 +13,15 @@ export class ScriptParser {
   private characterParser: CharacterParser
   private assembler: ScriptAssembler
   private sanitizer: ScriptSanitizer
-  
+  private markdownConverter: MarkdownToScriptConverter
+
   constructor(maxInputSize?: number) {
     this.preprocessor = new TextPreprocessor()
     this.sceneParser = new SceneParser()
     this.characterParser = new CharacterParser()
     this.assembler = new ScriptAssembler()
     this.sanitizer = new ScriptSanitizer(maxInputSize)
+    this.markdownConverter = new MarkdownToScriptConverter()
   }
   
   public parse(text: string, options?: ParserOptions): ParsedScript {
@@ -100,9 +103,25 @@ export class ScriptParser {
   
   public parseFile(buffer: Buffer, filename?: string, options?: ParserOptions): ParsedScript {
     try {
-      // Detect encoding
+      // Validate file format if filename is provided
+      if (filename) {
+        const ext = filename.substring(filename.lastIndexOf('.')).toLowerCase()
+        const supportedFormats = ['.txt', '.md', '.markdown']
+
+        if (!supportedFormats.includes(ext)) {
+          throw new Error(`Unsupported file format. Only ${supportedFormats.join(', ')} files are supported`)
+        }
+      }
+
+      // Check if it's a Markdown file
+      if (filename && this.isMarkdownFile(filename)) {
+        const text = buffer.toString('utf8')
+        return this.parseMarkdown(text, options)
+      }
+
+      // Detect encoding for non-markdown files
       const encoding = this.preprocessor.detectEncoding(buffer)
-      
+
       // Convert buffer to string
       let text: string
       if (encoding === 'UTF-16LE') {
@@ -118,19 +137,51 @@ export class ScriptParser {
       } else {
         text = buffer.toString('utf8')
       }
-      
+
       // Parse the text
       const result = this.parse(text, options)
-      
+
       // Add filename to metadata if provided
       if (filename && result.metadata) {
         (result.metadata as any).filename = filename
       }
-      
+
       return result
     } catch (error) {
       return this.createErrorScript('', error as Error)
     }
+  }
+
+  public async parseMarkdown(markdown: string, options?: ParserOptions): Promise<ParsedScript> {
+    try {
+      const result = await this.markdownConverter.convert(markdown)
+
+      // Apply any parser options
+      if (options?.detectCharacterAliases !== false) {
+        this.characterParser.detectCharacterAliases(result.dialogues)
+      }
+
+      return result
+    } catch (error) {
+      return this.createErrorScript(markdown, error as Error)
+    }
+  }
+
+  private isMarkdownFile(filename: string): boolean {
+    const ext = filename.toLowerCase().split('.').pop()
+    return ['md', 'markdown', 'mdown'].includes(ext || '')
+  }
+
+  public looksLikeMarkdown(text: string): boolean {
+    // Check for common Markdown patterns
+    const markdownPatterns = [
+      /^#\s+/m,                    // Headings
+      /\*\*[^*]+\*\*/,           // Bold text
+      /\*\([^)]+\)\*/,           // Action format
+      /^#\s+(场景|SCENE|Scene)/mi  // Scene headings
+    ]
+
+    return markdownPatterns.some(pattern => pattern.test(text))
   }
   
   private createErrorScript(originalText: string, error: Error): ParsedScript {
@@ -185,10 +236,17 @@ export async function parseScript(
 }
 
 // Export for browser usage
-export function parseScriptClient(
+export async function parseScriptClient(
   text: string,
-  options?: ParserOptions
-): ParsedScript {
+  options?: ParserOptions & { format?: 'auto' | 'standard' | 'markdown' }
+): Promise<ParsedScript> {
   const parser = new ScriptParser()
+
+  // Auto-detect markdown format
+  if (options?.format === 'markdown' ||
+      (options?.format === 'auto' && parser.looksLikeMarkdown(text))) {
+    return parser.parseMarkdown(text, options)
+  }
+
   return parser.parse(text, options)
 }

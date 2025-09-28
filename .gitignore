@@ -6,11 +6,11 @@
 .pnp.js
 
 # testing
-/coverage
-/test-results
-/playwright-report
+/tests/results/coverage
+/tests/results/test-results
+/tests/results/playwright-report
 /playwright/.cache
-test-results.json
+/tests/results/test-results.json
 .last-run.json
 
 # next.js
@@ -32,6 +32,7 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+/env/.env*.local
 
 # vercel
 .vercel
