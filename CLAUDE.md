@@ -22,16 +22,22 @@ npm run test:watch          # Run tests in watch mode
 npm run test:e2e            # Run E2E tests (Playwright)
 npm run test:e2e:ui         # Run E2E tests with UI
 npm run test:e2e:debug      # Run E2E tests in debug mode
+npm run test:e2e:headed     # Run E2E tests in headed mode (visible browser)
+npm run test:e2e:report     # Show Playwright test report
 npm run typecheck           # Run TypeScript type checking
 npm run lint                # Run ESLint
+npm run check:all           # Run typecheck, lint, and build in sequence
 ```
 
 ### Database
 ```bash
 npx prisma db push          # Push schema changes to database
 npx prisma migrate dev      # Create and apply migrations
+npx prisma migrate deploy   # Apply migrations in production
+npx prisma migrate reset    # Reset database and reapply migrations
 npx prisma studio           # Open Prisma Studio GUI
 npx prisma generate         # Generate Prisma Client
+npx prisma db seed          # Seed database with initial data
 ```
 
 ### Deployment Verification
@@ -107,6 +113,9 @@ Required for deployment:
 - `DIRECT_URL` - Supabase direct connection (port 5432, for migrations)
 - `DEEPSEEK_API_KEY` - DeepSeek API key
 - `DEEPSEEK_API_URL` - DeepSeek API endpoint (default: https://api.deepseek.com)
+- `NEXTAUTH_URL` - NextAuth URL for authentication (e.g., http://localhost:3000)
+- `NEXTAUTH_SECRET` - NextAuth secret for JWT signing
+- `NEXT_PUBLIC_APP_URL` - Public app URL for client-side operations
 
 ## Deployment Configuration
 
@@ -159,6 +168,13 @@ Required for deployment:
 
 ## Common Development Tasks
 
+### Running a Single Test
+```bash
+npm test -- path/to/test.spec.ts           # Run specific test file
+npm test -- -t "test description"          # Run test by description
+npm run test:e2e -- path/to/e2e.spec.ts   # Run specific E2E test
+```
+
 ### Adding a New API Endpoint
 1. Create route in `app/api/v1/[endpoint]/route.ts`
 2. Use `withMiddleware()` wrapper for standard middleware
@@ -182,8 +198,9 @@ Required for deployment:
 
 - API route handlers: `app/api/v1/*/route.ts`
 - AI agents: `lib/agents/consistency-guardian.ts`, `revision-executive.ts`
-- Script parser: `lib/parser/script-parser.ts`
+- Script parser: `lib/parser/script-parser.ts`, `lib/parser/markdown-script-parser.ts`
 - Database services: `lib/db/services/*.service.ts`
 - Client stores: `lib/stores/analysis-store.ts`, `revision-store.ts`
 - Deployment scripts: `scripts/deployment/*.sh`
 - Environment config: `.env`, `env/.env.production.example`
+- Test utilities: `tests/setup/*.ts`, `tests/__mocks__/*.ts`
