@@ -14,7 +14,7 @@ export class MarkdownToScriptConverter {
   /**
    * Convert Markdown content to ParsedScript format
    */
-  async convert(markdownContent: string): Promise<ParsedScript> {
+  convert(markdownContent: string): ParsedScript {
     // Validate the markdown first
     const validation = this.validator.validate(markdownContent);
 

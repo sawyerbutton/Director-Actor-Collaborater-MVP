@@ -152,9 +152,9 @@ export class ScriptParser {
     }
   }
 
-  public async parseMarkdown(markdown: string, options?: ParserOptions): Promise<ParsedScript> {
+  public parseMarkdown(markdown: string, options?: ParserOptions): ParsedScript {
     try {
-      const result = await this.markdownConverter.convert(markdown)
+      const result = this.markdownConverter.convert(markdown)
 
       // Apply any parser options
       if (options?.detectCharacterAliases !== false) {
@@ -236,10 +236,10 @@ export async function parseScript(
 }
 
 // Export for browser usage
-export async function parseScriptClient(
+export function parseScriptClient(
   text: string,
   options?: ParserOptions & { format?: 'auto' | 'standard' | 'markdown' }
-): Promise<ParsedScript> {
+): ParsedScript {
   const parser = new ScriptParser()
 
   // Auto-detect markdown format
