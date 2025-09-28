@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ScriptAI MVP - An AI-powered script analysis system that detects and fixes logical errors in screenplays using three collaborative AI agents. Built with Next.js 14, TypeScript, and DeepSeek API.
 
+**Current Status**: Production-ready with file type restrictions (only .txt, .md, .markdown supported)
+
 ## Essential Commands
 
 ### Development
@@ -38,6 +40,14 @@ npx prisma migrate reset    # Reset database and reapply migrations
 npx prisma studio           # Open Prisma Studio GUI
 npx prisma generate         # Generate Prisma Client
 npx prisma db seed          # Seed database with initial data
+
+# Alternative npm scripts for database operations:
+npm run db:generate         # Same as npx prisma generate
+npm run db:migrate:dev      # Same as npx prisma migrate dev
+npm run db:migrate:deploy   # Same as npx prisma migrate deploy
+npm run db:migrate:reset    # Same as npx prisma migrate reset
+npm run db:seed            # Same as npx prisma db seed
+npm run db:studio          # Same as npx prisma studio
 ```
 
 ### Deployment Verification
@@ -132,8 +142,14 @@ Required for deployment:
 
 ## Key Implementation Details
 
+### File Upload Restrictions (BREAKING CHANGE)
+- **Only accepts**: `.txt`, `.md`, `.markdown` files
+- **Rejected formats**: `.fdx`, `.fountain`, `.docx` (no longer supported)
+- Validation occurs at both frontend (`DragDropUpload` component) and backend (`ScriptParser`)
+- Clear error messages shown for unsupported formats
+
 ### AI Analysis Flow
-1. Script upload → Parse to structured format
+1. Script upload → Parse to structured format (with format validation)
 2. Consistency Guardian analyzes in parallel batches
 3. Results cached with TTL for performance
 4. Revision Executive generates fixes on-demand
@@ -199,8 +215,25 @@ npm run test:e2e -- path/to/e2e.spec.ts   # Run specific E2E test
 - API route handlers: `app/api/v1/*/route.ts`
 - AI agents: `lib/agents/consistency-guardian.ts`, `revision-executive.ts`
 - Script parser: `lib/parser/script-parser.ts`, `lib/parser/markdown-script-parser.ts`
+- Parser converters: `lib/parser/converters/markdown-to-script.ts`
+- Upload components: `components/upload/DragDropUpload.tsx`, `components/analysis/enhanced-script-upload.tsx`
 - Database services: `lib/db/services/*.service.ts`
 - Client stores: `lib/stores/analysis-store.ts`, `revision-store.ts`
 - Deployment scripts: `scripts/deployment/*.sh`
 - Environment config: `.env`, `env/.env.production.example`
 - Test utilities: `tests/setup/*.ts`, `tests/__mocks__/*.ts`
+
+## Known Issues and Solutions
+
+### TypeScript Build Errors
+If encountering `Promise<ParsedScript>` type errors:
+- Parser methods are now synchronous (no async/await needed)
+- `parseScriptClient` returns `ParsedScript` directly, not a Promise
+
+### Diagnostic Scripts
+The following scripts are excluded from TypeScript compilation:
+- `scripts/diagnose-repair-failure.ts`
+- `scripts/simple-diagnosis.ts`
+- `scripts/test-repair-fix.ts`
+
+These are utility scripts for debugging and don't affect the main application build.

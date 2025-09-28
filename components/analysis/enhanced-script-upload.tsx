@@ -53,7 +53,7 @@ export function EnhancedScriptUpload() {
 
         try {
           // Parse the script with format detection
-          const parsedScript = await parseScriptClient(content, {
+          const parsedScript = parseScriptClient(content, {
             format: isMarkdown ? 'markdown' : 'standard',
             detectCharacterAliases: true
           });
@@ -119,7 +119,7 @@ export function EnhancedScriptUpload() {
       }
 
       // Parse the script
-      const parsedScript = await parseScriptClient(textContent, {
+      const parsedScript = parseScriptClient(textContent, {
         format,
         detectCharacterAliases: true
       });

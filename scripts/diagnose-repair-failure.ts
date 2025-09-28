@@ -134,8 +134,12 @@ class RepairDiagnostic {
     const startTime = Date.now();
     try {
       // 尝试简单的API调用
-      const client = new DeepSeekClient();
+      const client = new DeepSeekClient({
+        apiKey: process.env.DEEPSEEK_API_KEY!,
+        apiEndpoint: process.env.DEEPSEEK_API_URL || 'https://api.deepseek.com'
+      });
       const response = await client.chat({
+        model: 'deepseek-chat',
         messages: [
           { role: 'system', content: 'You are a test assistant.' },
           { role: 'user', content: 'Reply with "OK" if you receive this.' }
@@ -147,7 +151,7 @@ class RepairDiagnostic {
       this.log(`API响应成功 (${responseTime}ms)`);
       this.log(`响应内容: ${response.choices?.[0]?.message?.content || 'No content'}`);
     } catch (error) {
-      this.log(`API连接失败: ${error.message}`);
+      this.log(`API连接失败: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
