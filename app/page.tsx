@@ -40,7 +40,7 @@ export default function Home() {
               </CardHeader>
               <CardContent>
                 <CardDescription className="text-base">
-                  支持文本粘贴或上传.txt/.docx文件，快速导入您的剧本内容
+                  支持文本粘贴或上传.txt/.md/.markdown文件，快速导入您的剧本内容
                 </CardDescription>
               </CardContent>
             </Card>

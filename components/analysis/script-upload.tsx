@@ -8,8 +8,8 @@ import { Upload, FileText, AlertCircle } from 'lucide-react';
 import { useAnalysisStore } from '@/lib/stores/analysis-store';
 import { sanitizeInput, sanitizeFileName } from '@/lib/utils/sanitize';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_FILE_TYPES = ['.txt', '.docx'];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_FILE_TYPES = ['.txt', '.md', '.markdown'];
 
 export function ScriptUpload() {
   const [uploadMethod, setUploadMethod] = useState<'text' | 'file'>('text');
@@ -41,6 +41,8 @@ export function ScriptUpload() {
     // MIME type validation
     const allowedMimeTypes = [
       'text/plain',
+      'text/markdown',
+      'text/x-markdown',
       'text/csv',
       'text/html',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -99,13 +101,7 @@ export function ScriptUpload() {
         reject(new Error('文件读取失败'));
       };
       
-      if (file.name.endsWith('.docx')) {
-        // For docx files, we'll need to handle them differently in production
-        // For now, we'll just read as text with a note
-        reject(new Error('DOCX 文件支持即将推出'));
-      } else {
-        reader.readAsText(file);
-      }
+      reader.readAsText(file);
     });
   };
 
