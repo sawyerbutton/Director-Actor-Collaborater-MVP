@@ -3,11 +3,14 @@ import { RevisionSuggestion, SuggestionPriority, RevisionContext } from '@/types
 import { DeepSeekClient } from '@/lib/api/deepseek/client';
 import { ConsistencyAgentConfig, AgentResponse, DEFAULT_AGENT_CONFIG } from './types';
 import { AIOutputValidator } from './ai-output-validator';
+import { RetryHelper, RetryConfig } from '@/lib/utils/retry-helper';
+import { getErrorMessage } from '@/lib/utils/error-messages';
 
 export interface RevisionExecutiveConfig extends ConsistencyAgentConfig {
   maxSuggestionsPerError: number;
   enableContextAnalysis: boolean;
   suggestionDepth: 'basic' | 'detailed' | 'comprehensive';
+  retryConfig?: RetryConfig;
 }
 
 export const DEFAULT_REVISION_CONFIG: RevisionExecutiveConfig = {
@@ -27,14 +30,25 @@ export class RevisionExecutive {
   private client: DeepSeekClient;
   private config: RevisionExecutiveConfig;
   private templates: Map<LogicErrorType, SuggestionTemplate>;
+  private retryConfig: RetryConfig;
 
   constructor(config: Partial<RevisionExecutiveConfig> = {}) {
     this.config = { ...DEFAULT_REVISION_CONFIG, ...config };
     this.client = new DeepSeekClient({
       apiKey: process.env.DEEPSEEK_API_KEY || '',
-      apiEndpoint: process.env.DEEPSEEK_API_ENDPOINT || 'https://api.deepseek.com'
+      apiEndpoint: process.env.DEEPSEEK_API_ENDPOINT || 'https://api.deepseek.com',
+      maxRetries: 3,
+      timeout: 30000
     });
     this.templates = this.initializeTemplates();
+    this.retryConfig = config.retryConfig || {
+      maxAttempts: 3,
+      backoffMs: [1000, 2000, 4000],
+      timeout: 30000,
+      onRetry: (attempt, error) => {
+        console.log(`Retry attempt ${attempt}: ${getErrorMessage(error)}`);
+      }
+    };
   }
 
   private initializeTemplates(): Map<LogicErrorType, SuggestionTemplate> {
@@ -138,13 +152,45 @@ Generate {max_suggestions} scene corrections that:
       }
 
       const prompt = this.buildPrompt(error, context, template);
-      const response = await this.callAI(prompt);
-      
+
+      // Use retry helper for robust API calls
+      const response = await RetryHelper.withRetry(
+        () => this.callAI(prompt),
+        this.retryConfig
+      );
+
       return this.parseSuggestions(response, error);
     } catch (error) {
       // Don't log sensitive error details that might contain API keys
-      console.error('Failed to generate suggestions');
-      return [];
+      console.error('Failed to generate suggestions:', getErrorMessage(error as Error));
+      return this.generateFallbackSuggestion(error as LogicError);
+    }
+  }
+
+  /**
+   * Generates a fix for a logic error (compatibility method)
+   * This method provides backward compatibility for existing code
+   * @param error The logic error to fix
+   * @param context Optional context for fix generation
+   * @returns The first suggestion as a fix
+   */
+  async generateFix(
+    error: LogicError,
+    context?: RevisionContext
+  ): Promise<RevisionSuggestion | null> {
+    const ctx = context || {
+      scriptContent: '',
+      previousEvents: [],
+      affectedElements: []
+    };
+
+    try {
+      const suggestions = await this.generateSuggestions(error, ctx);
+      return suggestions.length > 0 ? suggestions[0] : null;
+    } catch (error) {
+      console.error('Failed to generate fix:', getErrorMessage(error as Error));
+      const fallback = this.generateFallbackSuggestion(error as LogicError);
+      return fallback.length > 0 ? fallback[0] : null;
     }
   }
 
