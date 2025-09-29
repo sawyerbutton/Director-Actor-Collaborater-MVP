@@ -34,10 +34,10 @@ describe('Rate Limit Middleware', () => {
     expect(rateLimitMiddleware(request, options)).toBeNull();
     
     // Third request should be blocked
-    const response = rateLimitMiddleware(request, options);
+    const response = await rateLimitMiddleware(request, options);
     expect(response).not.toBeNull();
     expect(response?.status).toBe(429);
-    
+
     const headers = response?.headers;
     expect(headers?.get('X-RateLimit-Limit')).toBe('2');
     expect(headers?.get('X-RateLimit-Remaining')).toBe('0');

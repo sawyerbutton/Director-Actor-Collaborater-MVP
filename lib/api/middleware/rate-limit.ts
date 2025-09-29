@@ -20,7 +20,8 @@ export interface RateLimitConfig {
 
 const defaultConfig: RateLimitConfig = {
   windowMs: 60 * 1000, // 1 minute
-  max: 10, // 10 requests per window
+  // More permissive in development for testing
+  max: process.env.NODE_ENV === 'development' ? 100 : 10, // 100 requests per minute in dev, 10 in production
   message: 'Too many requests, please try again later',
   keyGenerator: (req) => {
     // Use IP address as default key
@@ -32,12 +33,17 @@ const defaultConfig: RateLimitConfig = {
 
 export function createRateLimiter(endpoint: string, config: RateLimitConfig = {}) {
   const options = { ...defaultConfig, ...config };
-  
+
   if (!stores[endpoint]) {
     stores[endpoint] = {};
   }
-  
+
   return async function rateLimitMiddleware(request: NextRequest) {
+    // Skip rate limiting in development if DISABLE_RATE_LIMIT is set
+    if (process.env.NODE_ENV === 'development' && process.env.DISABLE_RATE_LIMIT === 'true') {
+      return null; // Continue to next middleware
+    }
+
     const key = options.keyGenerator!(request);
     const now = Date.now();
     const store = stores[endpoint];

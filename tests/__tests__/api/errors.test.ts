@@ -108,15 +108,15 @@ describe('API Errors', () => {
 
     it('should not expose internal errors in production', () => {
       const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'production';
-      
+      (process.env as any).NODE_ENV = 'production';
+
       const error = new Error('Internal secret error');
       const response = handleApiError(error);
-      
+
       // Response should not contain the actual error message
       expect(response.status).toBe(HTTP_STATUS.INTERNAL_SERVER_ERROR);
-      
-      process.env.NODE_ENV = originalEnv;
+
+      (process.env as any).NODE_ENV = originalEnv;
     });
   });
 });

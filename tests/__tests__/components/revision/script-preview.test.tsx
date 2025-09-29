@@ -59,14 +59,14 @@ describe('ScriptPreview', () => {
   ];
 
   beforeEach(() => {
-    (useAnalysisStore as jest.Mock).mockImplementation((selector) => {
+    (useAnalysisStore as unknown as jest.Mock).mockImplementation((selector) => {
       const state = {
         scriptContent: mockOriginalScript
       };
       return selector ? selector(state) : state;
     });
 
-    (useRevisionStore as jest.Mock).mockImplementation((selector) => {
+    (useRevisionStore as unknown as jest.Mock).mockImplementation((selector) => {
       const state = {
         errors: mockErrors,
         getAcceptedSuggestions: () => mockErrors.filter(e => e.status === 'accepted')
@@ -143,7 +143,7 @@ describe('ScriptPreview', () => {
       }
     ];
 
-    (useRevisionStore as jest.Mock).mockImplementation((selector) => {
+    (useRevisionStore as unknown as jest.Mock).mockImplementation((selector) => {
       const state = {
         errors: conflictErrors,
         getAcceptedSuggestions: () => conflictErrors.filter(e => e.status === 'accepted')
@@ -179,7 +179,7 @@ describe('ScriptPreview', () => {
       }
     ];
 
-    (useRevisionStore as jest.Mock).mockImplementation((selector) => {
+    (useRevisionStore as unknown as jest.Mock).mockImplementation((selector) => {
       const state = {
         errors: updatedErrors,
         getAcceptedSuggestions: () => updatedErrors.filter(e => e.status === 'accepted')

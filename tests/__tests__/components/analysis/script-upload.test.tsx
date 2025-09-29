@@ -12,7 +12,7 @@ describe('ScriptUpload', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useAnalysisStore as jest.Mock).mockReturnValue({
+    (useAnalysisStore as unknown as jest.Mock).mockReturnValue({
       setScriptContent: mockSetScriptContent,
       resetAnalysis: mockResetAnalysis,
     });

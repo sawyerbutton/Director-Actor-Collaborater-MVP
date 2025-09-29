@@ -1,22 +1,24 @@
 import { LogicErrorType, ErrorSeverity } from '@/types/analysis';
 import { ERROR_DETECTION_RULES, ErrorDetectionRule } from '../types';
 
-export const SYSTEM_PROMPT = `You are a professional script consistency analyzer specializing in detecting logical errors, plot holes, and inconsistencies in screenplays and scripts. 
+export const SYSTEM_PROMPT = `你是一位专业的剧本一致性分析师，专门检测剧本和电影脚本中的逻辑错误、情节漏洞和不一致之处。
 
-Your role is to:
-1. Carefully analyze the provided script content
-2. Identify logical inconsistencies across multiple dimensions
-3. Provide specific, actionable feedback
-4. Rate severity based on impact to story coherence
-5. Suggest concrete fixes when possible
+你的职责是：
+1. 仔细分析提供的剧本内容
+2. 从多个维度识别逻辑不一致性
+3. 提供具体、可操作的反馈
+4. 根据对故事连贯性的影响评定严重程度
+5. 尽可能提出具体的修复建议
 
-You must output your analysis in valid JSON format following the specified schema.
+你必须以有效的JSON格式输出分析结果，并遵循指定的结构。
 
-Severity Guidelines:
-- CRITICAL: Breaks fundamental story logic or makes the plot impossible
-- HIGH: Major inconsistency that disrupts audience understanding
-- MEDIUM: Noticeable issue that affects immersion
-- LOW: Minor inconsistency that most viewers might overlook`;
+严重程度指南：
+- CRITICAL（严重）：破坏基本故事逻辑或使情节不可能发生
+- HIGH（高）：严重的不一致性，会影响观众理解
+- MEDIUM（中等）：明显的问题，会影响观看体验
+- LOW（轻微）：大多数观众可能忽略的小问题
+
+请使用中文描述所有的错误和建议。`;
 
 export function buildUserPrompt(
   scriptContent: string,
@@ -31,31 +33,31 @@ export function buildUserPrompt(
     `\n### ${rule.name}\n${rule.checkPrompt}\nKey indicators: ${rule.indicators.join(', ')}`
   ).join('\n');
 
-  return `Analyze the following script for consistency issues. Focus on these specific areas:
+  return `分析以下剧本的一致性问题。重点关注以下几个方面：
 
 ${rulesSection}
 
-## Script Content:
+## 剧本内容：
 ${scriptContent}
 
-## Analysis Requirements:
-1. Examine the script systematically, scene by scene
-2. Cross-reference information across scenes for contradictions
-3. Track character knowledge and states throughout
-4. Verify temporal and spatial logic
-5. Check dialogue flow and information consistency
-6. Return up to ${maxErrors} most significant errors
+## 分析要求：
+1. 系统地检查剧本，逐场分析
+2. 交叉对照各场景信息，查找矛盾之处
+3. 追踪角色的认知和状态变化
+4. 验证时间和空间逻辑
+5. 检查对话流程和信息一致性
+6. 返回最多${maxErrors}个最重要的错误
 
-## Output Format:
-Provide your analysis as a JSON array of detected errors. Each error should include:
-- type: one of [${checkTypes.join(', ')}]
-- severity: one of [critical, high, medium, low]
-- location: specific scene/character/line reference
-- description: clear explanation of the issue
-- suggestion: how to fix it (optional)
-- context: relevant script excerpt (optional)
+## 输出格式：
+以JSON数组格式提供你的分析结果。每个错误应包含：
+- type: 以下之一 [${checkTypes.join(', ')}]
+- severity: 以下之一 [critical, high, medium, low]
+- location: 具体的场景/角色/台词引用
+- description: 问题的清晰解释（用中文）
+- suggestion: 修复建议（可选，用中文）
+- context: 相关剧本摘录（可选）
 
-Ensure your response is valid JSON that can be parsed directly.`;
+确保你的响应是可以直接解析的有效JSON。所有描述和建议必须使用中文。`;
 }
 
 export function buildOutputFormatPrompt(): string {
@@ -72,8 +74,8 @@ Your response must be a valid JSON array following this exact structure:
       "dialogueIndex": <index if applicable>,
       "timeReference": "<time reference if applicable>"
     },
-    "description": "<Clear, specific description of the inconsistency>",
-    "suggestion": "<Concrete suggestion for fixing the issue>",
+    "description": "<不一致性的清晰、具体描述（中文）>",
+    "suggestion": "<修复问题的具体建议（中文）>",
     "context": "<Relevant excerpt from the script>",
     "relatedElements": ["<scene id>", "<character name>", etc.]
   }
@@ -88,8 +90,8 @@ Example:
       "sceneNumber": 5,
       "timeReference": "morning"
     },
-    "description": "Character mentions events from 'yesterday' that actually occurred two days ago based on the established timeline",
-    "suggestion": "Change dialogue to reference 'two days ago' or adjust the scene's time setting",
+    "description": "角色提到的'昨天'发生的事件，根据既定时间线实际发生在两天前",
+    "suggestion": "将对话改为'两天前'或调整场景的时间设置",
     "context": "JOHN: Remember what happened yesterday at the park?",
     "relatedElements": ["Scene 3", "John"]
   }

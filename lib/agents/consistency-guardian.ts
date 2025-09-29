@@ -260,20 +260,39 @@ export class ConsistencyGuardian {
 
   private parseAIResponse(response: string): LogicError[] {
     try {
-      const parsed = JSON.parse(response);
-      
+      // Clean the response by removing markdown code block markers if present
+      let cleanedResponse = response.trim();
+
+      // Remove ```json at the beginning and ``` at the end
+      if (cleanedResponse.startsWith('```json')) {
+        cleanedResponse = cleanedResponse.substring(7);
+      } else if (cleanedResponse.startsWith('```')) {
+        cleanedResponse = cleanedResponse.substring(3);
+      }
+
+      if (cleanedResponse.endsWith('```')) {
+        cleanedResponse = cleanedResponse.substring(0, cleanedResponse.length - 3);
+      }
+
+      // Trim again to remove any extra whitespace
+      cleanedResponse = cleanedResponse.trim();
+
+      const parsed = JSON.parse(cleanedResponse);
+
       if (Array.isArray(parsed)) {
         return parsed.map(error => this.validateAndNormalizeError(error));
       } else if (parsed.errors && Array.isArray(parsed.errors)) {
         return parsed.errors.map((error: any) => this.validateAndNormalizeError(error));
       }
-      
+
       return [];
     } catch (error) {
       // Sanitize error logging to prevent information leakage
       if (process.env.NODE_ENV !== 'production') {
         const errorMessage = error instanceof Error ? error.message : 'Failed to parse response';
         console.error('Failed to parse AI response:', errorMessage);
+        // Also log first 200 chars of response for debugging
+        console.error('Response preview:', response.substring(0, 200));
       }
       return [];
     }
@@ -395,6 +414,7 @@ export class ConsistencyGuardian {
     const recommendations = this.generateRecommendations(result);
     
     return {
+      errors: result.errors,
       summary: {
         overallConsistency,
         criticalIssues: criticalCount,
@@ -435,14 +455,17 @@ export class ConsistencyGuardian {
     
     const dominantErrorType = this.findDominantErrorType(result.errorsByType);
     if (dominantErrorType) {
-      const typeRecommendations: Record<LogicErrorType, string> = {
+      const typeRecommendations: Partial<Record<LogicErrorType, string>> = {
         'timeline': 'Create a detailed timeline document to track all temporal references',
         'character': 'Develop character bibles with consistent traits and knowledge states',
         'plot': 'Review plot structure and ensure all setups have payoffs',
         'dialogue': 'Conduct dialogue passes to ensure natural conversation flow',
         'scene': 'Map out location geography and movement logistics'
       };
-      recommendations.push(typeRecommendations[dominantErrorType]);
+      const recommendation = typeRecommendations[dominantErrorType];
+      if (recommendation) {
+        recommendations.push(recommendation);
+      }
     }
     
     if (result.totalErrors > 10) {

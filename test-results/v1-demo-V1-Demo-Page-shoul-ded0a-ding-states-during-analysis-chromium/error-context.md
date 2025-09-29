@@ -1,0 +1,97 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - link "DAC MVP" [ref=e6] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e7]:
+          - link "Dashboard" [ref=e8] [cursor=pointer]:
+            - /url: /dashboard
+          - link "Projects" [ref=e9] [cursor=pointer]:
+            - /url: /projects
+          - link "Settings" [ref=e10] [cursor=pointer]:
+            - /url: /settings
+      - button [ref=e12] [cursor=pointer]:
+        - img [ref=e13] [cursor=pointer]
+  - main [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - heading "V1 API Migration Demo" [level=1] [ref=e20]:
+            - img [ref=e21]
+            - text: V1 API Migration Demo
+          - paragraph [ref=e25]: Five-Act Workflow System with Database Persistence
+        - generic [ref=e26]:
+          - generic [ref=e27]:
+            - img [ref=e28]
+            - text: V1 API
+          - generic [ref=e30]:
+            - img [ref=e31]
+            - text: Act 1
+      - generic [ref=e35]:
+        - generic [ref=e36]:
+          - generic [ref=e37]:
+            - heading "V1 API 剧本上传" [level=3] [ref=e39]:
+              - img [ref=e40]
+              - text: V1 API 剧本上传
+            - generic [ref=e44]:
+              - generic [ref=e45]:
+                - tablist [ref=e46]:
+                  - tab "文件上传" [ref=e47] [cursor=pointer]:
+                    - img [ref=e48] [cursor=pointer]
+                    - text: 文件上传
+                  - tab "文本输入" [selected] [ref=e51] [cursor=pointer]:
+                    - img [ref=e52] [cursor=pointer]
+                    - text: 文本输入
+                  - tab "已有项目" [ref=e55] [cursor=pointer]:
+                    - img [ref=e56] [cursor=pointer]
+                    - text: 已有项目
+                - tabpanel "文本输入" [ref=e58]:
+                  - generic [ref=e59]:
+                    - generic [ref=e60]: 项目标题 *
+                    - textbox "输入项目标题" [ref=e61]: Loading Test
+                  - textbox "在此粘贴或输入剧本内容..." [ref=e62]: Test content
+                  - button "创建项目并分析" [ref=e63] [cursor=pointer]
+              - alert [ref=e64]:
+                - img [ref=e65]
+                - generic [ref=e69]:
+                  - text: "当前项目:"
+                  - strong [ref=e70]: Loading Test
+                  - text: "状态: INITIALIZED"
+              - button "重置" [ref=e71] [cursor=pointer]
+          - generic [ref=e72]:
+            - generic [ref=e73]:
+              - generic [ref=e74]:
+                - img [ref=e75]
+                - generic [ref=e77]:
+                  - paragraph [ref=e78]: 准备就绪
+                  - paragraph [ref=e79]: "项目: Loading Test"
+              - generic [ref=e80]:
+                - generic [ref=e81]: INITIALIZED
+                - img [ref=e82]
+            - alert [ref=e86]:
+              - generic [ref=e87]: parser.parse is not a function
+            - button "开始 Act 1 分析" [ref=e89] [cursor=pointer]:
+              - img [ref=e90] [cursor=pointer]
+              - text: 开始 Act 1 分析
+            - generic [ref=e92]:
+              - heading "V1 API 特性" [level=4] [ref=e93]
+              - list [ref=e94]:
+                - listitem [ref=e95]: ✓ 数据库持久化存储
+                - listitem [ref=e96]: ✓ 异步任务队列处理
+                - listitem [ref=e97]: ✓ 五幕工作流状态跟踪
+                - listitem [ref=e98]: ✓ Act 1 基础诊断分析
+        - generic [ref=e99]:
+          - alert [ref=e100]:
+            - img [ref=e101]
+            - heading "Project Loaded" [level=5] [ref=e105]
+            - generic [ref=e106]: Project "Loading Test" is ready for analysis. Click "开始 Act 1 分析" to begin.
+          - alert [ref=e107]:
+            - img [ref=e108]
+            - heading "Error" [level=5] [ref=e112]
+            - generic [ref=e113]: parser.parse is not a function
+  - alert [ref=e114]
+```

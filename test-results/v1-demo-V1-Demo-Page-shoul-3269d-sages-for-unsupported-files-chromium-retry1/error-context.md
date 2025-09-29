@@ -1,0 +1,86 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - link "DAC MVP" [ref=e6] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e7]:
+          - link "Dashboard" [ref=e8] [cursor=pointer]:
+            - /url: /dashboard
+          - link "Projects" [ref=e9] [cursor=pointer]:
+            - /url: /projects
+          - link "Settings" [ref=e10] [cursor=pointer]:
+            - /url: /settings
+      - button [ref=e12] [cursor=pointer]:
+        - img [ref=e13] [cursor=pointer]
+  - main [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - heading "V1 API Migration Demo" [level=1] [ref=e20]:
+            - img [ref=e21]
+            - text: V1 API Migration Demo
+          - paragraph [ref=e25]: Five-Act Workflow System with Database Persistence
+        - generic [ref=e26]:
+          - generic [ref=e27]:
+            - img [ref=e28]
+            - text: V1 API
+          - generic [ref=e30]:
+            - img [ref=e31]
+            - text: Act 1
+      - generic [ref=e35]:
+        - generic [ref=e36]:
+          - generic [ref=e37]:
+            - heading "V1 API 剧本上传" [level=3] [ref=e39]:
+              - img [ref=e40]
+              - text: V1 API 剧本上传
+            - generic [ref=e45]:
+              - tablist [ref=e46]:
+                - tab "文件上传" [selected] [ref=e47] [cursor=pointer]:
+                  - img [ref=e48] [cursor=pointer]
+                  - text: 文件上传
+                - tab "文本输入" [ref=e51] [cursor=pointer]:
+                  - img [ref=e52] [cursor=pointer]
+                  - text: 文本输入
+                - tab "已有项目" [ref=e55] [cursor=pointer]:
+                  - img [ref=e56] [cursor=pointer]
+                  - text: 已有项目
+              - tabpanel "文件上传" [ref=e58]:
+                - generic [ref=e59]:
+                  - generic [ref=e60]: 项目标题 (可选)
+                  - textbox "留空则使用文件名" [ref=e61]
+                - generic [ref=e62]:
+                  - alert [ref=e63]:
+                    - img [ref=e64]
+                    - generic [ref=e66]: "文件 \"test.docx\" 格式不支持。支持的格式: .txt, .md, .markdown"
+                  - generic [ref=e67]:
+                    - img [ref=e69]
+                    - paragraph [ref=e72]: 拖拽文件到此处，或点击选择文件
+                    - paragraph [ref=e73]: 支持 .txt, .md, .markdown 格式，最大 10MB，可同时上传多个文件
+                    - button "选择文件" [ref=e74] [cursor=pointer]
+          - generic [ref=e75]:
+            - generic [ref=e76]:
+              - generic [ref=e77]:
+                - img [ref=e78]
+                - paragraph [ref=e81]: 准备就绪
+              - generic [ref=e82]:
+                - generic [ref=e83]: INITIALIZED
+                - img [ref=e84]
+            - generic [ref=e88]:
+              - button "开始 Act 1 分析" [disabled]:
+                - img
+                - text: 开始 Act 1 分析
+            - generic [ref=e89]:
+              - heading "V1 API 特性" [level=4] [ref=e90]
+              - list [ref=e91]:
+                - listitem [ref=e92]: ✓ 数据库持久化存储
+                - listitem [ref=e93]: ✓ 异步任务队列处理
+                - listitem [ref=e94]: ✓ 五幕工作流状态跟踪
+                - listitem [ref=e95]: ✓ Act 1 基础诊断分析
+        - alert [ref=e97]:
+          - generic [ref=e98]: Upload a script or select an existing project to begin analysis.
+  - alert [ref=e99]
+```

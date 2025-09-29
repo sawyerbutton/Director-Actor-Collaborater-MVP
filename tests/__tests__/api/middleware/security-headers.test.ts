@@ -17,7 +17,7 @@ describe('Security Headers Middleware', () => {
 
     it('should not add HSTS header in development', () => {
       const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
+      (process.env as any).NODE_ENV = 'development';
 
       const response = new NextResponse('test body', { status: 200 });
       const securedResponse = securityHeadersMiddleware(response);
@@ -29,7 +29,7 @@ describe('Security Headers Middleware', () => {
 
     it('should add HSTS header in production', () => {
       const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'production';
+      (process.env as any).NODE_ENV = 'production';
 
       const response = new NextResponse('test body', { status: 200 });
       const securedResponse = securityHeadersMiddleware(response);
