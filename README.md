@@ -2,23 +2,36 @@
 
 [中文版本](./README_CN.md) | English
 
-> An AI-powered collaborative system that helps screenwriters detect and fix common logical errors in scripts within 10 seconds.
+> An AI-powered system that helps screenwriters detect and fix common logical errors in scripts within 10 seconds using DeepSeek API.
 
 ## Overview
 
-ScriptAI is a Next.js monolithic application that leverages three collaborative AI agents to analyze scripts and provide intelligent suggestions for improving logical consistency. Built with a "function-first, architecture-second" philosophy after learning from over-engineering failures.
+ScriptAI is a Next.js application that uses DeepSeek API to analyze scripts and provide intelligent suggestions for improving logical consistency. Built with a "function-first, architecture-second" philosophy, the current implementation is a streamlined MVP that prioritizes working functionality over complex architecture.
 
-### Key Features
+### Key Features (Current Implementation)
 
-- **Instant Script Analysis**: Detect and fix 5+ types of common logical errors in under 10 seconds
-- **AI-Powered Intelligent Repair**: LLM-based intelligent rewriting that maintains script coherence and style consistency
-- **AI Agent Collaboration**: Three specialized agents working together for comprehensive analysis
-- **Interactive Modifications**: Accept or reject AI suggestions with visual context
-- **Smart Export System**: Pre-export warnings to ensure AI repair is applied for best results
-- **Continuous Consistency Engine**: Maintains script consistency even after setting changes
-- **Clean, Minimal Interface**: Distraction-free writing and editing environment
+- **Instant Script Analysis**: Detect 5 types of logical errors using DeepSeek API
+- **AI-Powered Intelligent Repair**: DeepSeek-based intelligent rewriting that maintains script coherence
+- **Interactive Modifications**: Accept or reject AI suggestions with visual feedback
+- **Smart Export System**: Export warnings remind users to apply AI repair for best results
+- **Simple Storage**: Uses localStorage for quick access (no database required for MVP)
+- **Clean Interface**: Straightforward upload → analyze → repair → export workflow
 
-### Implemented Components
+## Important: Implementation Status
+
+### 🎯 Currently Active Implementation (What's Actually Running)
+
+The production system uses a **simplified architecture** that works reliably:
+
+1. **Frontend**: `/app/dashboard/page.tsx` → User uploads script
+2. **Analysis API**: `/api/analysis` → Direct DeepSeek API call (NOT /api/v1/analyze)
+3. **Repair API**: `/api/script-repair` → DeepSeek rewrites script based on accepted changes
+4. **Storage**: localStorage (no database interaction in current flow)
+5. **Export**: Direct file download (.txt format)
+
+**Key Point**: The advanced Agent system (ConsistencyGuardian, RevisionExecutive) and v1 APIs exist in the codebase but are **NOT connected to the frontend**.
+
+### Implemented Components (Code Available But Not All Active)
 
 #### ✅ DeepSeek API Integration (Story 1.1)
 - Robust API client with exponential backoff retry logic
@@ -167,10 +180,10 @@ Director-Actor-Collaborater-MVP/
 ### Prerequisites
 
 - Node.js 18+ and npm/yarn/pnpm
-- Docker Desktop (for local PostgreSQL)
-- DeepSeek API key
+- DeepSeek API key (required for AI features)
+- Docker Desktop (optional - only if you want to enable database features)
 
-### Installation
+### Quick Start (Minimal Setup)
 
 1. Clone the repository:
 ```bash
@@ -183,84 +196,106 @@ cd Director-Actor-Collaborater-MVP
 npm install
 ```
 
-3. Set up PostgreSQL with Docker:
+3. Create `.env.local` with minimal configuration:
 ```bash
-# Pull PostgreSQL image
-docker pull postgres:16-alpine
+echo 'DEEPSEEK_API_KEY="your_api_key_here"' > .env.local
+```
 
-# Run PostgreSQL container
+4. Start the development server:
+```bash
+npm run dev
+```
+
+Visit `http://localhost:3000` - the app will work with just the DeepSeek API key!
+
+### Full Setup (With Database - Optional)
+
+If you want to enable the database features (user accounts, project storage):
+
+1. Set up PostgreSQL with Docker:
+```bash
 docker run -d \
   --name director-actor-postgres \
   -e POSTGRES_USER=director_user \
   -e POSTGRES_PASSWORD=director_pass_2024 \
   -e POSTGRES_DB=director_actor_db \
   -p 5432:5432 \
-  -v director-actor-pgdata:/var/lib/postgresql/data \
   postgres:16-alpine
 ```
 
-4. Set up environment variables:
-```bash
-cp .env.local.example .env.local
-```
-
-The `.env.local` file is pre-configured with the Docker PostgreSQL credentials:
+2. Add database configuration to `.env.local`:
 ```env
 DATABASE_URL="postgresql://director_user:director_pass_2024@localhost:5432/director_actor_db?schema=public&pgbouncer=true"
 DIRECT_DATABASE_URL="postgresql://director_user:director_pass_2024@localhost:5432/director_actor_db?schema=public"
-DEEPSEEK_API_KEY="your_api_key_here"  # Replace with your actual API key
 ```
 
-5. Run database migrations:
+3. Run database migrations:
 ```bash
 npx prisma migrate dev
 ```
 
-6. Start the development server:
-```bash
-npm run dev
-```
-
 Visit `http://localhost:3000` to see the application.
 
-## Core Features
+## Core Features (How It Actually Works)
 
-### 1. Script Input (FR1)
-- Paste text directly or upload .txt/.docx files
-- Support for standard screenplay formats
-- File preview functionality
+### 1. Script Input
+- Paste text directly or upload .txt/.md/.markdown files
+- **Note**: .fdx, .fountain, .docx formats are NOT supported in current implementation
+- Simple text preview before analysis
 
-### 2. AI Collaborative Analysis (FR2)
-Three specialized agents working in concert:
-- **Consistency Guardian**: Detects logical inconsistencies
-- **Revision Executive**: Proposes contextual fixes with AI validation
-- **Incremental Analyzer**: Maintains consistency after changes
+### 2. AI Analysis (Direct DeepSeek API)
+- Single API call to DeepSeek with prompt engineering
+- **Note**: The three-agent system exists in code but is NOT used
+- Returns JSON-formatted analysis results
 
-### 3. Error Detection (FR3)
-Detects 5+ core logical error types:
-- Character inconsistencies
-- Timeline conflicts
-- Plot holes
-- Setting contradictions
-- Dialogue incongruities
+### 3. Error Detection
+Detects 5 types of logical errors via DeepSeek:
+- Timeline inconsistencies (`timeline_inconsistency`)
+- Character behavior contradictions (`character_behavior`)
+- Scene continuity issues (`scene_continuity`)
+- Dialogue logic errors (`dialogue_logic`)
+- Prop/environment inconsistencies (`prop_inconsistency`)
 
-### 4. Interactive Modifications (FR5)
-- Visual diff view showing proposed changes
-- One-click accept/reject for each suggestion
-- Real-time script updates
-- Undo decision functionality
+### 4. Interactive Review
+- Accept or reject each suggestion individually
+- Visual indicators for accepted/rejected status
+- Undo decision capability
+- **Storage**: Results saved in localStorage (not database)
 
-### 5. AI-Powered Intelligent Repair (FR7)
-- **Batch Intelligent Rewriting**: LLM understands full context before applying fixes
-- **Maintains Coherence**: Changes naturally integrate into context
-- **Style Consistency**: Preserves original script's language characteristics
-- **Repair Preview**: View complete repaired results before export
+### 5. AI-Powered Intelligent Repair
+- Calls `/api/script-repair` when user clicks "AI智能修复"
+- DeepSeek rewrites the entire script based on accepted changes
+- Maintains original style and coherence
+- Preview before export
 
-### 6. Export Functionality (FR6)
-- Export revised script with accepted changes
-- Smart export warnings (reminds to apply AI repair first)
-- Automatic filename tagging (Intelligent Repair Version/Original Version)
-- Multiple format support (.txt, .docx in development)
+### 6. Export Functionality
+- Export to .txt format (working)
+- Warning system if changes not applied via AI repair
+- .docx export shown but not implemented ("开发中")
+
+## Activating Advanced Features
+
+The codebase includes advanced features that are not currently connected. To enable them:
+
+### Enable Agent System
+1. Modify `/app/dashboard/page.tsx` line 44:
+   ```javascript
+   // Change from: await fetch('/api/analysis', {
+   // To: await fetch('/api/v1/analyze', {
+   ```
+
+2. Implement polling in frontend for async results (v1 returns 202 status)
+
+3. Integrate agents in `/app/api/v1/analyze/route.ts`:
+   ```javascript
+   import { ConsistencyGuardian } from '@/lib/agents/consistency-guardian';
+   // Add agent initialization and usage
+   ```
+
+### Enable Database Storage
+1. Ensure PostgreSQL is running (see Full Setup above)
+2. Modify frontend to use database instead of localStorage
+3. Update API endpoints to persist data
 
 ## Development
 
@@ -377,20 +412,29 @@ npx prisma generate                                # Generate Prisma Client
 
 ## Deployment
 
-The application is designed for seamless deployment on Vercel with Supabase:
+### Minimal Deployment (Current Implementation)
 
-1. Push to GitHub main branch
-2. Vercel automatically builds and deploys
-3. Preview deployments for feature branches
-4. Production deployment on main branch
+The application can run with just one environment variable:
 
-### Environment Variables (Production)
+```env
+DEEPSEEK_API_KEY=your_api_key_here
+```
 
-Configure these in Vercel dashboard:
-- `DATABASE_URL` - Supabase PostgreSQL connection string
-- `DEEPSEEK_API_KEY` - DeepSeek API key
-- `NEXTAUTH_SECRET` - Authentication secret
-- `NEXTAUTH_URL` - Production URL
+Deploy to Vercel:
+1. Push to GitHub
+2. Connect repository to Vercel
+3. Add `DEEPSEEK_API_KEY` in Vercel dashboard
+4. Deploy - that's it!
+
+### Full Deployment (With All Features)
+
+For complete functionality including database and authentication:
+
+Configure in Vercel dashboard:
+- `DEEPSEEK_API_KEY` - DeepSeek API key (REQUIRED)
+- `DATABASE_URL` - Supabase PostgreSQL connection string (optional)
+- `NEXTAUTH_SECRET` - Authentication secret (optional)
+- `NEXTAUTH_URL` - Production URL (optional)
 
 ## Architecture Highlights
 
