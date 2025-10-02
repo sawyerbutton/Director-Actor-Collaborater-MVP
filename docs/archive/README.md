@@ -24,9 +24,22 @@
 
 - **DEPLOYMENT_STATUS.md** (2.7K) - 部署流程验证结果报告
 
+### implementations/ - 实现总结文档
+Epic和Phase实现完成后的总结文档：
+
+- **ITERATION_PAGE_IMPLEMENTATION.md** (8.9K) - Acts 2-5 迭代页面实现文档
+- **PHASE_2_COMPLETION_SUMMARY.md** (4.6K) - Phase 2 Synthesis UI 实现完成总结
+- **DOCUMENTATION_CLEANUP_ANALYSIS.md** (4.4K) - 文档整理分析报告
+
+### planning/ - 历史计划文档
+已完成或过时的计划文档：
+
+- **sprint-board.md** (3.1K) - Sprint 执行看板 (2025-09-25，已过时)
+
 ## 📅 归档时间
 
-2025-10-02
+- 第一批: 2025-10-02 (根目录清理)
+- 第二批: 2025-10-02 (docs目录清理)
 
 ## 📝 归档原因
 
