@@ -47,19 +47,35 @@ export default function DashboardPage() {
 
     try {
       // Step 1: Create project with script content
+      console.log('📝 正在创建项目...')
       const project = await v1ApiService.createProject(
         fileName || '新剧本项目',
         scriptContent,
         '从仪表板创建的项目'
       )
+      console.log('✅ 项目创建成功，ID:', project.id)
 
-      // Step 2: Start Act 1 analysis
-      const analysisJob = await v1ApiService.startAnalysis(project.id, scriptContent)
+      // Wait 500ms for database replication (Supabase connection pooling)
+      console.log('⏳ 等待数据库同步...')
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Step 2: Start Act 1 analysis (with retry on failure)
+      console.log('🚀 开始启动分析...')
+      let analysisJob
+      try {
+        analysisJob = await v1ApiService.startAnalysis(project.id, scriptContent)
+      } catch (analysisError) {
+        // If first attempt fails, wait another 500ms and retry once
+        console.warn('⚠️ 首次启动失败，重试中...', analysisError)
+        await new Promise(resolve => setTimeout(resolve, 500))
+        analysisJob = await v1ApiService.startAnalysis(project.id, scriptContent)
+      }
+      console.log('✅ 分析任务已启动，Job ID:', analysisJob.jobId)
 
       // Step 3: Navigate to analysis page (polling will happen there)
       router.push(`/analysis/${project.id}`)
     } catch (error) {
-      console.error('分析错误:', error)
+      console.error('❌ 分析错误:', error)
       setError(error instanceof Error ? error.message : '分析失败，请稍后重试')
     } finally {
       setIsAnalyzing(false)
