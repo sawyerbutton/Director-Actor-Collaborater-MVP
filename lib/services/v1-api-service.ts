@@ -3,9 +3,10 @@ import { Suggestion } from '@/types/revision';
 
 // Get base URL for client-side requests
 const getBaseUrl = () => {
-  // Server-side
+  // Server-side (build time or SSR)
   if (typeof window === 'undefined') {
-    return 'http://localhost:3000';
+    // During build, use environment variable or return empty to skip API calls
+    return process.env.NEXT_PUBLIC_APP_URL || '';
   }
   // Client-side
   return '';
