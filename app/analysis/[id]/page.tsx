@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -37,25 +37,26 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
   const [pendingExportFormat, setPendingExportFormat] = useState<'txt' | 'docx' | null>(null)
   const [jobStatus, setJobStatus] = useState<JobStatusData | null>(null)
   const [pollingError, setPollingError] = useState<string | null>(null)
+  const [shouldPoll, setShouldPoll] = useState(true)
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    let pollInterval: NodeJS.Timeout | null = null
     let isMounted = true
 
     const fetchAnalysisStatus = async () => {
-      if (!isMounted) return
+      if (!isMounted || !shouldPoll) return
 
       try {
         // Get project workflow status
         const workflowStatus = await v1ApiService.getWorkflowStatus(params.id)
 
-        if (!isMounted) return
+        if (!isMounted || !shouldPoll) return
 
         // If there's an active job, poll it
         if (workflowStatus.latestJob) {
           const status = await v1ApiService.getJobStatus(workflowStatus.latestJob.id)
 
-          if (!isMounted) return
+          if (!isMounted || !shouldPoll) return
 
           setJobStatus(status)
 
@@ -84,33 +85,24 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
             }
             setLoading(false)
             // Stop polling when completed
-            if (pollInterval) {
-              clearInterval(pollInterval)
-              pollInterval = null
-            }
+            setShouldPoll(false)
           } else if (status.status === 'FAILED') {
             setPollingError(status.error || '分析失败')
             setLoading(false)
             // Stop polling when failed
-            if (pollInterval) {
-              clearInterval(pollInterval)
-              pollInterval = null
-            }
+            setShouldPoll(false)
           }
-          // If status is QUEUED or PROCESSING, continue polling (don't stop interval)
+          // If status is QUEUED or PROCESSING, continue polling
         } else {
           setLoading(false)
-          if (pollInterval) {
-            clearInterval(pollInterval)
-            pollInterval = null
-          }
+          setShouldPoll(false)
         }
       } catch (error) {
         if (!isMounted) return
 
         console.error('获取分析状态失败:', error)
         setPollingError(error instanceof Error ? error.message : '获取分析状态失败')
-        // Don't stop loading on error, allow retry
+        // Don't stop polling on error, allow retry
       }
     }
 
@@ -118,16 +110,25 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
     fetchAnalysisStatus()
 
     // Poll every 2 seconds
-    pollInterval = setInterval(fetchAnalysisStatus, 2000)
+    pollIntervalRef.current = setInterval(fetchAnalysisStatus, 2000)
 
     return () => {
       isMounted = false
-      if (pollInterval) {
-        clearInterval(pollInterval)
-        pollInterval = null
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current)
+        pollIntervalRef.current = null
       }
     }
-  }, [params.id])  // Only depend on params.id, not loading or jobStatus
+  }, [params.id, shouldPoll])  // Depend on shouldPoll to stop interval
+
+  // Stop interval when shouldPoll becomes false
+  useEffect(() => {
+    if (!shouldPoll && pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current)
+      pollIntervalRef.current = null
+      console.log('✅ 轮询已停止')
+    }
+  }, [shouldPoll])
 
   const handleAccept = (errorId: string) => {
     setErrors(prev => prev.map(error =>
