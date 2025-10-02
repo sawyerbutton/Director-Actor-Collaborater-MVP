@@ -76,7 +76,9 @@ model ScriptVersion {
   projectId   String
   version     Int
   content     String   @db.Text
-  changeLog   String?  // 版本变更说明
+  changeLog   String?  @db.Text // 版本变更说明
+  synthesisMetadata Json? // Epic 007: Synthesis元数据(decisionsApplied, styleProfile, etc.)
+  confidence  Float?   // Epic 007: 合成置信度 (0-1)
   createdAt   DateTime @default(now())
 
   // 关联关系
@@ -84,6 +86,7 @@ model ScriptVersion {
 
   @@unique([projectId, version])
   @@index([projectId])
+  @@index([projectId, version])
 }
 
 // AnalysisJob模型 - 异步分析任务管理
@@ -159,8 +162,9 @@ enum WorkflowStatus {
 // 任务类型枚举
 enum JobType {
   ACT1_ANALYSIS   // Act 1 基础诊断
-  SYNTHESIS       // 综合分析
+  SYNTHESIS       // Epic 007: 剧本合成
   ITERATION       // 迭代优化
+  EXPORT          // Epic 007: 导出任务
 }
 
 // 任务状态枚举

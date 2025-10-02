@@ -1,4 +1,4 @@
-import { JobType, JobStatus, WorkflowStatus } from '@prisma/client';
+import { JobType, JobStatus, WorkflowStatus, PrismaClient } from '@prisma/client';
 import {
   analysisJobService,
   projectService,
@@ -9,6 +9,8 @@ import {
 import { ConsistencyGuardian } from '@/lib/agents/consistency-guardian';
 import { parseScriptClient } from '@/lib/parser/script-parser';
 import { ConsistencyCheckRequest, LogicError } from '@/types/analysis';
+
+const prisma = new PrismaClient();
 
 /**
  * Workflow Queue for managing Act 1 analysis and other workflow jobs
@@ -273,11 +275,84 @@ class WorkflowQueue {
   }
 
   /**
-   * Process Synthesis (placeholder)
+   * Process Synthesis (Epic 007)
    */
   private async processSynthesis(jobId: string, projectId: string): Promise<void> {
-    // TODO: Implement synthesis processing in future epic
-    await analysisJobService.fail(jobId, 'Synthesis not yet implemented');
+    try {
+      // Get project and all its data
+      const [project, scriptVersions, decisions] = await Promise.all([
+        projectService.findById(projectId),
+        scriptVersionService.getByProjectId(projectId),
+        // Get revision decisions via raw query since we don't have a service yet
+        prisma.revisionDecision.findMany({ where: { projectId } })
+      ]);
+
+      if (!project || scriptVersions.length === 0) {
+        throw new Error('Project or script versions not found');
+      }
+
+      // Get V1 (original script)
+      const v1 = scriptVersions.find(v => v.version === 1);
+      if (!v1) {
+        throw new Error('Original script (V1) not found');
+      }
+
+      // Get synthesis options from job metadata
+      const job = await analysisJobService.getById(jobId);
+      const options = (job?.metadata as any)?.options || {};
+
+      // Import and run synthesis engine
+      const { SynthesisEngine } = await import('@/lib/synthesis/synthesis-engine');
+      const { VersionManager } = await import('@/lib/synthesis/version-manager');
+
+      const synthesisEngine = new SynthesisEngine();
+      const versionManager = new VersionManager();
+
+      // Run synthesis
+      const result = await synthesisEngine.synthesizeScript(
+        projectId,
+        v1.content,
+        decisions,
+        options
+      );
+
+      // Save V2 (synthesized version)
+      const v2 = await versionManager.createVersion(
+        projectId,
+        result.synthesizedScript,
+        {
+          synthesisLog: result.changeLog,
+          decisionsApplied: result.metadata.decisionsApplied,
+          confidence: result.confidence,
+          timestamp: new Date()
+        }
+      );
+
+      // Complete the job
+      await analysisJobService.complete(jobId, {
+        versionId: v2.id,
+        version: v2.version,
+        confidence: result.confidence,
+        conflicts: result.conflicts.length,
+        completedAt: new Date().toISOString()
+      });
+
+      // Update workflow status
+      await projectService.updateWorkflowStatus(projectId, WorkflowStatus.COMPLETED);
+
+    } catch (error) {
+      console.error(`Failed to process synthesis for job ${jobId}:`, error);
+
+      await analysisJobService.fail(
+        jobId,
+        error instanceof Error ? error.message : 'Synthesis failed'
+      );
+
+      // Reset workflow status
+      await projectService.updateWorkflowStatus(projectId, WorkflowStatus.ITERATING);
+
+      throw error;
+    }
   }
 
   /**
