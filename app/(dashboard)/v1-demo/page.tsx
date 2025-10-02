@@ -1,5 +1,7 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
 import { V1ScriptUpload } from '@/components/analysis/v1-script-upload';
 import { V1AnalysisControl } from '@/components/analysis/v1-analysis-control';
 import { useV1AnalysisStore } from '@/lib/stores/v1-analysis-store';
