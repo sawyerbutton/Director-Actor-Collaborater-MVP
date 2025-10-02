@@ -40,20 +40,30 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     let pollInterval: NodeJS.Timeout | null = null
+    let isMounted = true
 
     const fetchAnalysisStatus = async () => {
+      if (!isMounted) return
+
       try {
         // Get project workflow status
         const workflowStatus = await v1ApiService.getWorkflowStatus(params.id)
 
+        if (!isMounted) return
+
         // If there's an active job, poll it
         if (workflowStatus.latestJob) {
           const status = await v1ApiService.getJobStatus(workflowStatus.latestJob.id)
+
+          if (!isMounted) return
+
           setJobStatus(status)
 
           // If job is completed, fetch the report
           if (status.status === 'COMPLETED') {
             const report = await v1ApiService.getDiagnosticReport(params.id)
+
+            if (!isMounted) return
 
             if (report.report) {
               // Transform report findings to errors format
@@ -73,37 +83,51 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
               setErrors(transformedErrors)
             }
             setLoading(false)
-            if (pollInterval) clearInterval(pollInterval)
+            // Stop polling when completed
+            if (pollInterval) {
+              clearInterval(pollInterval)
+              pollInterval = null
+            }
           } else if (status.status === 'FAILED') {
             setPollingError(status.error || '分析失败')
             setLoading(false)
-            if (pollInterval) clearInterval(pollInterval)
+            // Stop polling when failed
+            if (pollInterval) {
+              clearInterval(pollInterval)
+              pollInterval = null
+            }
           }
+          // If status is QUEUED or PROCESSING, continue polling (don't stop interval)
         } else {
           setLoading(false)
+          if (pollInterval) {
+            clearInterval(pollInterval)
+            pollInterval = null
+          }
         }
       } catch (error) {
+        if (!isMounted) return
+
         console.error('获取分析状态失败:', error)
         setPollingError(error instanceof Error ? error.message : '获取分析状态失败')
-        setLoading(false)
-        if (pollInterval) clearInterval(pollInterval)
+        // Don't stop loading on error, allow retry
       }
     }
 
     // Initial fetch
     fetchAnalysisStatus()
 
-    // Poll every 2 seconds if loading
-    pollInterval = setInterval(() => {
-      if (loading || (jobStatus && jobStatus.status === 'PROCESSING')) {
-        fetchAnalysisStatus()
-      }
-    }, 2000)
+    // Poll every 2 seconds
+    pollInterval = setInterval(fetchAnalysisStatus, 2000)
 
     return () => {
-      if (pollInterval) clearInterval(pollInterval)
+      isMounted = false
+      if (pollInterval) {
+        clearInterval(pollInterval)
+        pollInterval = null
+      }
     }
-  }, [params.id, loading, jobStatus])
+  }, [params.id])  // Only depend on params.id, not loading or jobStatus
 
   const handleAccept = (errorId: string) => {
     setErrors(prev => prev.map(error =>
