@@ -12,6 +12,9 @@ import { projectService } from '@/lib/db/services/project.service';
 import { revisionDecisionService } from '@/lib/db/services/revision-decision.service';
 import { diagnosticReportService } from '@/lib/db/services/diagnostic-report.service';
 import { createCharacterArchitect } from '@/lib/agents/character-architect';
+import { createRulesAuditor } from '@/lib/agents/rules-auditor';
+import { createPacingStrategist } from '@/lib/agents/pacing-strategist';
+import { createThematicPolisher } from '@/lib/agents/thematic-polisher';
 import { ActType } from '@prisma/client';
 import { HTTP_STATUS } from '@/lib/config/constants';
 import { sanitizeInput, validateRequestSize } from '@/lib/api/sanitization';
@@ -107,17 +110,95 @@ export async function POST(request: NextRequest) {
         throw new ValidationError('Script context is required');
       }
 
-      // Initialize CharacterArchitect agent
-      const agent = createCharacterArchitect();
+      // Execute act-specific agent logic
+      let focusContext: any;
+      let proposals: any[];
+      let recommendation: string;
 
-      // Execute P4 + P5 (Focus and Proposal generation)
-      const focusContext = await agent.focusCharacter(
-        validatedData.focusName,
-        validatedData.contradiction,
-        scriptContext
-      );
+      switch (validatedData.act) {
+        case 'ACT2_CHARACTER': {
+          const agent = createCharacterArchitect();
+          const focus = await agent.focusCharacter(
+            validatedData.focusName,
+            validatedData.contradiction,
+            scriptContext
+          );
+          const proposalSet = await agent.proposeSolutions(focus);
+          focusContext = focus;
+          proposals = proposalSet.proposals;
+          recommendation = proposalSet.recommendation;
+          break;
+        }
 
-      const proposalSet = await agent.proposeSolutions(focusContext);
+        case 'ACT3_WORLDBUILDING': {
+          const agent = createRulesAuditor();
+          // P7: Audit worldbuilding rules
+          const auditResult = await agent.auditWorldRules(
+            validatedData.focusName, // setting description
+            scriptContext
+          );
+          // P8: Generate solutions if inconsistencies found
+          let verificationResult;
+          if (auditResult.inconsistencies.length > 0) {
+            verificationResult = await agent.verifyDynamicConsistency(
+              auditResult.inconsistencies
+            );
+          } else {
+            verificationResult = {
+              solutions: [],
+              recommendation: '未发现设定矛盾'
+            };
+          }
+          focusContext = auditResult;
+          proposals = verificationResult.solutions;
+          recommendation = verificationResult.recommendation;
+          break;
+        }
+
+        case 'ACT4_PACING': {
+          const agent = createPacingStrategist();
+          // P10: Analyze pacing
+          const analysisResult = await agent.analyzePacing(
+            scriptContext,
+            validatedData.focusName // time range
+          );
+          // P11: Generate restructure strategies if issues found
+          let restructureResult;
+          if (analysisResult.pacingIssues.length > 0) {
+            restructureResult = await agent.restructureConflicts(
+              analysisResult.pacingIssues
+            );
+          } else {
+            restructureResult = {
+              strategies: [],
+              recommendedSequence: '未发现节奏问题',
+              continuityChecks: []
+            };
+          }
+          focusContext = analysisResult;
+          proposals = restructureResult.strategies;
+          recommendation = restructureResult.recommendedSequence;
+          break;
+        }
+
+        case 'ACT5_THEME': {
+          const agent = createThematicPolisher();
+          // P12: Enhance character depth
+          const enhanced = await agent.enhanceCharacterDepth(
+            validatedData.focusName, // character name
+            validatedData.contradiction, // theme
+            scriptContext // style reference
+          );
+          // Use enhanced profile as proposals (single option workflow)
+          focusContext = enhanced;
+          proposals = [enhanced.characterProfile];
+          recommendation = `建议采用增强后的角色设定以深化主题表达`;
+          break;
+        }
+
+        default:
+          throw new ValidationError(`Unsupported act type: ${validatedData.act}`);
+      }
 
       // Store decision in database
       const decision = await revisionDecisionService.create({
@@ -125,7 +206,7 @@ export async function POST(request: NextRequest) {
         act: validatedData.act as ActType,
         focusName: validatedData.focusName,
         focusContext: focusContext as any,
-        proposals: proposalSet.proposals as any
+        proposals: proposals as any
       });
 
       // Return proposals to user
@@ -133,8 +214,8 @@ export async function POST(request: NextRequest) {
         createApiResponse({
           decisionId: decision.id,
           focusContext,
-          proposals: proposalSet.proposals,
-          recommendation: proposalSet.recommendation
+          proposals,
+          recommendation
         }),
         { status: HTTP_STATUS.OK }
       );

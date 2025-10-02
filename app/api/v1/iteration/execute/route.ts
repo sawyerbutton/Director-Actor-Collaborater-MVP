@@ -11,13 +11,16 @@ import {
 import { projectService } from '@/lib/db/services/project.service';
 import { revisionDecisionService } from '@/lib/db/services/revision-decision.service';
 import { createCharacterArchitect } from '@/lib/agents/character-architect';
+import { createRulesAuditor } from '@/lib/agents/rules-auditor';
+import { createPacingStrategist } from '@/lib/agents/pacing-strategist';
+import { createThematicPolisher } from '@/lib/agents/thematic-polisher';
 import { HTTP_STATUS } from '@/lib/config/constants';
 import { sanitizeInput, validateRequestSize } from '@/lib/api/sanitization';
 
 // Validation schema
 const executeRequestSchema = z.object({
   decisionId: z.string().min(1),
-  proposalChoice: z.number().int().min(0).max(1) // 0 or 1
+  proposalChoice: z.number().int().min(0) // Allow any non-negative index
 });
 
 /**
@@ -81,7 +84,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Verify decision has proposals
-      if (!decision.parsedProposals || decision.parsedProposals.length !== 2) {
+      if (!decision.parsedProposals || decision.parsedProposals.length === 0) {
         throw new ValidationError('Decision does not have valid proposals');
       }
 
@@ -91,33 +94,96 @@ export async function POST(request: NextRequest) {
         throw new ValidationError('Invalid proposal choice');
       }
 
-      // Initialize CharacterArchitect agent
-      const agent = createCharacterArchitect();
+      // Execute act-specific execution logic
+      let generatedChanges: any;
+      let result: any;
 
-      // Execute P6 (Show Don't Tell transformation)
-      const focusContext = decision.focusContext as any;
-      const showDontTellResult = await agent.executeShowDontTell(
-        selectedProposal as any,
-        focusContext
-      );
+      switch (decision.act) {
+        case 'ACT2_CHARACTER': {
+          const agent = createCharacterArchitect();
+          const focusContext = decision.focusContext as any;
+          const showDontTellResult = await agent.executeShowDontTell(
+            selectedProposal as any,
+            focusContext
+          );
+          generatedChanges = showDontTellResult.dramaticActions;
+          result = {
+            selectedProposal,
+            dramaticActions: showDontTellResult.dramaticActions,
+            overallArc: showDontTellResult.overallArc,
+            integrationNotes: showDontTellResult.integrationNotes
+          };
+          break;
+        }
+
+        case 'ACT3_WORLDBUILDING': {
+          const agent = createRulesAuditor();
+          const auditResult = decision.focusContext as any;
+          const solution = selectedProposal as any;
+          // P9: Align setting with theme (using selected solution)
+          const alignmentResult = await agent.alignSettingWithTheme(
+            solution.title, // setting aspect
+            solution.adjustment || '' // theme alignment
+          );
+          generatedChanges = alignmentResult.alignmentStrategies;
+          result = {
+            selectedProposal,
+            alignmentStrategies: alignmentResult.alignmentStrategies,
+            coreRecommendation: alignmentResult.coreRecommendation,
+            integrationNotes: `应用选定的世界观修复方案: ${solution.title}`
+          };
+          break;
+        }
+
+        case 'ACT4_PACING': {
+          // For pacing, the selected strategy IS the execution result
+          // No additional AI call needed
+          const strategy = selectedProposal as any;
+          generatedChanges = strategy.changes || [];
+          result = {
+            selectedProposal,
+            changes: strategy.changes || [],
+            expectedImprovement: strategy.expectedImprovement || '',
+            integrationNotes: `应用选定的节奏优化策略: ${strategy.title}`
+          };
+          break;
+        }
+
+        case 'ACT5_THEME': {
+          const agent = createThematicPolisher();
+          const enhancedProfile = selectedProposal as any;
+          // P13: Define character core based on enhanced profile
+          const coreDefinition = await agent.defineCharacterCore(
+            enhancedProfile.name || decision.focusName,
+            enhancedProfile
+          );
+          generatedChanges = coreDefinition.characterCore;
+          result = {
+            selectedProposal: enhancedProfile,
+            characterCore: coreDefinition.characterCore,
+            integrationNotes: coreDefinition.integrationNotes
+          };
+          break;
+        }
+
+        default:
+          throw new ValidationError(`Unsupported act type: ${decision.act}`);
+      }
 
       // Update decision with user choice and generated changes
       const updatedDecision = await revisionDecisionService.execute(
         validatedData.decisionId,
         {
-          userChoice: selectedProposal.id,
-          generatedChanges: showDontTellResult.dramaticActions as any
+          userChoice: selectedProposal.id || `choice_${validatedData.proposalChoice}`,
+          generatedChanges: generatedChanges as any
         }
       );
 
-      // Return dramatic actions to user
+      // Return execution result to user
       return NextResponse.json(
         createApiResponse({
           decisionId: updatedDecision.id,
-          selectedProposal,
-          dramaticActions: showDontTellResult.dramaticActions,
-          overallArc: showDontTellResult.overallArc,
-          integrationNotes: showDontTellResult.integrationNotes
+          ...result
         }),
         { status: HTTP_STATUS.OK }
       );

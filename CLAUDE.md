@@ -63,26 +63,42 @@ The system implements a five-act interactive workflow for script analysis:
 
 **Act 1 (Foundational Diagnosis)**: ConsistencyGuardian analyzes script for 5 error types
 **Act 2 (Character Arc)**: CharacterArchitect iterates on character contradictions
-**Act 3 (Worldbuilding)**: [Epic 006 - Not yet implemented]
-**Act 4 (Pacing)**: [Epic 006 - Not yet implemented]
-**Act 5 (Theme)**: [Epic 006 - Not yet implemented]
+**Act 3 (Worldbuilding)**: RulesAuditor audits setting consistency and theme alignment
+**Act 4 (Pacing)**: PacingStrategist optimizes rhythm and conflict distribution
+**Act 5 (Theme)**: ThematicPolisher enhances character depth and empathy
 **Synthesis**: [Epic 007 - Not yet implemented]
 
 ### Core AI Agents
-1. **ConsistencyGuardian** (`lib/agents/consistency-guardian.ts`)
+1. **ConsistencyGuardian** (`lib/agents/consistency-guardian.ts`) - Epic 004
    - Detects 5 error types: timeline, character, plot, dialogue, scene inconsistencies
    - Chinese language prompts for Chinese output
    - Parallel chunk processing for performance
    - Used in Act 1 analysis
 
-2. **CharacterArchitect** (`lib/agents/character-architect.ts`) - NEW in Epic 005
+2. **CharacterArchitect** (`lib/agents/character-architect.ts`) - Epic 005
    - Implements P4-P6 prompt chain for Act 2
    - P4: Focus on character contradiction and analyze context
    - P5: Generate exactly 2 solution proposals with pros/cons
    - P6: Execute "Show, Don't Tell" transformation to dramatic actions
    - Returns structured JSON with DeepSeek `response_format: { type: 'json_object' }`
 
-3. **RevisionExecutive** (`lib/agents/revision-executive.ts`)
+3. **RulesAuditor** (`lib/agents/rules-auditor.ts`) - Epic 006
+   - Implements P7-P9 prompt chain for Act 3
+   - P7: Core setting logic audit - detects worldbuilding inconsistencies
+   - P8: Dynamic rule verification - analyzes ripple effects of fixes
+   - P9: Setting-theme alignment - ensures worldbuilding serves theme
+
+4. **PacingStrategist** (`lib/agents/pacing-strategist.ts`) - Epic 006
+   - Implements P10-P11 prompt chain for Act 4
+   - P10: Rhythm and emotional space analysis - identifies pacing issues
+   - P11: Conflict redistribution - generates restructuring strategies
+
+5. **ThematicPolisher** (`lib/agents/thematic-polisher.ts`) - Epic 006
+   - Implements P12-P13 prompt chain for Act 5
+   - P12: Character de-labeling and depth - removes generic traits
+   - P13: Core fears and beliefs - defines emotional core
+
+6. **RevisionExecutive** (`lib/agents/revision-executive.ts`)
    - Generates contextual fixes for detected errors
    - Validates and sanitizes AI outputs
 
@@ -132,15 +148,23 @@ The system implements a five-act interactive workflow for script analysis:
 - `GET /api/v1/projects/:id/status` - Get workflow status
 - `GET /api/v1/projects/:id/report` - Get diagnostic report
 
-#### V1 Iteration Endpoints (Epic 005)
+#### V1 Iteration Endpoints (Epic 005 & 006)
 - `POST /api/v1/iteration/propose` - Generate AI proposals for focus area
+  - Supports: `ACT2_CHARACTER`, `ACT3_WORLDBUILDING`, `ACT4_PACING`, `ACT5_THEME`
   - Input: projectId, act, focusName, contradiction, scriptContext
-  - Output: decisionId, focusContext, proposals (2 options), recommendation
+  - Output: decisionId, focusContext, proposals, recommendation
   - Creates RevisionDecision record
+  - **ACT2**: Returns 2 character proposals with pros/cons
+  - **ACT3**: Returns worldbuilding solutions with ripple effects
+  - **ACT4**: Returns pacing restructure strategies
+  - **ACT5**: Returns enhanced character profile
 - `POST /api/v1/iteration/execute` - Execute selected proposal
-  - Input: decisionId, proposalChoice (0 or 1)
-  - Output: dramaticActions, overallArc, integrationNotes
+  - Input: decisionId, proposalChoice (0 or 1, or higher for Acts 3-5)
   - Updates RevisionDecision with userChoice and generatedChanges
+  - **ACT2**: Executes "Show Don't Tell" transformation (P6)
+  - **ACT3**: Executes setting-theme alignment (P9)
+  - **ACT4**: Directly applies selected pacing strategy
+  - **ACT5**: Defines character core fears/beliefs (P13)
 - `GET /api/v1/projects/:id/decisions` - List all decisions for project
   - Supports filtering by act type
   - Returns execution statistics
@@ -164,7 +188,13 @@ DISABLE_RATE_LIMIT=true  # Optional: disable rate limiting in development
 ## Key Implementation Details
 
 ### Chinese Language Support
-- AI prompts configured for Chinese output in `lib/agents/prompts/consistency-prompts.ts` and `character-architect-prompts.ts`
+- All AI prompts configured for Chinese output
+- Prompt files: `lib/agents/prompts/*-prompts.ts`
+  - `consistency-prompts.ts` - Act 1 (ConsistencyGuardian)
+  - `character-architect-prompts.ts` - Act 2 (CharacterArchitect)
+  - `rules-auditor-prompts.ts` - Act 3 (RulesAuditor)
+  - `pacing-strategist-prompts.ts` - Act 4 (PacingStrategist)
+  - `thematic-polisher-prompts.ts` - Act 5 (ThematicPolisher)
 - Error detection rules use Chinese indicators in `lib/agents/types.ts`
 
 ### Rate Limiting Configuration
@@ -211,15 +241,36 @@ DISABLE_RATE_LIMIT=true npm run dev
 - Alternative testing interface
 - Manual control over project creation and analysis triggering
 
-### Testing Epic 005 Iteration Flow (NEW)
+### Testing Iteration Workflows (Epic 005 & 006)
 
-#### Act 2 Iteration Workflow
+#### Act 2 - Character Arc (CharacterArchitect)
 1. Complete Act 1 analysis first (get diagnostic report)
-2. Call `POST /api/v1/iteration/propose` with character contradiction
-3. Review 2 AI-generated proposals
+2. Call `POST /api/v1/iteration/propose` with `act: "ACT2_CHARACTER"`
+3. Review 2 AI-generated proposals with pros/cons
 4. Call `POST /api/v1/iteration/execute` with selected proposal (0 or 1)
-5. Receive dramatic actions and integration notes
-6. Query `GET /api/v1/projects/:id/decisions` to view decision history
+5. Receive dramatic actions (P6 "Show Don't Tell" transformation)
+
+#### Act 3 - Worldbuilding (RulesAuditor)
+1. Call `POST /api/v1/iteration/propose` with `act: "ACT3_WORLDBUILDING"`
+2. Receive worldbuilding inconsistencies (P7) and solutions (P8)
+3. Call `POST /api/v1/iteration/execute` with selected solution
+4. Receive setting-theme alignment strategies (P9)
+
+#### Act 4 - Pacing (PacingStrategist)
+1. Call `POST /api/v1/iteration/propose` with `act: "ACT4_PACING"`
+2. Receive pacing analysis (P10) and restructure strategies (P11)
+3. Call `POST /api/v1/iteration/execute` with selected strategy
+4. Strategy is directly applied (no additional AI call)
+
+#### Act 5 - Theme (ThematicPolisher)
+1. Call `POST /api/v1/iteration/propose` with `act: "ACT5_THEME"`
+2. Receive enhanced character profile (P12 - de-labeling and depth)
+3. Call `POST /api/v1/iteration/execute` with profile choice
+4. Receive character core definition (P13 - fears, beliefs, empathy hooks)
+
+#### View Decision History
+- Query `GET /api/v1/projects/:id/decisions` to view all decisions
+- Filter by act type to see specific workflow results
 
 ### Adding New API Endpoints
 1. Create route in `app/api/v1/[endpoint]/route.ts`
@@ -230,14 +281,20 @@ DISABLE_RATE_LIMIT=true npm run dev
 
 ### Modifying AI Agent Prompts
 
-#### ConsistencyGuardian (Act 1)
-- System prompts: `lib/agents/prompts/consistency-prompts.ts`
-- Error detection rules: `lib/agents/types.ts`
+All agents follow the same pattern - see Epic 005/006 implementations for reference:
 
-#### CharacterArchitect (Act 2)
-- P4-P6 prompts: `lib/agents/prompts/character-architect-prompts.ts`
-- Ensure Chinese language consistency
+#### Act-Specific Prompt Files
+- **Act 1**: `lib/agents/prompts/consistency-prompts.ts` - Error detection rules
+- **Act 2**: `lib/agents/prompts/character-architect-prompts.ts` - P4-P6 prompts
+- **Act 3**: `lib/agents/prompts/rules-auditor-prompts.ts` - P7-P9 prompts
+- **Act 4**: `lib/agents/prompts/pacing-strategist-prompts.ts` - P10-P11 prompts
+- **Act 5**: `lib/agents/prompts/thematic-polisher-prompts.ts` - P12-P13 prompts
+
+#### Prompt Requirements
+- All prompts must output Chinese language
+- Use `response_format: { type: 'json_object' }` in DeepSeek API calls
 - Return structured JSON matching interface types
+- Include validation methods in agent classes
 
 ## Critical File Locations
 
@@ -264,6 +321,9 @@ DISABLE_RATE_LIMIT=true npm run dev
 - **AI Agents**:
   - `lib/agents/consistency-guardian.ts` - Act 1 diagnostics
   - `lib/agents/character-architect.ts` - Act 2 character iteration
+  - `lib/agents/rules-auditor.ts` - Act 3 worldbuilding audit
+  - `lib/agents/pacing-strategist.ts` - Act 4 pacing optimization
+  - `lib/agents/thematic-polisher.ts` - Act 5 theme enhancement
   - `lib/agents/revision-executive.ts` - Fix generation
 - **Database Services**: `lib/db/services/*.service.ts`
   - `revision-decision.service.ts` - NEW in Epic 005
@@ -273,9 +333,10 @@ DISABLE_RATE_LIMIT=true npm run dev
 - **Epic Documentation**: `docs/epics/epic-*/README.md`
   - Epic 004: Database & V1 API Migration (COMPLETED)
   - Epic 005: Interactive Workflow Core - Act 2 (COMPLETED)
-  - Epic 006: Multi-Act Agents (NOT STARTED)
+  - Epic 006: Multi-Act Agents - Acts 3-5 (COMPLETED)
   - Epic 007: Grand Synthesis Engine (NOT STARTED)
 - **Test Results**: `docs/epics/epic-*/TEST_RESULTS.md`
+- **Verification Reports**: `docs/epics/epic-*/EPIC_*_VERIFICATION_REPORT.md`
 
 ## Known Issues and Solutions
 
@@ -314,14 +375,15 @@ For long-running operations:
 4. Client polls `GET /api/v1/analyze/jobs/:jobId` every 2 seconds
 5. When complete (JobStatus: COMPLETED), fetch results
 
-### Iteration API Pattern (Epic 005)
-For interactive decision-making:
-1. Call `POST /api/v1/iteration/propose` with focus area
-2. AI generates proposals and creates RevisionDecision record
-3. User reviews proposals in UI
-4. Call `POST /api/v1/iteration/execute` with selected proposal
-5. AI executes "Show, Don't Tell" transformation
-6. RevisionDecision updated with userChoice and generatedChanges
+### Iteration API Pattern (Epic 005 & 006)
+For interactive decision-making across all Acts 2-5:
+1. Call `POST /api/v1/iteration/propose` with focus area and act type
+2. System routes to appropriate agent (CharacterArchitect/RulesAuditor/PacingStrategist/ThematicPolisher)
+3. AI generates proposals and creates RevisionDecision record
+4. User reviews proposals in UI
+5. Call `POST /api/v1/iteration/execute` with selected proposal
+6. Agent executes act-specific transformation (P6/P9/P11/P13)
+7. RevisionDecision updated with userChoice and generatedChanges
 
 ### Type Definitions
 - **LogicError**: Used for analysis errors (NOT AnalysisError)
@@ -333,11 +395,15 @@ For interactive decision-making:
 
 ### Testing Conventions
 - Core V1 API tests: `tests/integration/v1-api-flow.test.ts`, `tests/unit/v1-api-service.test.ts`
-- Epic 005 tests: `tests/unit/character-architect.test.ts`, `tests/unit/revision-decision.service.test.ts`
+- Agent unit tests:
+  - Epic 005: `tests/unit/character-architect.test.ts`
+  - Epic 006: `tests/unit/rules-auditor.test.ts`, `tests/unit/pacing-strategist.test.ts`, `tests/unit/thematic-polisher.test.ts`
+- Service tests: `tests/unit/revision-decision.service.test.ts`
 - E2E tests: `tests/e2e/workspace-basic.spec.ts`
 - Use `mockResolvedValue()` for continuous polling, not `mockResolvedValueOnce()`
 - Set proper timeouts (10-15 seconds) for async tests
 - Always call `v1ApiService.clearState()` in test cleanup
+- Mock DeepSeekClient in all agent tests
 
 ### Epic Development Pattern
 When working on Epic features:
