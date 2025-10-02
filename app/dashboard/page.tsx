@@ -8,11 +8,15 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Upload, FileText, Play, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { v1ApiService } from '@/lib/services/v1-api-service'
 
 export default function DashboardPage() {
+  const router = useRouter()
   const [scriptContent, setScriptContent] = useState('')
   const [fileName, setFileName] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -34,40 +38,29 @@ export default function DashboardPage() {
 
   const handleAnalyze = async () => {
     if (!scriptContent.trim()) {
-      alert('请先输入或上传剧本内容')
+      setError('请先输入或上传剧本内容')
       return
     }
 
     setIsAnalyzing(true)
+    setError(null)
 
     try {
-      const response = await fetch('/api/analysis', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          scriptContent,
-          projectId: 'demo-project'
-        }),
-      })
+      // Step 1: Create project with script content
+      const project = await v1ApiService.createProject(
+        fileName || '新剧本项目',
+        scriptContent,
+        '从仪表板创建的项目'
+      )
 
-      if (!response.ok) {
-        throw new Error('分析失败')
-      }
+      // Step 2: Start Act 1 analysis
+      const analysisJob = await v1ApiService.startAnalysis(project.id, scriptContent)
 
-      const result = await response.json()
-
-      // 保存分析结果到localStorage（实际应该使用数据库）
-      localStorage.setItem('lastAnalysis', JSON.stringify(result.data))
-
-      // 使用Next.js的路由跳转
-      setTimeout(() => {
-        window.location.href = `/analysis/${result.data.id}`
-      }, 100)
+      // Step 3: Navigate to analysis page (polling will happen there)
+      router.push(`/analysis/${project.id}`)
     } catch (error) {
       console.error('分析错误:', error)
-      alert('分析失败，请稍后重试')
+      setError(error instanceof Error ? error.message : '分析失败，请稍后重试')
     } finally {
       setIsAnalyzing(false)
     }
@@ -188,6 +181,14 @@ export default function DashboardPage() {
 
                 {/* Analyze Button */}
                 <div className="mt-6 space-y-2">
+                  {/* Error Alert */}
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+
                   {/* 调试信息 */}
                   <div className="text-xs text-gray-500 text-center">
                     当前剧本内容长度: {scriptContent.length} 字符
@@ -201,7 +202,7 @@ export default function DashboardPage() {
                     disabled={!scriptContent.trim() || isAnalyzing}
                   >
                     {isAnalyzing ? (
-                      <>分析中...</>
+                      <>创建项目并分析中...</>
                     ) : (
                       <>
                         <Play className="mr-2 h-4 w-4" />

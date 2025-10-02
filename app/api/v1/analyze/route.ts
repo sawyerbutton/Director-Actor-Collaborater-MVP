@@ -2,12 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { withMiddleware } from '@/lib/api/middleware';
 import { createApiResponse } from '@/lib/api/response';
-import { handleApiError, ValidationError, UnauthorizedError, NotFoundError, ForbiddenError } from '@/lib/api/errors';
+import { handleApiError, ValidationError, NotFoundError, ForbiddenError } from '@/lib/api/errors';
 import { projectService } from '@/lib/db/services/project.service';
-import { analysisService } from '@/lib/db/services/analysis.service';
 import { ERROR_CODES, HTTP_STATUS } from '@/lib/config/constants';
-import { sanitizeInput, sanitizeScriptContent, validateRequestSize, RequestSizeError } from '@/lib/api/sanitization';
-import { analysisQueue } from '@/lib/api/job-queue';
+import { sanitizeInput, sanitizeScriptContent, validateRequestSize } from '@/lib/api/sanitization';
+import { workflowQueue } from '@/lib/api/workflow-queue';
 
 // Validation schema
 const analyzeRequestSchema = z.object({
@@ -15,9 +14,7 @@ const analyzeRequestSchema = z.object({
   scriptContent: z.string().min(1).optional() // Optional, can use project content
 });
 
-
-
-// POST /api/v1/analyze - Submit analysis request
+// POST /api/v1/analyze - Submit Act 1 analysis request
 export async function POST(request: NextRequest) {
   return withMiddleware(request, async () => {
     try {
@@ -26,12 +23,12 @@ export async function POST(request: NextRequest) {
 
       // Parse and validate request body
       const body = await request.json();
-      
+
       // Validate request size (10MB limit)
       if (!validateRequestSize(JSON.stringify(body))) {
         throw new ValidationError('Request size exceeds maximum allowed size of 10MB');
       }
-      
+
       // Sanitize input to prevent XSS
       const sanitizedBody = sanitizeInput(body);
       const validatedData = analyzeRequestSchema.parse(sanitizedBody);
@@ -50,25 +47,23 @@ export async function POST(request: NextRequest) {
       if (!scriptContent) {
         throw new ValidationError('Script content is required');
       }
-      
+
       // Sanitize script content
       scriptContent = sanitizeScriptContent(scriptContent);
 
-      // Create analysis record with pending status
-      const analysis = await analysisService.create({
-        projectId: validatedData.projectId,
-        status: 'pending'
-      });
+      // Submit Act 1 analysis job to workflow queue
+      const jobId = await workflowQueue.submitAct1Analysis(
+        validatedData.projectId,
+        scriptContent
+      );
 
-      // Add analysis job to queue for async processing
-      const jobId = await analysisQueue.addJob(analysis.id, scriptContent);
-
-      // Return 202 Accepted with analysis ID
+      // Return 202 Accepted with job ID
       return NextResponse.json(
         createApiResponse({
-          analysisId: analysis.id,
+          jobId,
+          projectId: validatedData.projectId,
           status: 'processing',
-          message: 'Analysis started successfully'
+          message: 'Act 1 analysis started successfully'
         }),
         { status: HTTP_STATUS.ACCEPTED }
       );

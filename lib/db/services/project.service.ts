@@ -1,4 +1,4 @@
-import { Project, Prisma } from '@prisma/client';
+import { Project, Prisma, WorkflowStatus } from '@prisma/client';
 import { prisma } from '../client';
 import { BaseService, PaginationOptions } from './base.service';
 
@@ -102,6 +102,106 @@ export class ProjectService extends BaseService {
   async countByUser(userId: string): Promise<number> {
     return await prisma.project.count({
       where: { userId },
+    });
+  }
+
+  /**
+   * Update workflow status for a project
+   */
+  async updateWorkflowStatus(id: string, workflowStatus: WorkflowStatus): Promise<Project> {
+    try {
+      // Validate state transitions
+      const project = await this.findById(id);
+      if (!project) {
+        throw new Error('Project not found');
+      }
+
+      // Validate state machine transitions
+      if (!this.isValidTransition(project.workflowStatus, workflowStatus)) {
+        throw new Error(`Invalid workflow transition from ${project.workflowStatus} to ${workflowStatus}`);
+      }
+
+      return await prisma.project.update({
+        where: { id },
+        data: { workflowStatus },
+      });
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
+
+  /**
+   * Validate workflow state transitions
+   */
+  private isValidTransition(from: WorkflowStatus, to: WorkflowStatus): boolean {
+    const validTransitions: Record<WorkflowStatus, WorkflowStatus[]> = {
+      [WorkflowStatus.INITIALIZED]: [WorkflowStatus.ACT1_RUNNING],
+      [WorkflowStatus.ACT1_RUNNING]: [WorkflowStatus.ACT1_COMPLETE, WorkflowStatus.INITIALIZED],
+      [WorkflowStatus.ACT1_COMPLETE]: [WorkflowStatus.ITERATING, WorkflowStatus.SYNTHESIZING],
+      [WorkflowStatus.ITERATING]: [WorkflowStatus.ACT1_COMPLETE, WorkflowStatus.SYNTHESIZING],
+      [WorkflowStatus.SYNTHESIZING]: [WorkflowStatus.COMPLETED, WorkflowStatus.ITERATING],
+      [WorkflowStatus.COMPLETED]: [WorkflowStatus.INITIALIZED], // Allow restart
+    };
+
+    return validTransitions[from]?.includes(to) ?? false;
+  }
+
+  /**
+   * Get projects by workflow status
+   */
+  async findByWorkflowStatus(
+    workflowStatus: WorkflowStatus,
+    pagination?: PaginationOptions
+  ): Promise<Project[]> {
+    return await prisma.project.findMany({
+      where: { workflowStatus },
+      take: pagination?.limit || 20,
+      skip: pagination?.offset || 0,
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        _count: {
+          select: {
+            analyses: true,
+            scriptVersions: true,
+            analysisJobs: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Get project with all workflow data
+   */
+  async findWithWorkflowData(id: string): Promise<Project & {
+    scriptVersions?: any[];
+    analysisJobs?: any[];
+    diagnosticReport?: any;
+  } | null> {
+    return await prisma.project.findUnique({
+      where: { id },
+      include: {
+        scriptVersions: {
+          orderBy: { version: 'desc' },
+          take: 5, // Last 5 versions
+        },
+        analysisJobs: {
+          orderBy: { createdAt: 'desc' },
+          take: 10, // Last 10 jobs
+        },
+        diagnosticReport: true,
+        analyses: {
+          orderBy: { createdAt: 'desc' },
+          take: 1, // Latest analysis
+        },
+      },
     });
   }
 }

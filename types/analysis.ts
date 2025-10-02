@@ -1,11 +1,26 @@
-export type LogicErrorType = 'timeline' | 'character' | 'plot' | 'dialogue' | 'scene';
+export type LogicErrorType =
+  | 'timeline'
+  | 'character'
+  | 'plot'
+  | 'dialogue'
+  | 'scene'
+  | 'timeline_consistency'
+  | 'character_consistency'
+  | 'plot_consistency'
+  | 'dialogue_consistency'
+  | 'scene_consistency';
 
 export const LogicErrorType = {
   TIMELINE: 'timeline' as LogicErrorType,
   CHARACTER: 'character' as LogicErrorType,
   PLOT: 'plot' as LogicErrorType,
   DIALOGUE: 'dialogue' as LogicErrorType,
-  SCENE: 'scene' as LogicErrorType
+  SCENE: 'scene' as LogicErrorType,
+  TIMELINE_CONSISTENCY: 'timeline_consistency' as LogicErrorType,
+  CHARACTER_CONSISTENCY: 'character_consistency' as LogicErrorType,
+  PLOT_CONSISTENCY: 'plot_consistency' as LogicErrorType,
+  DIALOGUE_CONSISTENCY: 'dialogue_consistency' as LogicErrorType,
+  SCENE_CONSISTENCY: 'scene_consistency' as LogicErrorType
 } as const;
 
 export type ErrorSeverity = 'critical' | 'high' | 'medium' | 'low';
@@ -20,6 +35,7 @@ export const ErrorSeverity = {
 export interface ErrorLocation {
   sceneId?: string;
   sceneNumber?: number;
+  scene?: number;
   characterName?: string;
   dialogueIndex?: number;
   lineNumber?: number;
@@ -28,6 +44,9 @@ export interface ErrorLocation {
   endLine?: number;
   endColumn?: number;
   timeReference?: string;
+  page?: number;
+  timelinePoint?: string;
+  content?: string; // Original text content from the script
 }
 
 export interface LogicError {
@@ -39,6 +58,7 @@ export interface LogicError {
   suggestion?: string;
   context?: string;
   relatedElements?: string[];
+  confidence?: number;
 }
 
 export interface ConsistencyAnalysisResult {
@@ -57,7 +77,8 @@ export interface ConsistencyAnalysisResult {
 }
 
 export interface AnalysisReport {
-  summary: {
+  errors: LogicError[];
+  summary: string | {
     overallConsistency: 'excellent' | 'good' | 'fair' | 'poor';
     criticalIssues: number;
     totalIssues: number;
@@ -65,7 +86,8 @@ export interface AnalysisReport {
   };
   detailedAnalysis: ConsistencyAnalysisResult;
   recommendations: string[];
-  confidence: number;
+  confidence?: number;
+  processingTime?: number;
 }
 
 export interface ConsistencyCheckRequest {

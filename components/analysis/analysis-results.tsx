@@ -123,12 +123,17 @@ export function AnalysisResults({ results }: AnalysisResultsProps) {
   };
 
   const getErrorTypeLabel = (type: LogicErrorType) => {
-    const labels: Record<LogicErrorType, string> = {
+    const labels: Partial<Record<LogicErrorType, string>> = {
       timeline: '时间线错误',
       character: '角色一致性',
       plot: '情节逻辑',
       dialogue: '对话问题',
-      scene: '场景转换'
+      scene: '场景转换',
+      timeline_consistency: '时间线一致性',
+      character_consistency: '角色一致性',
+      plot_consistency: '情节一致性',
+      dialogue_consistency: '对话一致性',
+      scene_consistency: '场景一致性'
     };
     return labels[type] || type;
   };

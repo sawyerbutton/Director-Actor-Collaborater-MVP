@@ -75,6 +75,7 @@ export class ResultMerger {
     const deduplicatedErrors = this.deduplicateErrors(mergedErrors);
     
     const finalReport: AnalysisReport = {
+      errors: deduplicatedErrors,
       summary: this.generateSummary(deduplicatedErrors),
       detailedAnalysis: {
         scriptId: uuidv4(),

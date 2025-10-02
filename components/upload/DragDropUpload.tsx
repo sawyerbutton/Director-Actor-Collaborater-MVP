@@ -19,6 +19,7 @@ interface DragDropUploadProps {
   accept?: string[];
   maxSize?: number;
   multiple?: boolean;
+  disabled?: boolean;
   onUpload: (files: File[]) => Promise<void>;
   onFileSelect?: (files: File[]) => void;
   className?: string;
@@ -28,6 +29,7 @@ export function DragDropUpload({
   accept = ['.txt', '.md', '.markdown'],
   maxSize = 10 * 1024 * 1024, // 10MB
   multiple = true,
+  disabled = false,
   onUpload,
   onFileSelect,
   className

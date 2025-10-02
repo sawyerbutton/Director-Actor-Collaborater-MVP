@@ -27,21 +27,27 @@ model User {
 
 // Project模型 - 代表用户的一个剧本工程
 model Project {
-  id          String    @id @default(cuid())
-  userId      String
-  title       String
-  description String?
-  content     String    @db.Text // 剧本内容
-  status      String    @default("draft")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
+  id              String            @id @default(cuid())
+  userId          String
+  title           String
+  description     String?
+  content         String            @db.Text // 剧本内容
+  status          String            @default("draft")
+  workflowStatus  WorkflowStatus    @default(INITIALIZED)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
   // 关联关系
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  analyses    Analysis[]
-  
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analyses        Analysis[]
+  scriptVersions  ScriptVersion[]
+  analysisJobs    AnalysisJob[]
+  diagnosticReport DiagnosticReport?
+  revisionDecisions RevisionDecision[]
+
   @@index([userId])
   @@index([status])
+  @@index([workflowStatus])
 }
 
 // Analysis模型 - 存储对某一个项目的AI分析结果
@@ -59,7 +65,121 @@ model Analysis {
   
   // 关联关系
   project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  
+
   @@index([projectId])
   @@index([status])
+}
+
+// ScriptVersion模型 - 存储剧本版本历史
+model ScriptVersion {
+  id          String   @id @default(cuid())
+  projectId   String
+  version     Int
+  content     String   @db.Text
+  changeLog   String?  @db.Text // 版本变更说明
+  synthesisMetadata Json? // Epic 007: Synthesis元数据(decisionsApplied, styleProfile, etc.)
+  confidence  Float?   // Epic 007: 合成置信度 (0-1)
+  createdAt   DateTime @default(now())
+
+  // 关联关系
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, version])
+  @@index([projectId])
+  @@index([projectId, version])
+}
+
+// AnalysisJob模型 - 异步分析任务管理
+model AnalysisJob {
+  id        String      @id @default(cuid())
+  projectId String
+  type      JobType
+  status    JobStatus   @default(QUEUED)
+  result    Json?
+  error     String?
+  metadata  Json?       // 额外的任务元数据
+  startedAt DateTime?
+  completedAt DateTime?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  // 关联关系
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([status])
+  @@index([type])
+}
+
+// DiagnosticReport模型 - Act 1诊断报告
+model DiagnosticReport {
+  id          String   @id @default(cuid())
+  projectId   String   @unique
+  findings    Json     // 结构化的诊断结果
+  summary     String?  @db.Text // 报告摘要
+  confidence  Float?   // 诊断置信度 (0-1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 关联关系
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
+
+// RevisionDecision模型 - 存储用户在迭代过程中的决策
+model RevisionDecision {
+  id               String   @id @default(cuid())
+  projectId        String
+  act              ActType
+  focusName        String   // 聚焦对象名称（例如角色名）
+  focusContext     Json     // 聚焦上下文（例如矛盾描述）
+  proposals        Json     // AI生成的提案
+  userChoice       String?  // 用户选择的提案ID
+  generatedChanges Json?    // 最终生成的修改
+  version          Int      @default(1)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // 关联关系
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([act])
+  @@index([projectId, act])
+}
+
+// 工作流状态枚举
+enum WorkflowStatus {
+  INITIALIZED     // 初始化
+  ACT1_RUNNING    // Act 1 正在执行
+  ACT1_COMPLETE   // Act 1 完成
+  ITERATING       // 迭代阶段
+  SYNTHESIZING    // 综合阶段
+  COMPLETED       // 全部完成
+}
+
+// 任务类型枚举
+enum JobType {
+  ACT1_ANALYSIS   // Act 1 基础诊断
+  SYNTHESIS       // Epic 007: 剧本合成
+  ITERATION       // 迭代优化
+  EXPORT          // Epic 007: 导出任务
+}
+
+// 任务状态枚举
+enum JobStatus {
+  QUEUED          // 队列中
+  PROCESSING      // 处理中
+  COMPLETED       // 完成
+  FAILED          // 失败
+  CANCELLED       // 已取消
+}
+
+// 幕类型枚举
+enum ActType {
+  ACT2_CHARACTER      // Act 2: 角色弧光压力测试
+  ACT3_WORLDBUILDING  // Act 3: 世界构建
+  ACT4_PACING         // Act 4: 节奏
+  ACT5_THEME          // Act 5: 主题
 }

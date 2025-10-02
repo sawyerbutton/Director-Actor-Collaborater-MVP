@@ -10,6 +10,18 @@ async function main() {
   await prisma.project.deleteMany();
   await prisma.user.deleteMany();
 
+  // Create demo user for development
+  const demoUser = await prisma.user.upsert({
+    where: { id: 'demo-user' },
+    update: {},
+    create: {
+      id: 'demo-user',
+      email: 'demo@example.com',
+      name: 'Demo User',
+      emailVerified: new Date(),
+    },
+  });
+
   // Create test users
   const user1 = await prisma.user.create({
     data: {

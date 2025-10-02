@@ -24,31 +24,6 @@ export default function RevisionPage() {
   const pendingCount = getPendingSuggestions().length;
   const totalCount = errors.length;
 
-  // Auto-save draft to localStorage
-  useEffect(() => {
-    if (errors.length > 0) {
-      const draft = {
-        errors,
-        timestamp: new Date().toISOString()
-      };
-      localStorage.setItem('revision-draft', JSON.stringify(draft));
-    }
-  }, [errors]);
-
-  // Load draft on mount
-  useEffect(() => {
-    const savedDraft = localStorage.getItem('revision-draft');
-    if (savedDraft && errors.length === 0) {
-      try {
-        const draft = JSON.parse(savedDraft);
-        // You could restore the draft here if needed
-        console.log('Draft found from:', draft.timestamp);
-      } catch (error) {
-        console.error('Failed to load draft:', error);
-      }
-    }
-  }, []);
-
   if (!scriptContent && analysisErrors.length === 0) {
     return (
       <div className="container mx-auto p-6">

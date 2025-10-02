@@ -19,6 +19,7 @@ export interface DeepSeekChatRequest {
   frequency_penalty?: number
   presence_penalty?: number
   stream?: boolean
+  response_format?: { type: 'json_object' | 'text' }
 }
 
 export interface DeepSeekChatResponse {

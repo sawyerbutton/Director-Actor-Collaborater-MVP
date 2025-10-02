@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
           title: project.title,
           description: project.description,
           status: project.status,
+          workflowStatus: project.workflowStatus,
           createdAt: project.createdAt.toISOString(),
           updatedAt: project.updatedAt.toISOString()
         }),
@@ -103,6 +104,7 @@ export async function GET(request: NextRequest) {
         title: project.title,
         description: project.description,
         status: project.status,
+        workflowStatus: project.workflowStatus,
         analysisCount: project._count?.analyses || 0,
         createdAt: project.createdAt.toISOString(),
         updatedAt: project.updatedAt.toISOString()

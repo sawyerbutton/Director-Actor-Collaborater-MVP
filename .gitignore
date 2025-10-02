@@ -12,6 +12,9 @@
 /playwright/.cache
 /tests/results/test-results.json
 .last-run.json
+/coverage
+/test-results
+/e2e
 
 # next.js
 /.next/

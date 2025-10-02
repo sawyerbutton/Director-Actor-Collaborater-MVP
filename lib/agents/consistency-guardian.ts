@@ -36,11 +36,87 @@ export class ConsistencyGuardian {
     this.cache = new Map();
   }
 
+  /**
+   * Analyze raw script text directly (bypasses parser)
+   * Use this for ACT1 to avoid parser artifacts
+   */
+  async analyzeScriptText(
+    scriptText: string,
+    scriptId: string,
+    checkTypes?: LogicErrorType[],
+    maxErrors: number = 50
+  ): Promise<AnalysisReport> {
+    const startTime = Date.now();
+
+    try {
+      const promptBuilder = new PromptBuilder(
+        scriptText,
+        checkTypes || ['timeline', 'character', 'plot', 'dialogue', 'scene'],
+        maxErrors
+      );
+
+      const prompt = promptBuilder.buildFullPrompt();
+
+      const request: DeepSeekChatRequest = {
+        model: this.config.modelName,
+        messages: [
+          { role: 'system', content: prompt.system },
+          { role: 'user', content: prompt.user }
+        ],
+        temperature: this.config.temperature,
+        max_tokens: this.config.maxTokens,
+        response_format: { type: 'json_object' }
+      };
+
+      console.log('📝 [ACT1 DEBUG] Script sent to AI (first 500 chars):',
+        scriptText.substring(0, 500));
+
+      const response = await this.client.chat(request);
+
+      console.log('🤖 [AI DEBUG] DeepSeek response preview:', {
+        contentLength: response.choices[0].message.content.length,
+        contentPreview: response.choices[0].message.content.substring(0, 300),
+        tokensUsed: response.usage?.total_tokens
+      });
+
+      const errors = this.parseAIResponse(response.choices[0].message.content);
+
+      console.log('✅ [AI DEBUG] Parsed errors:', {
+        count: errors.length,
+        types: errors.map(e => e.type),
+        firstErrorHasContent: errors[0]?.location?.content ? true : false
+      });
+
+      const analysisResult: ConsistencyAnalysisResult = {
+        scriptId,
+        analyzedAt: new Date(),
+        totalErrors: errors.length,
+        errors,
+        errorsByType: this.groupErrorsByType(errors),
+        errorsBySeverity: this.groupErrorsBySeverity(errors),
+        analysisMetadata: {
+          processingTime: Date.now() - startTime,
+          tokensUsed: response.usage?.total_tokens || 0,
+          modelUsed: this.config.modelName,
+          version: '1.0.0'
+        }
+      };
+
+      return this.generateReport(analysisResult);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('Script text analysis failed:', errorMessage);
+      }
+      throw new Error(`Consistency analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   async analyzeScript(
     request: ConsistencyCheckRequest
   ): Promise<AnalysisReport> {
     const startTime = Date.now();
-    
+
     const cacheKey = this.generateCacheKey(request);
     if (this.config.enableCaching) {
       const cached = this.cache.get(cacheKey);
@@ -161,13 +237,28 @@ export class ConsistencyGuardian {
         { role: 'user', content: prompt.user }
       ],
       temperature: this.config.temperature,
-      max_tokens: this.config.maxTokens
+      max_tokens: this.config.maxTokens,
+      response_format: { type: 'json_object' }  // Force JSON output
     };
 
     const response = await this.client.chat(request);
-    
+
+    // DEBUG: Log AI response
+    console.log('🤖 [AI DEBUG] DeepSeek response preview:', {
+      contentLength: response.choices[0].message.content.length,
+      contentPreview: response.choices[0].message.content.substring(0, 300),
+      tokensUsed: response.usage?.total_tokens
+    });
+
     const errors = this.parseAIResponse(response.choices[0].message.content);
-    
+
+    // DEBUG: Log parsed errors
+    console.log('✅ [AI DEBUG] Parsed errors:', {
+      count: errors.length,
+      types: errors.map(e => e.type),
+      firstErrorHasContent: errors[0]?.location?.content ? true : false
+    });
+
     return {
       errors: errors.map(error => ({
         ...error,
@@ -260,26 +351,57 @@ export class ConsistencyGuardian {
 
   private parseAIResponse(response: string): LogicError[] {
     try {
-      const parsed = JSON.parse(response);
-      
+      // Clean the response by removing markdown code block markers if present
+      let cleanedResponse = response.trim();
+
+      // Remove ```json at the beginning and ``` at the end
+      if (cleanedResponse.startsWith('```json')) {
+        cleanedResponse = cleanedResponse.substring(7);
+      } else if (cleanedResponse.startsWith('```')) {
+        cleanedResponse = cleanedResponse.substring(3);
+      }
+
+      if (cleanedResponse.endsWith('```')) {
+        cleanedResponse = cleanedResponse.substring(0, cleanedResponse.length - 3);
+      }
+
+      // Trim again to remove any extra whitespace
+      cleanedResponse = cleanedResponse.trim();
+
+      const parsed = JSON.parse(cleanedResponse);
+
       if (Array.isArray(parsed)) {
         return parsed.map(error => this.validateAndNormalizeError(error));
       } else if (parsed.errors && Array.isArray(parsed.errors)) {
         return parsed.errors.map((error: any) => this.validateAndNormalizeError(error));
       }
-      
+
       return [];
     } catch (error) {
       // Sanitize error logging to prevent information leakage
       if (process.env.NODE_ENV !== 'production') {
         const errorMessage = error instanceof Error ? error.message : 'Failed to parse response';
         console.error('Failed to parse AI response:', errorMessage);
+        // Also log first 200 chars of response for debugging
+        console.error('Response preview:', response.substring(0, 200));
       }
       return [];
     }
   }
 
   private validateAndNormalizeError(error: any): LogicError {
+    // Normalize confidence: must be between 0-100
+    let confidence = 80; // default
+    if (typeof error.confidence === 'number') {
+      if (error.confidence > 100) {
+        confidence = 100; // cap at 100
+      } else if (error.confidence < 0) {
+        confidence = 0; // floor at 0
+      } else {
+        confidence = error.confidence;
+      }
+    }
+
     return {
       id: error.id || uuidv4(),
       type: this.normalizeErrorType(error.type),
@@ -288,7 +410,8 @@ export class ConsistencyGuardian {
       description: error.description || 'Unspecified error',
       suggestion: error.suggestion,
       context: error.context,
-      relatedElements: error.relatedElements
+      relatedElements: error.relatedElements,
+      confidence
     };
   }
 
@@ -395,6 +518,7 @@ export class ConsistencyGuardian {
     const recommendations = this.generateRecommendations(result);
     
     return {
+      errors: result.errors,
       summary: {
         overallConsistency,
         criticalIssues: criticalCount,
@@ -435,14 +559,17 @@ export class ConsistencyGuardian {
     
     const dominantErrorType = this.findDominantErrorType(result.errorsByType);
     if (dominantErrorType) {
-      const typeRecommendations: Record<LogicErrorType, string> = {
+      const typeRecommendations: Partial<Record<LogicErrorType, string>> = {
         'timeline': 'Create a detailed timeline document to track all temporal references',
         'character': 'Develop character bibles with consistent traits and knowledge states',
         'plot': 'Review plot structure and ensure all setups have payoffs',
         'dialogue': 'Conduct dialogue passes to ensure natural conversation flow',
         'scene': 'Map out location geography and movement logistics'
       };
-      recommendations.push(typeRecommendations[dominantErrorType]);
+      const recommendation = typeRecommendations[dominantErrorType];
+      if (recommendation) {
+        recommendations.push(recommendation);
+      }
     }
     
     if (result.totalErrors > 10) {

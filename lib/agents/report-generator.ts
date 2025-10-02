@@ -16,6 +16,7 @@ export class ReportGenerator {
 
   generateFullReport(): AnalysisReport {
     return {
+      errors: this.result.errors,
       summary: this.generateSummary(),
       detailedAnalysis: this.result,
       recommendations: this.generateRecommendations(),
@@ -29,15 +30,15 @@ export class ReportGenerator {
 
     sections.push('# Script Consistency Analysis Report');
     sections.push(`\n## Summary`);
-    sections.push(`- **Overall Consistency**: ${report.summary.overallConsistency.toUpperCase()}`);
-    sections.push(`- **Total Issues Found**: ${report.summary.totalIssues}`);
-    sections.push(`- **Critical Issues**: ${report.summary.criticalIssues}`);
-    sections.push(`- **Confidence Score**: ${(report.confidence * 100).toFixed(1)}%`);
+    sections.push(`- **Overall Consistency**: ${typeof report.summary === 'string' ? report.summary : report.summary.overallConsistency.toUpperCase()}`);
+    sections.push(`- **Total Issues Found**: ${typeof report.summary === 'string' ? 'N/A' : report.summary.totalIssues}`);
+    sections.push(`- **Critical Issues**: ${typeof report.summary === 'string' ? 'N/A' : report.summary.criticalIssues}`);
+    sections.push(`- **Confidence Score**: ${((report.confidence || 0) * 100).toFixed(1)}%`);
     sections.push(`- **Analysis Time**: ${report.detailedAnalysis.analysisMetadata.processingTime}ms`);
 
-    if (report.summary.primaryConcerns.length > 0) {
+    if (typeof report.summary !== 'string' && report.summary.primaryConcerns.length > 0) {
       sections.push(`\n### Primary Concerns`);
-      report.summary.primaryConcerns.forEach(concern => {
+      report.summary.primaryConcerns.forEach((concern: string) => {
         sections.push(`- ${concern}`);
       });
     }
@@ -132,29 +133,29 @@ export class ReportGenerator {
     <div class="summary">
         <div class="summary-stat">
             <span class="summary-label">Overall Consistency:</span>
-            <span class="summary-value overall-${report.summary.overallConsistency}">${report.summary.overallConsistency.toUpperCase()}</span>
+            <span class="summary-value overall-${typeof report.summary === 'string' ? 'unknown' : report.summary.overallConsistency}">${typeof report.summary === 'string' ? report.summary : report.summary.overallConsistency.toUpperCase()}</span>
         </div>
         <div class="summary-stat">
             <span class="summary-label">Total Issues:</span>
-            <span class="summary-value">${report.summary.totalIssues}</span>
+            <span class="summary-value">${typeof report.summary === 'string' ? 'N/A' : report.summary.totalIssues}</span>
         </div>
         <div class="summary-stat">
             <span class="summary-label">Critical Issues:</span>
-            <span class="summary-value">${report.summary.criticalIssues}</span>
+            <span class="summary-value">${typeof report.summary === 'string' ? 'N/A' : report.summary.criticalIssues}</span>
         </div>
         <div class="summary-stat">
             <span class="summary-label">Confidence:</span>
-            <span class="summary-value">${(report.confidence * 100).toFixed(1)}%</span>
+            <span class="summary-value">${((report.confidence || 0) * 100).toFixed(1)}%</span>
         </div>
         <div class="confidence-bar">
-            <div class="confidence-fill" style="width: ${report.confidence * 100}%"></div>
+            <div class="confidence-fill" style="width: ${(report.confidence || 0) * 100}%"></div>
         </div>
     </div>
 
-    ${report.summary.primaryConcerns.length > 0 ? `
+    ${typeof report.summary !== 'string' && report.summary.primaryConcerns.length > 0 ? `
     <h2>Primary Concerns</h2>
     <ul>
-        ${report.summary.primaryConcerns.map(concern => `<li>${concern}</li>`).join('')}
+        ${report.summary.primaryConcerns.map((concern: string) => `<li>${concern}</li>`).join('')}
     </ul>
     ` : ''}
 
@@ -243,14 +244,17 @@ export class ReportGenerator {
 
     const dominantErrorType = this.findDominantErrorType();
     if (dominantErrorType) {
-      const typeRecommendations: Record<LogicErrorType, string> = {
+      const typeRecommendations: Partial<Record<LogicErrorType, string>> = {
         'timeline': 'Create a detailed timeline document mapping all temporal references and events',
         'character': 'Develop comprehensive character bibles tracking traits, knowledge, and relationships',
         'plot': 'Review plot structure ensuring all setups have payoffs and causal chains are clear',
         'dialogue': 'Conduct dialogue passes to ensure natural conversation flow and answered questions',
         'scene': 'Map location geography and verify all scene transitions are logically possible'
       };
-      recommendations.push(typeRecommendations[dominantErrorType]);
+      const recommendation = typeRecommendations[dominantErrorType];
+      if (recommendation) {
+        recommendations.push(recommendation);
+      }
     }
 
     if (this.result.totalErrors > 15) {
@@ -422,7 +426,12 @@ export class ReportGenerator {
       'character': 'Character',
       'plot': 'Plot',
       'dialogue': 'Dialogue',
-      'scene': 'Scene'
+      'scene': 'Scene',
+      'timeline_consistency': 'Timeline Consistency',
+      'character_consistency': 'Character Consistency',
+      'plot_consistency': 'Plot Consistency',
+      'dialogue_consistency': 'Dialogue Consistency',
+      'scene_consistency': 'Scene Consistency'
     };
     return formatted[type] || type;
   }
