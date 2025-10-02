@@ -123,7 +123,7 @@ The system implements a five-act interactive workflow for script analysis:
   - Stores DiagnosticReport in database
 
 #### Status Polling Pattern
-- Frontend polls job status every 2 seconds
+- Frontend polls job status every 5 seconds (reduced from 2s on 2025-10-02)
 - Client: `v1ApiService.pollJobStatus()` in `lib/services/v1-api-service.ts`
 - Server: `GET /api/v1/analyze/jobs/:jobId`
 - Supports long-running AI operations without blocking
@@ -450,10 +450,13 @@ All agents follow the same pattern - see Epic 005/006 implementations for refere
   - Epic 006: Multi-Act Agents - Acts 3-5 (COMPLETED + UI)
   - Epic 007: Grand Synthesis Engine (COMPLETED - Full UI + Backend)
 - **Phase Summaries**:
-  - `docs/ITERATION_PAGE_IMPLEMENTATION.md` - Phase 1: Acts 2-5 UI
-  - `docs/PHASE_2_COMPLETION_SUMMARY.md` - Phase 2: Synthesis UI
+  - `docs/archive/implementations/ITERATION_PAGE_IMPLEMENTATION.md` - Phase 1: Acts 2-5 UI
+  - `docs/archive/implementations/PHASE_2_COMPLETION_SUMMARY.md` - Phase 2: Synthesis UI
 - **Test Results**: `docs/epics/epic-*/TEST_RESULTS.md`
 - **Verification Reports**: `docs/epics/epic-*/EPIC_*_VERIFICATION_REPORT.md`
+- **Reference Documents**: `docs/references/` - Prompt design and workflow architecture references
+- **Configuration Docs**: `docs/config/` - Project structure and security notices
+- **Archived Docs**: `docs/archive/` - Historical bug fixes, test reports, and implementation summaries
 
 ## Known Issues and Solutions
 
@@ -473,6 +476,12 @@ Clear Next.js cache: `rm -rf .next node_modules/.cache && npm run dev`
 ### Rate Limiting in Development
 Use `DISABLE_RATE_LIMIT=true npm run dev` to bypass rate limits during testing
 
+### Database Replication Lag (Supabase/Production)
+When using connection pooling (pgbouncer), there may be brief delays between writes and reads:
+- Dashboard adds 500ms delay after project creation before starting analysis
+- Includes retry logic for "Project not found" errors
+- See `app/dashboard/page.tsx:48-82` for implementation
+
 ## Important Conventions
 
 ### Data Flow Pattern (Post Epic 004)
@@ -489,7 +498,7 @@ For long-running operations (Act 1 analysis, synthesis):
 1. Create job via `POST /api/v1/analyze` or `POST /api/v1/synthesize`
 2. Job gets queued in database (JobStatus: QUEUED)
 3. WorkflowQueue processes job in background (JobStatus: PROCESSING)
-4. Client polls status endpoint every 2 seconds
+4. Client polls status endpoint every 5 seconds
 5. When complete (JobStatus: COMPLETED), fetch results
 6. WorkflowQueue handles both ACT1_ANALYSIS and SYNTHESIS job types
 
@@ -758,7 +767,7 @@ Playwright E2E tests configured for WSL:
 - Legacy tests in `tests/__tests__/` have TypeScript errors (not in main test suite)
 - Some timing-based tests may be flaky in WSL (retry logic compensates)
 
-**Documentation**: See `docs/COMPREHENSIVE_TESTING_STRATEGY.md` and `docs/TEST_EXECUTION_REPORT.md`
+**Documentation**: See `docs/COMPREHENSIVE_TESTING_STRATEGY.md` and `docs/archive/testing/TEST_EXECUTION_REPORT.md`
 
 ---
 
@@ -869,7 +878,8 @@ For future development, refer to:
 
 ---
 
-**Last Updated**: 2025-10-02 (Post-testing improvements)
+**Last Updated**: 2025-10-02 (Post-documentation cleanup)
 **Architecture Version**: V1 API (Epic 004-007 Complete)
 **System Status**: Production Ready with Complete UI
 **Test Coverage**: 97.5% (77/79 tests passing)
+**Documentation**: Reorganized for clarity (root and docs/ directories cleaned)
