@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import { LogicError, ParsedScript } from '@/types/analysis';
 import { Suggestion } from '@/types/revision';
 import { ErrorContext, ErrorRelationship, FilterCriteria } from '@/types/visualization';
@@ -86,9 +85,7 @@ interface AnalysisState {
   setErrors: (errors: LogicError[]) => void;
 }
 
-export const useAnalysisStore = create<AnalysisState>()(
-  persist(
-    (set, get) => ({
+export const useAnalysisStore = create<AnalysisState>()((set, get) => ({
       // Initial state
       scriptContent: null,
       scriptFileName: null,
@@ -388,14 +385,4 @@ export const useAnalysisStore = create<AnalysisState>()(
           filteredErrors: errors
         });
       }
-    }),
-    {
-      name: 'analysis-storage',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        // Only persist history, not current analysis state
-        analysisHistory: state.analysisHistory
-      })
-    }
-  )
-);
+    }));

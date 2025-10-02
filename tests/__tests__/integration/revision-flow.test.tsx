@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { renderHook, act } from '@testing-library/react';
 import { useRevisionStore } from '@/lib/stores/revision-store';
 import { useAnalysisStore } from '@/lib/stores/analysis-store';
-import type { AnalysisError } from '@/types/analysis';
+import type { LogicError } from '@/types/analysis';
 
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
@@ -23,27 +23,33 @@ describe('Revision Flow Integration', () => {
 角色A：这是测试台词1
 角色B：这是测试台词2`;
 
-  const mockErrors: AnalysisError[] = [
+  const mockErrors: LogicError[] = [
     {
       id: 'error-1',
-      category: 'logic',
+      type: 'plot',
       severity: 'high',
-      message: '逻辑错误1',
+      description: '逻辑错误1',
       suggestion: '建议修改为新台词1',
-      context: {
-        line: 2,
-        snippet: '这是测试台词1'
+      context: '这是测试台词1',
+      confidence: 0.9,
+      location: {
+        lineNumber: 2,
+        lineText: '这是测试台词1',
+        sceneNumber: 1
       }
     },
     {
       id: 'error-2',
-      category: 'consistency',
+      type: 'character',
       severity: 'medium',
-      message: '一致性错误2',
+      description: '一致性错误2',
       suggestion: '建议修改为新台词2',
-      context: {
-        line: 3,
-        snippet: '这是测试台词2'
+      context: '这是测试台词2',
+      confidence: 0.8,
+      location: {
+        lineNumber: 3,
+        lineText: '这是测试台词2',
+        sceneNumber: 1
       }
     }
   ];
@@ -55,7 +61,7 @@ describe('Revision Flow Integration', () => {
     
     act(() => {
       revisionResult.current.setErrors([]);
-      analysisResult.current.setScriptContent('');
+      analysisResult.current.setScriptContent('', 'test.txt');
       analysisResult.current.setErrors([]);
     });
   });
@@ -67,7 +73,7 @@ describe('Revision Flow Integration', () => {
 
       // Setup initial state
       act(() => {
-        analysisResult.current.setScriptContent(mockScript);
+        analysisResult.current.setScriptContent(mockScript, 'test.txt');
         analysisResult.current.setErrors(mockErrors);
         revisionResult.current.setErrors(mockErrors);
       });
@@ -111,7 +117,7 @@ describe('Revision Flow Integration', () => {
 
       // Setup initial state
       act(() => {
-        analysisResult.current.setScriptContent(mockScript);
+        analysisResult.current.setScriptContent(mockScript, 'test.txt');
         analysisResult.current.setErrors(mockErrors);
         revisionResult.current.setErrors(mockErrors);
       });
@@ -233,7 +239,7 @@ describe('Revision Flow Integration', () => {
       const { result: analysisResult } = renderHook(() => useAnalysisStore());
 
       act(() => {
-        analysisResult.current.setScriptContent(mockScript);
+        analysisResult.current.setScriptContent(mockScript, 'test.txt');
         revisionResult.current.setErrors(mockErrors);
         revisionResult.current.acceptSuggestion('error-1');
       });

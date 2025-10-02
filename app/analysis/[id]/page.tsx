@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle, XCircle, AlertTriangle, AlertCircle, FileText, Download, ArrowLeft, Loader2, Wand2, Eye } from 'lucide-react'
+import { v1ApiService, type DiagnosticReportData, type JobStatusData } from '@/lib/services/v1-api-service'
 
 interface AnalysisError {
   id: string
@@ -32,20 +33,75 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
   const [repairedScript, setRepairedScript] = useState('')
   const [showExportWarning, setShowExportWarning] = useState(false)
   const [pendingExportFormat, setPendingExportFormat] = useState<'txt' | 'docx' | null>(null)
+  const [jobStatus, setJobStatus] = useState<JobStatusData | null>(null)
+  const [pollingError, setPollingError] = useState<string | null>(null)
 
   useEffect(() => {
-    // 从localStorage获取分析结果（实际应该从API获取）
-    const storedAnalysis = localStorage.getItem('lastAnalysis')
-    if (storedAnalysis) {
-      const data = JSON.parse(storedAnalysis)
-      setAnalysis(data)
-      setErrors(data.errors || [])
-      setModifiedScript(data.scriptContent)
-      setLoading(false)
-    } else {
-      setLoading(false)
+    let pollInterval: NodeJS.Timeout | null = null
+
+    const fetchAnalysisStatus = async () => {
+      try {
+        // Get project workflow status
+        const workflowStatus = await v1ApiService.getWorkflowStatus(params.id)
+
+        // If there's an active job, poll it
+        if (workflowStatus.latestJob) {
+          const status = await v1ApiService.getJobStatus(workflowStatus.latestJob.id)
+          setJobStatus(status)
+
+          // If job is completed, fetch the report
+          if (status.status === 'COMPLETED') {
+            const report = await v1ApiService.getDiagnosticReport(params.id)
+
+            if (report.report) {
+              // Transform report findings to errors format
+              const transformedErrors: AnalysisError[] = report.report.findings.map((finding, idx) => ({
+                id: `error-${idx}`,
+                type: finding.type,
+                typeName: finding.type,
+                severity: finding.severity as 'high' | 'medium' | 'low',
+                line: finding.location?.line || 0,
+                content: finding.location?.content || '',
+                description: finding.description,
+                suggestion: finding.suggestion || '',
+                confidence: finding.confidence
+              }))
+
+              setAnalysis(report.report)
+              setErrors(transformedErrors)
+            }
+            setLoading(false)
+            if (pollInterval) clearInterval(pollInterval)
+          } else if (status.status === 'FAILED') {
+            setPollingError(status.error || '分析失败')
+            setLoading(false)
+            if (pollInterval) clearInterval(pollInterval)
+          }
+        } else {
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('获取分析状态失败:', error)
+        setPollingError(error instanceof Error ? error.message : '获取分析状态失败')
+        setLoading(false)
+        if (pollInterval) clearInterval(pollInterval)
+      }
     }
-  }, [params.id])
+
+    // Initial fetch
+    fetchAnalysisStatus()
+
+    // Poll every 2 seconds if loading
+    pollInterval = setInterval(() => {
+      if (loading || (jobStatus && jobStatus.status === 'PROCESSING')) {
+        fetchAnalysisStatus()
+      }
+    }, 2000)
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval)
+    }
+  }, [params.id, loading, jobStatus])
 
   const handleAccept = (errorId: string) => {
     setErrors(prev => prev.map(error =>
@@ -155,10 +211,62 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
     }
   }
 
-  if (loading) {
+  if (loading || (jobStatus && jobStatus.status !== 'COMPLETED' && jobStatus.status !== 'FAILED')) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <Card className="max-w-md w-full">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              分析进行中
+            </CardTitle>
+            <CardDescription>
+              正在使用 AI 分析您的剧本...
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {jobStatus && (
+              <>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>状态: {jobStatus.status}</span>
+                    <span>{jobStatus.progress || 0}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${jobStatus.progress || 0}%` }}
+                    />
+                  </div>
+                </div>
+                <p className="text-sm text-gray-600">
+                  预计需要 10-30 秒，请稍候...
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (pollingError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <XCircle className="h-5 w-5" />
+              分析失败
+            </CardTitle>
+            <CardDescription>{pollingError}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => router.push('/dashboard')}>
+              返回工作台
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }
