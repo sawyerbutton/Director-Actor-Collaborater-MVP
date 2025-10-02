@@ -96,6 +96,11 @@ class V1ApiService {
     options: RequestInit = {},
     timeout: number = DEFAULT_TIMEOUT
   ): Promise<Response> {
+    // Skip API calls during build time (when base URL is empty)
+    if (!url || url.startsWith('/api/') && typeof window === 'undefined') {
+      throw new Error('API calls are not available during build time');
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
