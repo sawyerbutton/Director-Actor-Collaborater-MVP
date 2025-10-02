@@ -39,8 +39,8 @@ export function createRateLimiter(endpoint: string, config: RateLimitConfig = {}
   }
 
   return async function rateLimitMiddleware(request: NextRequest) {
-    // Skip rate limiting in development if DISABLE_RATE_LIMIT is set
-    if (process.env.NODE_ENV === 'development' && process.env.DISABLE_RATE_LIMIT === 'true') {
+    // Skip rate limiting if DISABLE_RATE_LIMIT is set (works in all environments)
+    if (process.env.DISABLE_RATE_LIMIT === 'true') {
       return null; // Continue to next middleware
     }
 
