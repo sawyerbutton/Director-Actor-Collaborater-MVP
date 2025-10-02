@@ -109,8 +109,8 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
     // Initial fetch
     fetchAnalysisStatus()
 
-    // Poll every 2 seconds
-    pollIntervalRef.current = setInterval(fetchAnalysisStatus, 2000)
+    // Poll every 5 seconds (reduced API call frequency)
+    pollIntervalRef.current = setInterval(fetchAnalysisStatus, 5000)
 
     return () => {
       isMounted = false

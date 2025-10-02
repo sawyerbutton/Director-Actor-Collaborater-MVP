@@ -60,7 +60,7 @@ export default function SynthesisPage() {
 
     const pollInterval = setInterval(async () => {
       await checkSynthesisStatus();
-    }, 2000); // Poll every 2 seconds
+    }, 5000); // Poll every 5 seconds (reduced API call frequency)
 
     return () => clearInterval(pollInterval);
   }, [synthesisJobId, synthesisStatus]);
