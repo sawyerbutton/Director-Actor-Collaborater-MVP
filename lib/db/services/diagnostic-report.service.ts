@@ -10,6 +10,7 @@ export interface DiagnosticFinding {
     scene?: number
     line?: number
     character?: string
+    content?: string  // Original text content from the script
   }
   description: string
   suggestion?: string

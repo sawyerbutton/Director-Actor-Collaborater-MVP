@@ -762,6 +762,59 @@ Playwright E2E tests configured for WSL:
 
 ---
 
+## Critical ACT1 Analysis Implementation Details (2025-10-02)
+
+### ConsistencyGuardian Analysis Flow
+**IMPORTANT**: ACT1 analysis bypasses the script parser to avoid artifacts.
+
+1. **Direct Text Analysis** (`lib/agents/consistency-guardian.ts`):
+   - Uses `analyzeScriptText()` method (NOT `analyzeScript()`)
+   - Passes raw script content directly to AI
+   - Avoids preprocessor that can introduce "undefined" values
+
+2. **Severity Mapping** (`lib/api/workflow-queue.ts`):
+   ```typescript
+   // AI outputs: critical/high/medium/low (4 levels)
+   // Database stores: critical/warning/info (3 levels)
+   severity: (error.severity === 'critical' || error.severity === 'high') ? 'critical' :
+            error.severity === 'medium' ? 'warning' : 'info'
+   ```
+
+3. **Frontend Display** (`app/analysis/[id]/page.tsx`):
+   - Interface expects: `'critical' | 'warning' | 'info'`
+   - Display labels: `critical → '高'`, `warning → '中'`, `info → '低'`
+
+4. **Statistics API** (`app/api/v1/projects/[id]/report/route.ts`):
+   ```typescript
+   const summary = {
+     totalErrors: statistics?.total || 0,
+     highSeverity: statistics?.bySeverity?.critical || 0,
+     mediumSeverity: statistics?.bySeverity?.warning || 0,
+     lowSeverity: statistics?.bySeverity?.info || 0
+   };
+   ```
+
+5. **Confidence Scoring** (`lib/agents/prompts/consistency-prompts.ts`):
+   - AI must provide varied confidence scores (not all 80%)
+   - 90-100: Explicit logic errors (timeline contradictions)
+   - 70-89: Probable issues (missing setup)
+   - 50-69: Possible issues (ambiguous)
+   - 30-49: Uncertain (may be style choice)
+
+### Common ACT1 Issues and Solutions
+
+**Issue**: Statistics show 0 errors but findings list has items
+- **Cause**: Severity value mismatch between database and frontend
+- **Fix**: Ensure severity mapping is consistent (critical/warning/info)
+
+**Issue**: All confidence scores are identical (e.g., 80%)
+- **Cause**: AI not outputting confidence, using default value
+- **Fix**: Update prompt to require varied confidence based on error clarity
+
+**Issue**: AI detects parser artifacts like "Location: undefined"
+- **Cause**: Using `analyzeScript()` which preprocesses parsed data
+- **Fix**: Use `analyzeScriptText()` to analyze raw script content
+
 ## Current Implementation Status (2025-10-02)
 
 ### ✅ Fully Implemented & Production-Ready

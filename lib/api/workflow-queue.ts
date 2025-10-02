@@ -171,37 +171,37 @@ class WorkflowQueue {
         throw new Error('Project or script version not found');
       }
 
-      // Parse the script
-      const parsedScript = parseScriptClient(scriptVersion.content);
+      // Use raw script text directly instead of parsing (avoids parser artifacts)
+      console.log('🚀 [ACT1 DEBUG] Starting AI analysis...');
+      console.log('🔑 [ACT1 DEBUG] API Key status:', {
+        exists: !!process.env.DEEPSEEK_API_KEY,
+        length: process.env.DEEPSEEK_API_KEY?.length || 0,
+        firstChars: process.env.DEEPSEEK_API_KEY?.substring(0, 10) || 'N/A'
+      });
+      console.log('📊 [ACT1 DEBUG] Script stats:', {
+        contentLength: scriptVersion.content.length,
+        lineCount: scriptVersion.content.split('\n').length
+      });
 
-      // Map the parsed script to the expected format for ConsistencyCheckRequest
-      // Convert 'index' to 'number' for Scene objects
-      const mappedScenes = parsedScript.scenes.map(scene => ({
-        ...scene,
-        number: (scene as any).index || (scene as any).number || 0
-      }));
+      // Call new analyzeScriptText method that bypasses parser
+      const analysisReport = await this.consistencyGuardian.analyzeScriptText(
+        scriptVersion.content,
+        `script-${projectId}`,
+        ['timeline', 'character', 'plot', 'dialogue', 'scene'],
+        50
+      );
 
-      // Map metadata to the analysis format
-      const mappedMetadata = {
-        genre: undefined,
-        setting: undefined,
-        timespan: undefined,
-        themes: undefined
-      };
-
-      // Create analysis request
-      const analysisRequest: ConsistencyCheckRequest = {
-        script: {
-          id: `script-${projectId}`,
-          title: project.title || 'Untitled Script',
-          scenes: mappedScenes as any, // Type assertion needed due to interface mismatch
-          characters: parsedScript.characters,
-          metadata: mappedMetadata
-        } as any
-      };
-
-      // Run ConsistencyGuardian analysis
-      const analysisReport = await this.consistencyGuardian.analyzeScript(analysisRequest);
+      // DEBUG: Log analysis results
+      console.log('🔍 [ACT1 DEBUG] Analysis report:', {
+        totalErrors: (analysisReport.errors || []).length,
+        errorTypes: (analysisReport.errors || []).map(e => e.type),
+        firstError: analysisReport.errors?.[0] ? {
+          type: analysisReport.errors[0].type,
+          severity: analysisReport.errors[0].severity,
+          hasContent: !!analysisReport.errors[0].location?.content,
+          hasSuggestion: !!analysisReport.errors[0].suggestion
+        } : null
+      });
 
       // Transform to diagnostic report format
       // Handle summary that could be either a string or an object
@@ -221,16 +221,21 @@ class WorkflowQueue {
       const diagnosticData: DiagnosticReportData = {
         findings: (analysisReport.errors || []).map((error: LogicError) => ({
           type: this.mapErrorType(error.type),
-          severity: error.severity === 'high' ? 'critical' :
+          // Map AI severity (critical/high/medium/low) to frontend format (high/medium/low)
+          severity: (error.severity === 'critical' || error.severity === 'high') ? 'critical' :
                    error.severity === 'medium' ? 'warning' : 'info',
           location: {
-            scene: error.location?.sceneId ? parseInt(error.location.sceneId) : undefined,
-            line: error.location?.lineNumber,
-            character: error.location?.characterName
+            scene: error.location?.sceneNumber || (error.location?.sceneId ? parseInt(error.location.sceneId) : undefined),
+            line: error.location?.line || error.location?.lineNumber,
+            character: error.location?.characterName,
+            content: error.location?.content  // Include original text content
           },
           description: error.description,
           suggestion: error.suggestion,
-          confidence: (error as any).confidence || 0.8
+          // Normalize confidence to 0-1 range (AI might return 0-100 percentage)
+          confidence: ((error as any).confidence || 80) > 1
+            ? ((error as any).confidence || 80) / 100
+            : (error as any).confidence || 0.8
         })),
         summary: summaryText,
         overallConfidence: (analysisReport as any).confidence || 0.85,

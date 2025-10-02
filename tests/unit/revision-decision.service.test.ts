@@ -4,7 +4,7 @@
 
 import { RevisionDecisionService } from '@/lib/db/services/revision-decision.service';
 import { prisma } from '@/lib/db/client';
-import { ActType } from '@prisma/client';
+import { ActType, Prisma } from '@prisma/client';
 
 // Mock prisma client
 jest.mock('@/lib/db/client', () => ({
@@ -335,7 +335,7 @@ describe('RevisionDecisionService', () => {
         where: { id: 'decision-1' },
         data: {
           userChoice: null,
-          generatedChanges: null,
+          generatedChanges: Prisma.JsonNull,
           updatedAt: expect.any(Date)
         }
       });

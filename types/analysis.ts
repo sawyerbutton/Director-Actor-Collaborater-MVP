@@ -46,6 +46,7 @@ export interface ErrorLocation {
   timeReference?: string;
   page?: number;
   timelinePoint?: string;
+  content?: string; // Original text content from the script
 }
 
 export interface LogicError {

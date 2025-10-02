@@ -49,13 +49,21 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       // Get statistics
       const statistics = await diagnosticReportService.getStatistics(projectId);
 
+      // Transform statistics for frontend compatibility
+      const summary = {
+        totalErrors: statistics?.total || 0,
+        highSeverity: statistics?.bySeverity?.critical || 0,
+        mediumSeverity: statistics?.bySeverity?.warning || 0,
+        lowSeverity: statistics?.bySeverity?.info || 0
+      };
+
       return NextResponse.json(
         createApiResponse({
           projectId,
           report: {
             id: report.id,
             findings: report.parsedFindings,
-            summary: report.summary,
+            summary: summary,  // Use transformed summary instead of raw string
             confidence: report.confidence,
             statistics,
             createdAt: report.createdAt.toISOString(),

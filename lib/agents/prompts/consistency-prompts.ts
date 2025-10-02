@@ -1,23 +1,24 @@
 import { LogicErrorType, ErrorSeverity } from '@/types/analysis';
 import { ERROR_DETECTION_RULES, ErrorDetectionRule } from '../types';
 
-export const SYSTEM_PROMPT = `你是一位专业的剧本一致性分析师，专门检测剧本和电影脚本中的逻辑错误、情节漏洞和不一致之处。
+export const SYSTEM_PROMPT = `【Prompt 1：设定角色与目标】
 
-你的职责是：
-1. 仔细分析提供的剧本内容
-2. 从多个维度识别逻辑不一致性
-3. 提供具体、可操作的反馈
-4. 根据对故事连贯性的影响评定严重程度
-5. 尽可能提出具体的修复建议
+你的角色：一个顶级的剧本医生，沟通风格绝对客观、理智、精准，专注于结构化分析。
 
-你必须以有效的JSON格式输出分析结果，并遵循指定的结构。
+你的核心任务：为我检查剧本，专注于检测并列出以下几类核心逻辑错误：
+1. 角色不一致（角色行为与动机矛盾、性格前后不符）
+2. 时间线冲突（时间顺序混乱、时间跳跃不合理、同时性矛盾）
+3. 情节漏洞（因果关系断裂、缺失关键铺垫、plot hole）
+4. 对话逻辑错误（答非所问、信息凭空出现、对话不连贯）
+5. 场景转换问题（空间逻辑矛盾、缺少必要过渡、位置冲突）
 
-严重程度指南：
-- CRITICAL（严重）：破坏基本故事逻辑或使情节不可能发生
-- HIGH（高）：严重的不一致性，会影响观众理解
-- MEDIUM（中等）：明显的问题，会影响观看体验
-- LOW（轻微）：大多数观众可能忽略的小问题
+【关键要求】：
+- 你必须用批判性思维，像侦探一样寻找每一个可疑之处
+- 任何逻辑上说不通、需要观众"脑补"才能理解的地方，都要标记出来
+- 宁可多报告潜在问题，也不要遗漏真实存在的硬伤
+- 每个错误必须指明：错误类型、具体位置、问题描述、修复建议
 
+你必须以有效的JSON格式输出分析结果。
 请使用中文描述所有的错误和建议。`;
 
 export function buildUserPrompt(
@@ -25,37 +26,65 @@ export function buildUserPrompt(
   checkTypes: LogicErrorType[] = ['timeline', 'character', 'plot', 'dialogue', 'scene'],
   maxErrors: number = 50
 ): string {
-  const selectedRules = ERROR_DETECTION_RULES.filter(rule => 
+  const selectedRules = ERROR_DETECTION_RULES.filter(rule =>
     checkTypes.includes(rule.type)
   );
-  
-  const rulesSection = selectedRules.map(rule => 
-    `\n### ${rule.name}\n${rule.checkPrompt}\nKey indicators: ${rule.indicators.join(', ')}`
+
+  const rulesSection = selectedRules.map(rule =>
+    `\n### ${rule.name}\n${rule.checkPrompt}\n关键指标: ${rule.indicators.join('、')}`
   ).join('\n');
 
-  return `分析以下剧本的一致性问题。重点关注以下几个方面：
+  return `【Prompt 2：输入剧本并要求分析】
 
-${rulesSection}
+这是需要诊断的剧本内容，请你开始执行核心任务。
 
 ## 剧本内容：
 ${scriptContent}
 
-## 分析要求：
-1. 系统地检查剧本，逐场分析
-2. 交叉对照各场景信息，查找矛盾之处
-3. 追踪角色的认知和状态变化
-4. 验证时间和空间逻辑
-5. 检查对话流程和信息一致性
-6. 返回最多${maxErrors}个最重要的错误
+【Prompt 3：要求结构化反馈】
+
+请以结构化报告的形式，向我呈现你的分析结果。报告需要明确指出每一个发现的潜在逻辑问题，并解释：
+1. 错误归属的类型（角色不一致/时间线冲突/情节漏洞/对话逻辑/场景转换）
+2. 定位（在哪个场景/哪一行/涉及哪个角色）
+3. 判断依据（为什么这是一个问题）
+4. 对剧情的潜在影响
+5. 修复建议（如何改正）
+
+## 检测重点：
+${rulesSection}
+
+## 分析流程：
+1. 逐场景扫描，建立时间线和角色状态追踪表
+2. 交叉验证场景之间的信息一致性
+3. 检查角色动机与行为的因果链条
+4. 验证对话的逻辑连贯性和信息来源
+5. 检查场景转换的空间和时间合理性
+6. 返回最多${maxErrors}个最严重的错误（优先级：high > medium > low）
+
+【重要】：如果发现逻辑问题，必须在location.content字段中包含问题所在的原始文本摘录
 
 ## 输出格式：
 以JSON数组格式提供你的分析结果。每个错误应包含：
 - type: 以下之一 [${checkTypes.join(', ')}]
 - severity: 以下之一 [critical, high, medium, low]
-- location: 具体的场景/角色/台词引用
+- location: 对象，必须包含以下字段：
+  * sceneNumber: 场景编号
+  * line: 行号
+  * content: **【必填】问题所在的原始文本摘录（直接从剧本中复制，不能为空）**
+  * characterName: 角色名称（如适用）
+  * dialogueIndex: 对话索引（如适用）
 - description: 问题的清晰解释（用中文）
-- suggestion: 修复建议（可选，用中文）
+- suggestion: 修复建议（用中文）
 - context: 相关剧本摘录（可选）
+- confidence: 置信度（0-100），基于以下标准：
+  * 90-100: 明确的逻辑错误（如时间线矛盾、角色信息冲突）
+  * 70-89: 很可能的问题（需要轻微推理才能发现）
+  * 50-69: 可能的问题（存在模糊性，但值得注意）
+  * 30-49: 不太确定的问题（可能是风格选择）
+
+**重要**:
+1. location.content字段必须包含原始的有问题的文本，不能留空
+2. confidence 必须根据问题的明确程度给出合理评分，不要都使用相同值
 
 确保你的响应是可以直接解析的有效JSON。所有描述和建议必须使用中文。`;
 }
@@ -70,9 +99,11 @@ Your response must be a valid JSON array following this exact structure:
     "severity": "critical|high|medium|low",
     "location": {
       "sceneNumber": <number>,
+      "line": <line number>,
       "characterName": "<character name if applicable>",
       "dialogueIndex": <index if applicable>,
-      "timeReference": "<time reference if applicable>"
+      "timeReference": "<time reference if applicable>",
+      "content": "<原文：问题所在的原始文本摘录>"
     },
     "description": "<不一致性的清晰、具体描述（中文）>",
     "suggestion": "<修复问题的具体建议（中文）>",
@@ -81,6 +112,8 @@ Your response must be a valid JSON array following this exact structure:
   }
 ]
 
+IMPORTANT: The "location.content" field MUST contain the original problematic text from the script. Never leave it empty.
+
 Example:
 [
   {
@@ -88,7 +121,9 @@ Example:
     "severity": "high",
     "location": {
       "sceneNumber": 5,
-      "timeReference": "morning"
+      "line": 42,
+      "timeReference": "morning",
+      "content": "JOHN: Remember what happened yesterday at the park?"
     },
     "description": "角色提到的'昨天'发生的事件，根据既定时间线实际发生在两天前",
     "suggestion": "将对话改为'两天前'或调整场景的时间设置",

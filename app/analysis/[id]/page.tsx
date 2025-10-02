@@ -13,7 +13,7 @@ interface AnalysisError {
   id: string
   type: string
   typeName: string
-  severity: 'high' | 'medium' | 'low'
+  severity: 'critical' | 'warning' | 'info'  // Match database values
   line: number
   content: string
   description: string
@@ -59,7 +59,7 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
                 id: `error-${idx}`,
                 type: finding.type,
                 typeName: finding.type,
-                severity: finding.severity as 'high' | 'medium' | 'low',
+                severity: finding.severity as 'critical' | 'warning' | 'info',  // Use database values
                 line: finding.location?.line || 0,
                 content: finding.location?.content || '',
                 description: finding.description,
@@ -195,19 +195,28 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'high': return 'destructive'
-      case 'medium': return 'secondary'
-      case 'low': return 'outline'
+      case 'critical': return 'destructive'
+      case 'warning': return 'secondary'
+      case 'info': return 'outline'
       default: return 'default'
     }
   }
 
   const getSeverityIcon = (severity: string) => {
     switch (severity) {
-      case 'high': return <XCircle className="h-4 w-4" />
-      case 'medium': return <AlertTriangle className="h-4 w-4" />
-      case 'low': return <AlertCircle className="h-4 w-4" />
+      case 'critical': return <XCircle className="h-4 w-4" />
+      case 'warning': return <AlertTriangle className="h-4 w-4" />
+      case 'info': return <AlertCircle className="h-4 w-4" />
       default: return <AlertCircle className="h-4 w-4" />
+    }
+  }
+
+  const getSeverityLabel = (severity: string) => {
+    switch (severity) {
+      case 'critical': return '高'
+      case 'warning': return '中'
+      case 'info': return '低'
+      default: return severity
     }
   }
 
@@ -394,7 +403,7 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
                     <div className="flex items-center gap-2">
                       <Badge variant={getSeverityColor(error.severity) as any}>
                         {getSeverityIcon(error.severity)}
-                        <span className="ml-1">{error.severity === 'high' ? '高' : error.severity === 'medium' ? '中' : '低'}</span>
+                        <span className="ml-1">{getSeverityLabel(error.severity)}</span>
                       </Badge>
                       <Badge variant="outline">{error.typeName}</Badge>
                       <span className="text-sm text-gray-500">行 {error.line}</span>

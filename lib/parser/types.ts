@@ -40,18 +40,18 @@ export interface PreprocessedText {
 }
 
 export const SCENE_PATTERNS: ScenePattern[] = [
-  // Chinese patterns
-  { pattern: /^场景[\s]?(\d+|[一二三四五六七八九十]+)[:：\s]/i, type: 'INT', language: 'zh' },
-  { pattern: /^第[\s]?(\d+|[一二三四五六七八九十]+)[\s]?场[:：\s]/i, type: 'INT', language: 'zh' },
-  { pattern: /^内景[:：\s]/i, type: 'INT', language: 'zh' },
-  { pattern: /^外景[:：\s]/i, type: 'EXT', language: 'zh' },
-  { pattern: /^内\/外景[:：\s]/i, type: 'INT/EXT', language: 'zh' },
-  
+  // Chinese patterns - more flexible to match various formats
+  { pattern: /^场景[\s]?(\d+|[一二三四五六七八九十]+)[\s]*[:：]/i, type: 'INT', language: 'zh' },
+  { pattern: /^第[\s]?(\d+|[一二三四五六七八九十]+)[\s]?场[\s]*[:：]/i, type: 'INT', language: 'zh' },
+  { pattern: /^内景[\s]*[:：]/i, type: 'INT', language: 'zh' },
+  { pattern: /^外景[\s]*[:：]/i, type: 'EXT', language: 'zh' },
+  { pattern: /^内\/外景[\s]*[:：]/i, type: 'INT/EXT', language: 'zh' },
+
   // English patterns
   { pattern: /^INT\.\s/i, type: 'INT', language: 'en' },
   { pattern: /^EXT\.\s/i, type: 'EXT', language: 'en' },
   { pattern: /^INT\.\/EXT\.\s/i, type: 'INT/EXT', language: 'en' },
-  { pattern: /^SCENE\s+\d+[:：\s]/i, type: 'INT', language: 'en' }
+  { pattern: /^SCENE\s+\d+[\s]*[:：]/i, type: 'INT', language: 'en' }
 ]
 
 export const CHARACTER_PATTERNS: CharacterPattern[] = [

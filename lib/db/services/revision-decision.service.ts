@@ -1,5 +1,5 @@
 import { prisma } from '../client'
-import { RevisionDecision, ActType } from '@prisma/client'
+import { RevisionDecision, ActType, Prisma } from '@prisma/client'
 import { BaseService, NotFoundError } from './base.service'
 
 export interface Proposal {
@@ -221,7 +221,7 @@ export class RevisionDecisionService extends BaseService {
         where: { id: decisionId },
         data: {
           userChoice: null,
-          generatedChanges: null,
+          generatedChanges: Prisma.JsonNull,
           updatedAt: new Date()
         }
       })
