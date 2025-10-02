@@ -96,9 +96,13 @@ class V1ApiService {
     options: RequestInit = {},
     timeout: number = DEFAULT_TIMEOUT
   ): Promise<Response> {
-    // Skip API calls during build time (when base URL is empty)
-    if (!url || url.startsWith('/api/') && typeof window === 'undefined') {
-      throw new Error('API calls are not available during build time');
+    // Skip API calls during build time - return empty response
+    if (typeof window === 'undefined' && (!url || url.startsWith('/api/'))) {
+      // Return a mock response during build time to prevent errors
+      return new Response(JSON.stringify({ data: [], error: 'Build time - no API available' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
     }
 
     const controller = new AbortController();
