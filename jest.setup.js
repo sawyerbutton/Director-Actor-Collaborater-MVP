@@ -7,7 +7,7 @@ process.env.DATABASE_URL = 'postgresql://director_user:director_pass_2024@localh
 process.env.DIRECT_URL = 'postgresql://director_user:director_pass_2024@localhost:5432/director_actor_db?schema=public'
 process.env.DEEPSEEK_API_KEY = 'test-api-key'
 process.env.DEEPSEEK_API_URL = 'https://api.deepseek.com'
-process.env.NEXTAUTH_SECRET = 'test-secret'
+process.env.NEXTAUTH_SECRET = 'test-secret-for-jest-testing-environment-minimum-32-chars'
 process.env.NEXTAUTH_URL = 'http://localhost:3000'
 process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000'
 

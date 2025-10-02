@@ -1,16 +1,34 @@
 /**
- * Integration tests for Iteration API endpoints
- * Tests the complete Act 2 workflow
+ * Integration tests for Iteration API route handlers
+ * Tests route handlers directly using NextRequest (no HTTP server required)
+ * @jest-environment node
  */
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db/client';
-import { CharacterArchitect } from '@/lib/agents/character-architect';
+import type { CharacterArchitect } from '@/lib/agents/character-architect';
 
-// Mock CharacterArchitect
-jest.mock('@/lib/agents/character-architect');
+// Import route handlers
+import { POST as proposeHandler } from '@/app/api/v1/iteration/propose/route';
+import { POST as executeHandler } from '@/app/api/v1/iteration/execute/route';
+import { GET as decisionsHandler } from '@/app/api/v1/projects/[id]/decisions/route';
 
-describe('Iteration API Integration Tests', () => {
+// Mock AI agent factory functions
+jest.mock('@/lib/agents/character-architect', () => ({
+  createCharacterArchitect: jest.fn()
+}));
+jest.mock('@/lib/agents/rules-auditor', () => ({
+  createRulesAuditor: jest.fn()
+}));
+jest.mock('@/lib/agents/pacing-strategist', () => ({
+  createPacingStrategist: jest.fn()
+}));
+jest.mock('@/lib/agents/thematic-polisher', () => ({
+  createThematicPolisher: jest.fn()
+}));
+
+describe('Iteration API Route Handlers', () => {
   let testProjectId: string;
   let testUserId: string;
 
@@ -36,14 +54,14 @@ describe('Iteration API Integration Tests', () => {
     const project = await prisma.project.create({
       data: {
         userId: testUserId,
-        title: 'Test Project for Iteration',
+        title: 'Test Project for Iteration Route Handlers',
         content: '测试剧本内容...',
         workflowStatus: 'ACT1_COMPLETE'
       }
     });
     testProjectId = project.id;
 
-    // Create diagnostic report for the project
+    // Create diagnostic report
     await prisma.diagnosticReport.create({
       data: {
         projectId: testProjectId,
@@ -65,11 +83,10 @@ describe('Iteration API Integration Tests', () => {
     });
 
     // Setup CharacterArchitect mock
-    const mockCharacterArchitect = CharacterArchitect as jest.MockedClass<
-      typeof CharacterArchitect
-    >;
+    const { createCharacterArchitect } = require('@/lib/agents/character-architect');
 
-    mockCharacterArchitect.prototype.focusCharacter = jest.fn().mockResolvedValue({
+    const mockAgent = {
+      focusCharacter: jest.fn().mockResolvedValue({
       character: '张三',
       contradiction: '性格前后不一致',
       analysis: {
@@ -79,11 +96,10 @@ describe('Iteration API Integration Tests', () => {
         impact: '观众难以共情',
         dramaticPotential: '可以通过关键事件塑造性格转变'
       },
-      relatedScenes: ['场景1', '场景5'],
-      keyMoments: ['第一次选择', '最终决定']
-    });
-
-    mockCharacterArchitect.prototype.proposeSolutions = jest.fn().mockResolvedValue({
+        relatedScenes: ['场景1', '场景5'],
+        keyMoments: ['第一次选择', '最终决定']
+      }),
+      proposeSolutions: jest.fn().mockResolvedValue({
       proposals: [
         {
           id: 'proposal_1',
@@ -103,13 +119,10 @@ describe('Iteration API Integration Tests', () => {
           cons: ['可能显得突兀', '需要精心设计'],
           dramaticImpact: '创造强烈戏剧张力'
         }
-      ],
-      recommendation: '建议选择方案1，更适合本剧本的叙事风格'
-    });
-
-    mockCharacterArchitect.prototype.executeShowDontTell = jest
-      .fn()
-      .mockResolvedValue({
+        ],
+        recommendation: '建议选择方案1，更适合本剧本的叙事风格'
+      }),
+      executeShowDontTell: jest.fn().mockResolvedValue({
         dramaticActions: [
           {
             sequence: 1,
@@ -128,7 +141,10 @@ describe('Iteration API Integration Tests', () => {
         ],
         overallArc: '通过两个场景展现角色从被动到主动的转变',
         integrationNotes: '建议在第一幕结尾和第二幕开头分别插入这两个场景'
-      });
+      })
+    };
+
+    (createCharacterArchitect as jest.Mock).mockReturnValue(mockAgent);
   });
 
   afterAll(async () => {
@@ -152,7 +168,7 @@ describe('Iteration API Integration Tests', () => {
 
   describe('POST /api/v1/iteration/propose', () => {
     it('should generate proposals for character contradiction', async () => {
-      const response = await fetch('http://localhost:3000/api/v1/iteration/propose', {
+      const request = new NextRequest('http://localhost:3001/api/v1/iteration/propose', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -161,10 +177,12 @@ describe('Iteration API Integration Tests', () => {
           projectId: testProjectId,
           act: 'ACT2_CHARACTER',
           focusName: '张三',
-          contradiction: '性格前后不一致'
+          contradiction: '性格前后不一致',
+          scriptContext: '相关剧本上下文...'
         })
       });
 
+      const response = await proposeHandler(request);
       expect(response.status).toBe(200);
 
       const data = await response.json();
@@ -185,7 +203,7 @@ describe('Iteration API Integration Tests', () => {
     }, 15000);
 
     it('should return 404 for non-existent project', async () => {
-      const response = await fetch('http://localhost:3000/api/v1/iteration/propose', {
+      const request = new NextRequest('http://localhost:3001/api/v1/iteration/propose', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -194,15 +212,20 @@ describe('Iteration API Integration Tests', () => {
           projectId: 'non-existent-id',
           act: 'ACT2_CHARACTER',
           focusName: '张三',
-          contradiction: '矛盾'
+          contradiction: '矛盾',
+          scriptContext: '上下文'
         })
       });
 
+      const response = await proposeHandler(request);
       expect(response.status).toBe(404);
+
+      const data = await response.json();
+      expect(data.success).toBe(false);
     });
 
     it('should validate request body', async () => {
-      const response = await fetch('http://localhost:3000/api/v1/iteration/propose', {
+      const request = new NextRequest('http://localhost:3001/api/v1/iteration/propose', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -213,7 +236,11 @@ describe('Iteration API Integration Tests', () => {
         })
       });
 
+      const response = await proposeHandler(request);
       expect(response.status).toBe(400);
+
+      const data = await response.json();
+      expect(data.success).toBe(false);
     });
   });
 
@@ -222,28 +249,27 @@ describe('Iteration API Integration Tests', () => {
 
     beforeAll(async () => {
       // Create a decision first
-      const proposeResponse = await fetch(
-        'http://localhost:3000/api/v1/iteration/propose',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            projectId: testProjectId,
-            act: 'ACT2_CHARACTER',
-            focusName: '张三',
-            contradiction: '性格前后不一致'
-          })
-        }
-      );
+      const proposeRequest = new NextRequest('http://localhost:3001/api/v1/iteration/propose', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          projectId: testProjectId,
+          act: 'ACT2_CHARACTER',
+          focusName: '张三',
+          contradiction: '性格前后不一致',
+          scriptContext: '相关剧本上下文...'
+        })
+      });
 
+      const proposeResponse = await proposeHandler(proposeRequest);
       const proposeData = await proposeResponse.json();
       decisionId = proposeData.data.decisionId;
     });
 
     it('should execute selected proposal and generate dramatic actions', async () => {
-      const response = await fetch('http://localhost:3000/api/v1/iteration/execute', {
+      const request = new NextRequest('http://localhost:3001/api/v1/iteration/execute', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -254,6 +280,7 @@ describe('Iteration API Integration Tests', () => {
         })
       });
 
+      const response = await executeHandler(request);
       expect(response.status).toBe(200);
 
       const data = await response.json();
@@ -275,7 +302,7 @@ describe('Iteration API Integration Tests', () => {
     }, 15000);
 
     it('should validate proposalChoice range', async () => {
-      const response = await fetch('http://localhost:3000/api/v1/iteration/execute', {
+      const request = new NextRequest('http://localhost:3001/api/v1/iteration/execute', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -286,11 +313,15 @@ describe('Iteration API Integration Tests', () => {
         })
       });
 
+      const response = await executeHandler(request);
       expect(response.status).toBe(400);
+
+      const data = await response.json();
+      expect(data.success).toBe(false);
     });
 
     it('should return 404 for non-existent decision', async () => {
-      const response = await fetch('http://localhost:3000/api/v1/iteration/execute', {
+      const request = new NextRequest('http://localhost:3001/api/v1/iteration/execute', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -301,16 +332,24 @@ describe('Iteration API Integration Tests', () => {
         })
       });
 
+      const response = await executeHandler(request);
       expect(response.status).toBe(404);
+
+      const data = await response.json();
+      expect(data.success).toBe(false);
     });
   });
 
   describe('GET /api/v1/projects/:id/decisions', () => {
     it('should retrieve all decisions for a project', async () => {
-      const response = await fetch(
-        `http://localhost:3000/api/v1/projects/${testProjectId}/decisions`
+      const request = new NextRequest(
+        `http://localhost:3001/api/v1/projects/${testProjectId}/decisions`,
+        {
+          method: 'GET'
+        }
       );
 
+      const response = await decisionsHandler(request, { params: { id: testProjectId } });
       expect(response.status).toBe(200);
 
       const data = await response.json();
@@ -322,10 +361,14 @@ describe('Iteration API Integration Tests', () => {
     });
 
     it('should filter decisions by act', async () => {
-      const response = await fetch(
-        `http://localhost:3000/api/v1/projects/${testProjectId}/decisions?act=ACT2_CHARACTER`
+      const request = new NextRequest(
+        `http://localhost:3001/api/v1/projects/${testProjectId}/decisions?act=ACT2_CHARACTER`,
+        {
+          method: 'GET'
+        }
       );
 
+      const response = await decisionsHandler(request, { params: { id: testProjectId } });
       expect(response.status).toBe(200);
 
       const data = await response.json();
@@ -340,11 +383,18 @@ describe('Iteration API Integration Tests', () => {
     });
 
     it('should return 404 for non-existent project', async () => {
-      const response = await fetch(
-        'http://localhost:3000/api/v1/projects/non-existent-id/decisions'
+      const request = new NextRequest(
+        'http://localhost:3001/api/v1/projects/non-existent-id/decisions',
+        {
+          method: 'GET'
+        }
       );
 
+      const response = await decisionsHandler(request, { params: { id: 'non-existent-id' } });
       expect(response.status).toBe(404);
+
+      const data = await response.json();
+      expect(data.success).toBe(false);
     });
   });
 });

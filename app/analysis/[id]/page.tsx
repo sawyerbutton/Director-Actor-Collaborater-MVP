@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle, XCircle, AlertTriangle, AlertCircle, FileText, Download, ArrowLeft, Loader2, Wand2, Eye } from 'lucide-react'
+import { CheckCircle, XCircle, AlertTriangle, AlertCircle, FileText, Download, ArrowLeft, Loader2, Wand2, Eye, ArrowRight } from 'lucide-react'
 import { v1ApiService, type DiagnosticReportData, type JobStatusData } from '@/lib/services/v1-api-service'
 
 interface AnalysisError {
@@ -337,10 +337,30 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
           </div>
         </div>
 
+        {/* Act 1 Complete - Next Steps */}
+        {analysis && (
+          <Alert className="mb-6 bg-blue-50 border-blue-200">
+            <AlertCircle className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="flex items-center justify-between">
+              <span className="text-blue-800">
+                ✓ Act 1 基础诊断已完成！您可以进入 Acts 2-5 进行深度迭代修改
+              </span>
+              <Button
+                onClick={() => router.push(`/iteration/${params.id}`)}
+                className="ml-4"
+                size="sm"
+              >
+                进入迭代工作区
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Summary Card */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>分析概览</CardTitle>
+            <CardTitle>Act 1 - 基础诊断结果</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
