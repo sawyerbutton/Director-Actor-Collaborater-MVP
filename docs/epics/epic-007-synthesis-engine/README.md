@@ -239,6 +239,75 @@ interface SynthesisComponents {
 - [ ] Export includes change log
 - [ ] Async export for large files
 
+### Story 4: Unified Workspace Interface (Optional - Post-Synthesis)
+**Points:** 8
+**Priority:** P2 - UX Enhancement
+**Description:** Evaluate need for and potentially implement a unified WorkspaceLayout page that integrates all five acts into a cohesive workspace interface.
+
+**Context:**
+Epic 005 delivered reusable UI components (ActProgressBar, FindingsSelector, ProposalComparison, ChangesDisplay) without a unified workspace page. This was intentionally deferred to avoid premature UI decisions before all agents were implemented.
+
+**Pre-Implementation Assessment:**
+Before implementing, evaluate the following:
+1. **User Flow Analysis**: Review actual user behavior across Acts 1-5
+   - Are users comfortable navigating between separate pages?
+   - What are the most common navigation patterns?
+   - Where do users experience friction?
+
+2. **Component Integration Points**: Assess current integration
+   - How well do existing components work in current pages?
+   - Are there redundant navigation steps?
+   - What interaction patterns emerge across all five acts?
+
+3. **Technical Readiness**: Verify prerequisites
+   - All five agents (ConsistencyGuardian, CharacterArchitect, RulesAuditor, PacingStrategist, ThematicPolisher) operational
+   - Complete decision tracking across all acts
+   - Performance acceptable with full workflow
+
+**Decision Criteria:**
+Implement WorkspaceLayout if:
+- [ ] Users request unified interface in feedback
+- [ ] Navigation between acts shows measurable friction
+- [ ] Current page-per-act approach proves confusing
+- [ ] Component reuse creates too much code duplication
+
+Skip WorkspaceLayout if:
+- [ ] Current multi-page approach works well
+- [ ] Users prefer focused, single-act pages
+- [ ] Development resources better spent on other features
+
+**Acceptance Criteria (if implemented):**
+- [ ] Single workspace page at `/workspace/[projectId]`
+- [ ] ActProgressBar showing all five acts with status
+- [ ] Context-sensitive component rendering based on current act
+- [ ] Smooth transitions between acts without page reload
+- [ ] State management (Zustand/Context) for workspace state
+- [ ] Persistent user preferences (last viewed act, layout settings)
+- [ ] Mobile-responsive design maintained
+- [ ] Performance: < 2s page load, smooth act transitions
+
+**Implementation Notes:**
+```typescript
+// Potential workspace route structure
+app/workspace/[id]/page.tsx
+  - ActProgressBar (always visible)
+  - Dynamic content area based on currentAct:
+    - ACT1: DiagnosticReport display
+    - ACT2: FindingsSelector + ProposalComparison + ChangesDisplay
+    - ACT3: RuleInconsistencyDisplay + proposals
+    - ACT4: PacingTimeline + ConflictMap + proposals
+    - ACT5: CharacterEvolution + proposals
+  - Navigation controls
+  - Progress persistence
+```
+
+**Alternative Approach:**
+If WorkspaceLayout is not implemented, ensure current approach is optimized:
+- [ ] Add "Next Act" / "Previous Act" navigation to existing pages
+- [ ] Implement act progress indicator on all relevant pages
+- [ ] Create breadcrumb navigation showing current position
+- [ ] Add quick-jump menu for act navigation
+
 ## Success Metrics
 - [ ] Synthesis completes in < 2 minutes for average script
 - [ ] 95% of changes integrated without conflicts
@@ -279,6 +348,8 @@ interface SynthesisComponents {
 - Export libraries available (docx, pdf generators)
 
 ## Definition of Done
+
+### Core Synthesis Features (Required)
 - [ ] RevisionExecutive successfully synthesizes scripts
 - [ ] Conflict detection and resolution working
 - [ ] Version management system operational
@@ -287,6 +358,13 @@ interface SynthesisComponents {
 - [ ] Performance benchmarks met
 - [ ] End-to-end synthesis tested
 - [ ] User documentation complete
+
+### Workspace Interface Assessment (Required Evaluation, Optional Implementation)
+- [ ] User flow analysis completed across all five acts
+- [ ] Component integration assessment documented
+- [ ] Decision documented: Implement WorkspaceLayout OR optimize current multi-page approach
+- [ ] If WorkspaceLayout implemented: All Story 4 acceptance criteria met
+- [ ] If multi-page approach retained: Navigation enhancements completed (breadcrumbs, act progress indicators, quick-jump menu)
 
 ## Technical Notes
 
@@ -400,12 +478,38 @@ describe('Grand Synthesis Engine', () => {
 
 ## Post-Epic Considerations
 
+### Epic 005 Component Reuse
+**Available Components from Epic 005 (Interactive Workflow Core):**
+- `ActProgressBar` - Five-act progress visualization
+- `FindingsSelector` - Act 1 diagnostic results selector
+- `ProposalComparison` - Side-by-side proposal comparison
+- `ChangesDisplay` - Dramatic actions/changes display
+
+**Current Integration Status:**
+These components are **standalone and reusable** but not yet integrated into a unified workspace. They can be used in:
+- Current approach: Individual pages per act (e.g., `/analysis/[id]` for Act 1-2)
+- Story 4 approach: Unified `/workspace/[id]` page (if implemented)
+
+**Design Decision Rationale:**
+Epic 005 intentionally deferred creating a unified workspace to:
+1. Avoid premature UI architecture before all agents were implemented
+2. Allow agent-specific interaction patterns to emerge naturally
+3. Enable iterative UX improvements based on actual usage
+4. Keep Epic 005 focused on core functionality (Agent + API + Components)
+
+This decision is validated in Epic 007 Story 4, where a data-driven assessment determines the optimal UI approach.
+
 ### Future Enhancements
 1. **AI Learning Loop**: Train on successful syntheses
 2. **Collaborative Editing**: Multiple users on same project
 3. **Template Library**: Reusable revision patterns
 4. **Analytics Dashboard**: Insights on common changes
 5. **API Access**: Third-party integration support
+6. **Advanced Workspace Features** (if WorkspaceLayout is implemented):
+   - Multi-project workspace switching
+   - Side-by-side act comparison
+   - Customizable workspace layouts
+   - Keyboard shortcuts for power users
 
 ### Maintenance Requirements
 - Regular prompt tuning based on results

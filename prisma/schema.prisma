@@ -43,6 +43,7 @@ model Project {
   scriptVersions  ScriptVersion[]
   analysisJobs    AnalysisJob[]
   diagnosticReport DiagnosticReport?
+  revisionDecisions RevisionDecision[]
 
   @@index([userId])
   @@index([status])
@@ -123,6 +124,28 @@ model DiagnosticReport {
   @@index([projectId])
 }
 
+// RevisionDecision模型 - 存储用户在迭代过程中的决策
+model RevisionDecision {
+  id               String   @id @default(cuid())
+  projectId        String
+  act              ActType
+  focusName        String   // 聚焦对象名称（例如角色名）
+  focusContext     Json     // 聚焦上下文（例如矛盾描述）
+  proposals        Json     // AI生成的提案
+  userChoice       String?  // 用户选择的提案ID
+  generatedChanges Json?    // 最终生成的修改
+  version          Int      @default(1)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  // 关联关系
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([act])
+  @@index([projectId, act])
+}
+
 // 工作流状态枚举
 enum WorkflowStatus {
   INITIALIZED     // 初始化
@@ -147,4 +170,12 @@ enum JobStatus {
   COMPLETED       // 完成
   FAILED          // 失败
   CANCELLED       // 已取消
+}
+
+// 幕类型枚举
+enum ActType {
+  ACT2_CHARACTER      // Act 2: 角色弧光压力测试
+  ACT3_WORLDBUILDING  // Act 3: 世界构建
+  ACT4_PACING         // Act 4: 节奏
+  ACT5_THEME          // Act 5: 主题
 }

@@ -1,0 +1,350 @@
+/**
+ * Integration tests for Iteration API endpoints
+ * Tests the complete Act 2 workflow
+ */
+
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { prisma } from '@/lib/db/client';
+import { CharacterArchitect } from '@/lib/agents/character-architect';
+
+// Mock CharacterArchitect
+jest.mock('@/lib/agents/character-architect');
+
+describe('Iteration API Integration Tests', () => {
+  let testProjectId: string;
+  let testUserId: string;
+
+  beforeAll(async () => {
+    // Ensure test user exists
+    testUserId = 'demo-user';
+
+    const existingUser = await prisma.user.findUnique({
+      where: { id: testUserId }
+    });
+
+    if (!existingUser) {
+      await prisma.user.create({
+        data: {
+          id: testUserId,
+          email: 'demo@example.com',
+          name: 'Demo User'
+        }
+      });
+    }
+
+    // Create test project
+    const project = await prisma.project.create({
+      data: {
+        userId: testUserId,
+        title: 'Test Project for Iteration',
+        content: '测试剧本内容...',
+        workflowStatus: 'ACT1_COMPLETE'
+      }
+    });
+    testProjectId = project.id;
+
+    // Create diagnostic report for the project
+    await prisma.diagnosticReport.create({
+      data: {
+        projectId: testProjectId,
+        findings: [
+          {
+            type: 'character',
+            severity: 'high',
+            description: '张三的性格前后不一致',
+            location: {
+              sceneNumber: 1,
+              characterName: '张三'
+            },
+            suggestion: '需要更清晰的角色发展弧线'
+          }
+        ] as any,
+        summary: '发现1个角色一致性问题',
+        confidence: 0.85
+      }
+    });
+
+    // Setup CharacterArchitect mock
+    const mockCharacterArchitect = CharacterArchitect as jest.MockedClass<
+      typeof CharacterArchitect
+    >;
+
+    mockCharacterArchitect.prototype.focusCharacter = jest.fn().mockResolvedValue({
+      character: '张三',
+      contradiction: '性格前后不一致',
+      analysis: {
+        essence: '角色缺乏内在驱动力',
+        rootCause: '初始设定不够清晰',
+        manifestation: '行为决策反复无常',
+        impact: '观众难以共情',
+        dramaticPotential: '可以通过关键事件塑造性格转变'
+      },
+      relatedScenes: ['场景1', '场景5'],
+      keyMoments: ['第一次选择', '最终决定']
+    });
+
+    mockCharacterArchitect.prototype.proposeSolutions = jest.fn().mockResolvedValue({
+      proposals: [
+        {
+          id: 'proposal_1',
+          title: '渐进式性格塑造',
+          description: '通过一系列小事件逐步展现角色内在',
+          approach: '渐进式角色发展',
+          pros: ['自然', '可信', '观众容易接受'],
+          cons: ['需要更多篇幅', '节奏可能较慢'],
+          dramaticImpact: '增强角色真实感'
+        },
+        {
+          id: 'proposal_2',
+          title: '戏剧性转折',
+          description: '通过一个重大事件引发角色剧变',
+          approach: '戏剧性转折',
+          pros: ['冲击力强', '记忆点明确', '节奏紧凑'],
+          cons: ['可能显得突兀', '需要精心设计'],
+          dramaticImpact: '创造强烈戏剧张力'
+        }
+      ],
+      recommendation: '建议选择方案1，更适合本剧本的叙事风格'
+    });
+
+    mockCharacterArchitect.prototype.executeShowDontTell = jest
+      .fn()
+      .mockResolvedValue({
+        dramaticActions: [
+          {
+            sequence: 1,
+            scene: '办公室，白天',
+            action: '张三面对同事的挑衅，深吸一口气，紧握拳头，但最终选择转身离开',
+            reveals: '展现角色的克制和内在挣扎',
+            dramaticFunction: '建立角色初始状态'
+          },
+          {
+            sequence: 2,
+            scene: '家中，夜晚',
+            action: '张三独自坐在黑暗中，拿出一张旧照片反复端详，眼神从迷茫转为坚定',
+            reveals: '暗示角色的过去和动机',
+            dramaticFunction: '揭示内在驱动力'
+          }
+        ],
+        overallArc: '通过两个场景展现角色从被动到主动的转变',
+        integrationNotes: '建议在第一幕结尾和第二幕开头分别插入这两个场景'
+      });
+  });
+
+  afterAll(async () => {
+    // Cleanup
+    if (testProjectId) {
+      await prisma.revisionDecision.deleteMany({
+        where: { projectId: testProjectId }
+      });
+
+      await prisma.diagnosticReport.deleteMany({
+        where: { projectId: testProjectId }
+      });
+
+      await prisma.project.delete({
+        where: { id: testProjectId }
+      });
+    }
+
+    await prisma.$disconnect();
+  });
+
+  describe('POST /api/v1/iteration/propose', () => {
+    it('should generate proposals for character contradiction', async () => {
+      const response = await fetch('http://localhost:3000/api/v1/iteration/propose', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          projectId: testProjectId,
+          act: 'ACT2_CHARACTER',
+          focusName: '张三',
+          contradiction: '性格前后不一致'
+        })
+      });
+
+      expect(response.status).toBe(200);
+
+      const data = await response.json();
+
+      expect(data.success).toBe(true);
+      expect(data.data.decisionId).toBeDefined();
+      expect(data.data.focusContext).toBeDefined();
+      expect(data.data.proposals).toHaveLength(2);
+      expect(data.data.recommendation).toBeDefined();
+
+      // Verify proposals structure
+      const proposal = data.data.proposals[0];
+      expect(proposal.id).toBeDefined();
+      expect(proposal.title).toBeDefined();
+      expect(proposal.description).toBeDefined();
+      expect(Array.isArray(proposal.pros)).toBe(true);
+      expect(Array.isArray(proposal.cons)).toBe(true);
+    }, 15000);
+
+    it('should return 404 for non-existent project', async () => {
+      const response = await fetch('http://localhost:3000/api/v1/iteration/propose', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          projectId: 'non-existent-id',
+          act: 'ACT2_CHARACTER',
+          focusName: '张三',
+          contradiction: '矛盾'
+        })
+      });
+
+      expect(response.status).toBe(404);
+    });
+
+    it('should validate request body', async () => {
+      const response = await fetch('http://localhost:3000/api/v1/iteration/propose', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          projectId: testProjectId
+          // Missing required fields
+        })
+      });
+
+      expect(response.status).toBe(400);
+    });
+  });
+
+  describe('POST /api/v1/iteration/execute', () => {
+    let decisionId: string;
+
+    beforeAll(async () => {
+      // Create a decision first
+      const proposeResponse = await fetch(
+        'http://localhost:3000/api/v1/iteration/propose',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            projectId: testProjectId,
+            act: 'ACT2_CHARACTER',
+            focusName: '张三',
+            contradiction: '性格前后不一致'
+          })
+        }
+      );
+
+      const proposeData = await proposeResponse.json();
+      decisionId = proposeData.data.decisionId;
+    });
+
+    it('should execute selected proposal and generate dramatic actions', async () => {
+      const response = await fetch('http://localhost:3000/api/v1/iteration/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          decisionId,
+          proposalChoice: 0 // Select first proposal
+        })
+      });
+
+      expect(response.status).toBe(200);
+
+      const data = await response.json();
+
+      expect(data.success).toBe(true);
+      expect(data.data.decisionId).toBe(decisionId);
+      expect(data.data.selectedProposal).toBeDefined();
+      expect(Array.isArray(data.data.dramaticActions)).toBe(true);
+      expect(data.data.dramaticActions.length).toBeGreaterThan(0);
+      expect(data.data.overallArc).toBeDefined();
+      expect(data.data.integrationNotes).toBeDefined();
+
+      // Verify dramatic action structure
+      const action = data.data.dramaticActions[0];
+      expect(action.sequence).toBeDefined();
+      expect(action.scene).toBeDefined();
+      expect(action.action).toBeDefined();
+      expect(action.reveals).toBeDefined();
+    }, 15000);
+
+    it('should validate proposalChoice range', async () => {
+      const response = await fetch('http://localhost:3000/api/v1/iteration/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          decisionId,
+          proposalChoice: 5 // Invalid choice
+        })
+      });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should return 404 for non-existent decision', async () => {
+      const response = await fetch('http://localhost:3000/api/v1/iteration/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          decisionId: 'non-existent-id',
+          proposalChoice: 0
+        })
+      });
+
+      expect(response.status).toBe(404);
+    });
+  });
+
+  describe('GET /api/v1/projects/:id/decisions', () => {
+    it('should retrieve all decisions for a project', async () => {
+      const response = await fetch(
+        `http://localhost:3000/api/v1/projects/${testProjectId}/decisions`
+      );
+
+      expect(response.status).toBe(200);
+
+      const data = await response.json();
+
+      expect(data.success).toBe(true);
+      expect(Array.isArray(data.data.decisions)).toBe(true);
+      expect(data.data.statistics).toBeDefined();
+      expect(data.data.statistics.total).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should filter decisions by act', async () => {
+      const response = await fetch(
+        `http://localhost:3000/api/v1/projects/${testProjectId}/decisions?act=ACT2_CHARACTER`
+      );
+
+      expect(response.status).toBe(200);
+
+      const data = await response.json();
+
+      expect(data.success).toBe(true);
+      expect(Array.isArray(data.data.decisions)).toBe(true);
+
+      // All decisions should be for ACT2_CHARACTER
+      data.data.decisions.forEach((decision: any) => {
+        expect(decision.act).toBe('ACT2_CHARACTER');
+      });
+    });
+
+    it('should return 404 for non-existent project', async () => {
+      const response = await fetch(
+        'http://localhost:3000/api/v1/projects/non-existent-id/decisions'
+      );
+
+      expect(response.status).toBe(404);
+    });
+  });
+});

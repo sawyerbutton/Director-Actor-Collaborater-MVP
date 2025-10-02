@@ -1,0 +1,83 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - link "DAC MVP" [ref=e6] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e7]:
+          - link "Dashboard" [ref=e8] [cursor=pointer]:
+            - /url: /dashboard
+          - link "Projects" [ref=e9] [cursor=pointer]:
+            - /url: /projects
+          - link "Settings" [ref=e10] [cursor=pointer]:
+            - /url: /settings
+      - button [ref=e12] [cursor=pointer]:
+        - img [ref=e13] [cursor=pointer]
+  - main [ref=e16]:
+    - generic [ref=e18]:
+      - generic [ref=e19]:
+        - heading "剧本分析工作台" [level=1] [ref=e20]
+        - paragraph [ref=e21]: 上传您的剧本，让AI帮您发现并修复逻辑错误
+      - generic [ref=e22]:
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - heading "上传剧本" [level=3] [ref=e26]
+            - paragraph [ref=e27]: 选择文本输入或文件上传方式导入您的剧本
+          - generic [ref=e28]:
+            - generic [ref=e29]:
+              - tablist [ref=e30]:
+                - tab "文本输入" [selected] [ref=e31] [cursor=pointer]:
+                  - img [ref=e32] [cursor=pointer]
+                  - text: 文本输入
+                - tab "文件上传" [ref=e35] [cursor=pointer]:
+                  - img [ref=e36] [cursor=pointer]
+                  - text: 文件上传
+              - tabpanel "文本输入" [ref=e39]:
+                - textbox "在此粘贴您的剧本内容..." [ref=e41]
+                - generic [ref=e42]:
+                  - button "使用示例剧本" [ref=e43] [cursor=pointer]
+                  - button "清空内容" [ref=e44] [cursor=pointer]
+            - generic [ref=e45]:
+              - generic [ref=e46]: "当前剧本内容长度: 0 字符 (按钮将被禁用)"
+              - button "开始AI分析" [disabled]:
+                - img
+                - text: 开始AI分析
+        - generic [ref=e47]:
+          - generic [ref=e48]:
+            - heading "最近项目" [level=3] [ref=e50]
+            - generic [ref=e52]:
+              - link "示例项目 1 2分钟前" [ref=e53] [cursor=pointer]:
+                - /url: /projects
+                - paragraph [ref=e54] [cursor=pointer]: 示例项目 1
+                - paragraph [ref=e55] [cursor=pointer]: 2分钟前
+              - link "示例项目 2 1小时前" [ref=e56] [cursor=pointer]:
+                - /url: /projects
+                - paragraph [ref=e57] [cursor=pointer]: 示例项目 2
+                - paragraph [ref=e58] [cursor=pointer]: 1小时前
+              - link "示例项目 3 昨天" [ref=e59] [cursor=pointer]:
+                - /url: /projects
+                - paragraph [ref=e60] [cursor=pointer]: 示例项目 3
+                - paragraph [ref=e61] [cursor=pointer]: 昨天
+          - generic [ref=e62]:
+            - heading "分析提示" [level=3] [ref=e64]
+            - generic [ref=e65]:
+              - generic [ref=e66]:
+                - img [ref=e67]
+                - generic [ref=e69]:
+                  - paragraph [ref=e70]: 最佳实践
+                  - paragraph [ref=e71]: 建议剧本长度在500-5000字之间，以获得最佳分析效果
+              - generic [ref=e72]:
+                - img [ref=e73]
+                - generic [ref=e75]:
+                  - paragraph [ref=e76]: 格式要求
+                  - paragraph [ref=e77]: 请确保场景、角色、对话有清晰的格式区分
+              - generic [ref=e78]:
+                - img [ref=e79]
+                - generic [ref=e81]:
+                  - paragraph [ref=e82]: 分析时间
+                  - paragraph [ref=e83]: 通常在10秒内完成，复杂剧本可能需要更长时间
+  - alert [ref=e84]
+```

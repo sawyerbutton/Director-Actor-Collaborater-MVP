@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ScriptAI MVP - An AI-powered script analysis system that detects and fixes logical errors in screenplays using a three-agent collaborative AI architecture. Built with Next.js 14, TypeScript, PostgreSQL/Prisma, and DeepSeek API.
+ScriptAI MVP - An AI-powered script analysis system that detects and fixes logical errors in screenplays using a five-act interactive workflow and DeepSeek API. Built with Next.js 14, TypeScript, PostgreSQL/Prisma, and async job queue architecture.
 
 **Current Architecture**: Database-backed V1 API with async job queue system (migrated from localStorage in Epic 004)
 
-**Important Note**: The README describes the original MVP implementation. The current production system now uses the V1 API architecture described in this file. localStorage has been completely removed.
+**Important**: The README describes the original MVP implementation. The current production system uses the V1 API architecture described in this file. localStorage has been completely removed.
 
 ## Essential Commands
 
@@ -58,41 +58,92 @@ npx prisma db push
 ## Architecture Overview
 
 ### Five-Act Workflow State Machine
-The system implements a five-act workflow for script analysis:
+The system implements a five-act interactive workflow for script analysis:
 - `INITIALIZED` → `ACT1_RUNNING` → `ACT1_COMPLETE` → `ITERATING` → `SYNTHESIZING` → `COMPLETED`
+
+**Act 1 (Foundational Diagnosis)**: ConsistencyGuardian analyzes script for 5 error types
+**Act 2 (Character Arc)**: CharacterArchitect iterates on character contradictions
+**Act 3 (Worldbuilding)**: [Epic 006 - Not yet implemented]
+**Act 4 (Pacing)**: [Epic 006 - Not yet implemented]
+**Act 5 (Theme)**: [Epic 006 - Not yet implemented]
+**Synthesis**: [Epic 007 - Not yet implemented]
 
 ### Core AI Agents
 1. **ConsistencyGuardian** (`lib/agents/consistency-guardian.ts`)
    - Detects 5 error types: timeline, character, plot, dialogue, scene inconsistencies
    - Chinese language prompts for Chinese output
    - Parallel chunk processing for performance
+   - Used in Act 1 analysis
 
-2. **RevisionExecutive** (`lib/agents/revision-executive.ts`)
+2. **CharacterArchitect** (`lib/agents/character-architect.ts`) - NEW in Epic 005
+   - Implements P4-P6 prompt chain for Act 2
+   - P4: Focus on character contradiction and analyze context
+   - P5: Generate exactly 2 solution proposals with pros/cons
+   - P6: Execute "Show, Don't Tell" transformation to dramatic actions
+   - Returns structured JSON with DeepSeek `response_format: { type: 'json_object' }`
+
+3. **RevisionExecutive** (`lib/agents/revision-executive.ts`)
    - Generates contextual fixes for detected errors
    - Validates and sanitizes AI outputs
 
-3. **Incremental Analyzer** (change-driven analysis)
-   - Maintains consistency after script modifications
-   - Delta-based optimization
+### API Architecture (V1 - Current Production System)
 
-### API Architecture (V1)
-- **Async Job Queue**: `lib/api/workflow-queue.ts` manages Act 1 analysis jobs
-  - Processes jobs in background every 3 seconds
-  - Single-instance pattern (WorkflowQueue.getInstance())
-  - Automatic retry on failure
-- **Status Polling**: Frontend polls job status every 2 seconds
-  - Client: `v1ApiService.pollJobStatus()` in `lib/services/v1-api-service.ts`
-  - Server: `GET /api/v1/analyze/jobs/:jobId`
-- **Database Persistence**: PostgreSQL via Prisma ORM
-  - All state persisted server-side (no client storage)
-- **Middleware Stack**: Rate limiting, CORS, security headers, validation
+#### Async Job Queue System
+- **WorkflowQueue** (`lib/api/workflow-queue.ts`): Singleton pattern managing background jobs
+  - Processes jobs every 3 seconds
+  - Handles Act 1 analysis with ConsistencyGuardian
+  - Updates WorkflowStatus state machine
+  - Stores DiagnosticReport in database
 
-### Database Models
-- `User`: Authentication and ownership
-- `Project`: Script projects with workflow status
-- `ScriptVersion`: Version control for scripts
-- `AnalysisJob`: Async job tracking
-- `DiagnosticReport`: Analysis results
+#### Status Polling Pattern
+- Frontend polls job status every 2 seconds
+- Client: `v1ApiService.pollJobStatus()` in `lib/services/v1-api-service.ts`
+- Server: `GET /api/v1/analyze/jobs/:jobId`
+- Supports long-running AI operations without blocking
+
+#### Database Persistence
+- PostgreSQL via Prisma ORM
+- All state persisted server-side (NO client storage)
+- Key models: User, Project, ScriptVersion, AnalysisJob, DiagnosticReport, RevisionDecision
+
+#### Middleware Stack
+- Rate limiting (disabled in dev with `DISABLE_RATE_LIMIT=true`)
+- CORS, security headers
+- Zod validation for all inputs
+- Comprehensive error handling
+
+### Database Models (Prisma Schema)
+
+**Project**: Central model with `workflowStatus` enum tracking five-act progress
+**ScriptVersion**: Versioned script storage with changeLog
+**AnalysisJob**: Async job tracking with JobType (ACT1_ANALYSIS, SYNTHESIS, ITERATION)
+**DiagnosticReport**: Act 1 findings with structured JSON
+**RevisionDecision**: User decisions during Acts 2-5 with proposals and generatedChanges
+**ActType enum**: `ACT2_CHARACTER`, `ACT3_WORLDBUILDING`, `ACT4_PACING`, `ACT5_THEME`
+
+### Key API Endpoints
+
+#### V1 Core Endpoints (Epic 004)
+- `POST /api/v1/projects` - Create new project with script
+- `GET /api/v1/projects` - List user projects
+- `GET /api/v1/projects/:id` - Get project details
+- `POST /api/v1/analyze` - Start Act 1 analysis (returns jobId)
+- `GET /api/v1/analyze/jobs/:jobId` - Poll job status
+- `GET /api/v1/projects/:id/status` - Get workflow status
+- `GET /api/v1/projects/:id/report` - Get diagnostic report
+
+#### V1 Iteration Endpoints (Epic 005)
+- `POST /api/v1/iteration/propose` - Generate AI proposals for focus area
+  - Input: projectId, act, focusName, contradiction, scriptContext
+  - Output: decisionId, focusContext, proposals (2 options), recommendation
+  - Creates RevisionDecision record
+- `POST /api/v1/iteration/execute` - Execute selected proposal
+  - Input: decisionId, proposalChoice (0 or 1)
+  - Output: dramaticActions, overallArc, integrationNotes
+  - Updates RevisionDecision with userChoice and generatedChanges
+- `GET /api/v1/projects/:id/decisions` - List all decisions for project
+  - Supports filtering by act type
+  - Returns execution statistics
 
 ## Environment Configuration
 
@@ -113,7 +164,7 @@ DISABLE_RATE_LIMIT=true  # Optional: disable rate limiting in development
 ## Key Implementation Details
 
 ### Chinese Language Support
-- AI prompts configured for Chinese output in `lib/agents/prompts/consistency-prompts.ts`
+- AI prompts configured for Chinese output in `lib/agents/prompts/consistency-prompts.ts` and `character-architect-prompts.ts`
 - Error detection rules use Chinese indicators in `lib/agents/types.ts`
 
 ### Rate Limiting Configuration
@@ -143,56 +194,88 @@ DISABLE_RATE_LIMIT=true npm run dev
 ```
 
 ### Testing V1 API Flow (Current Production Flow)
-1. **Dashboard Flow** (http://localhost:3000/dashboard):
-   - Upload script (.txt/.md/.markdown)
-   - Click "开始AI分析" button
-   - System creates project and starts analysis automatically
-   - Redirects to analysis page with polling
 
-2. **Analysis Page** (http://localhost:3000/analysis/:projectId):
-   - Polls job status every 2 seconds
-   - Shows progress bar and status (QUEUED → PROCESSING → COMPLETED)
-   - Displays diagnostic report when complete
-   - Allows accept/reject of error suggestions
+#### Dashboard Flow (http://localhost:3000/dashboard)
+1. Upload script (.txt/.md/.markdown)
+2. Click "开始AI分析" button
+3. System creates project and starts analysis automatically
+4. Redirects to analysis page with polling
 
-3. **V1 Demo Page** (http://localhost:3000/v1-demo):
-   - Alternative testing interface
-   - Manual control over project creation and analysis triggering
+#### Analysis Page (http://localhost:3000/analysis/:projectId)
+1. Polls job status every 2 seconds
+2. Shows progress bar and status (QUEUED → PROCESSING → COMPLETED)
+3. Displays diagnostic report when complete
+4. Allows accept/reject of error suggestions
+
+#### V1 Demo Page (http://localhost:3000/v1-demo)
+- Alternative testing interface
+- Manual control over project creation and analysis triggering
+
+### Testing Epic 005 Iteration Flow (NEW)
+
+#### Act 2 Iteration Workflow
+1. Complete Act 1 analysis first (get diagnostic report)
+2. Call `POST /api/v1/iteration/propose` with character contradiction
+3. Review 2 AI-generated proposals
+4. Call `POST /api/v1/iteration/execute` with selected proposal (0 or 1)
+5. Receive dramatic actions and integration notes
+6. Query `GET /api/v1/projects/:id/decisions` to view decision history
 
 ### Adding New API Endpoints
 1. Create route in `app/api/v1/[endpoint]/route.ts`
-2. Use `withMiddleware()` wrapper
+2. Use `withMiddleware()` wrapper from `lib/api/middleware`
 3. Implement Zod schema validation
 4. Use `createApiResponse()` for responses
 5. Add service in `lib/db/services/`
 
-### Modifying AI Analysis Prompts
+### Modifying AI Agent Prompts
+
+#### ConsistencyGuardian (Act 1)
 - System prompts: `lib/agents/prompts/consistency-prompts.ts`
 - Error detection rules: `lib/agents/types.ts`
+
+#### CharacterArchitect (Act 2)
+- P4-P6 prompts: `lib/agents/prompts/character-architect-prompts.ts`
 - Ensure Chinese language consistency
+- Return structured JSON matching interface types
 
 ## Critical File Locations
 
 ### Frontend (Client-Side)
 - **Pages**: `app/dashboard/page.tsx`, `app/analysis/[id]/page.tsx`, `app/revision/page.tsx`
 - **V1 API Client**: `lib/services/v1-api-service.ts` - Main service for all V1 API calls
-- **State Management**: `lib/stores/analysis-store.ts`, `revision-store.ts` (now in-memory only, no persistence)
+- **Workspace Components** (Epic 005): `components/workspace/`
+  - `act-progress-bar.tsx` - Five-act progress visualization
+  - `findings-selector.tsx` - Act 1 diagnostic results selector
+  - `proposal-comparison.tsx` - Side-by-side proposal comparison
+  - `changes-display.tsx` - Dramatic actions display
 
 ### Backend (Server-Side)
 - **V1 API Routes**: `app/api/v1/*/route.ts`
   - `projects/route.ts` - Project CRUD
-  - `analyze/route.ts` - Start analysis
+  - `analyze/route.ts` - Start Act 1 analysis
   - `analyze/jobs/[jobId]/route.ts` - Job status polling
   - `projects/[id]/status/route.ts` - Workflow status
   - `projects/[id]/report/route.ts` - Diagnostic report
-- **Workflow Queue**: `lib/api/workflow-queue.ts` - Background job processor
-- **AI Agents**: `lib/agents/consistency-guardian.ts`, `revision-executive.ts`
+  - `iteration/propose/route.ts` - Generate proposals (Epic 005)
+  - `iteration/execute/route.ts` - Execute selected proposal (Epic 005)
+  - `projects/[id]/decisions/route.ts` - Decision history (Epic 005)
+- **Workflow Queue**: `lib/api/workflow-queue.ts` - Singleton job processor
+- **AI Agents**:
+  - `lib/agents/consistency-guardian.ts` - Act 1 diagnostics
+  - `lib/agents/character-architect.ts` - Act 2 character iteration
+  - `lib/agents/revision-executive.ts` - Fix generation
 - **Database Services**: `lib/db/services/*.service.ts`
+  - `revision-decision.service.ts` - NEW in Epic 005
 - **Script Parsers**: `lib/parser/script-parser.ts`, `lib/parser/markdown-script-parser.ts`
 
 ### Documentation
-- **Epic 004**: `docs/epics/epic-004-architecture-migration/` - Architecture migration details
-- **Test Results**: `docs/epics/epic-004-architecture-migration/TEST_RESULTS.md`
+- **Epic Documentation**: `docs/epics/epic-*/README.md`
+  - Epic 004: Database & V1 API Migration (COMPLETED)
+  - Epic 005: Interactive Workflow Core - Act 2 (COMPLETED)
+  - Epic 006: Multi-Act Agents (NOT STARTED)
+  - Epic 007: Grand Synthesis Engine (NOT STARTED)
+- **Test Results**: `docs/epics/epic-*/TEST_RESULTS.md`
 
 ## Known Issues and Solutions
 
@@ -231,14 +314,82 @@ For long-running operations:
 4. Client polls `GET /api/v1/analyze/jobs/:jobId` every 2 seconds
 5. When complete (JobStatus: COMPLETED), fetch results
 
+### Iteration API Pattern (Epic 005)
+For interactive decision-making:
+1. Call `POST /api/v1/iteration/propose` with focus area
+2. AI generates proposals and creates RevisionDecision record
+3. User reviews proposals in UI
+4. Call `POST /api/v1/iteration/execute` with selected proposal
+5. AI executes "Show, Don't Tell" transformation
+6. RevisionDecision updated with userChoice and generatedChanges
+
 ### Type Definitions
 - **LogicError**: Used for analysis errors (NOT AnalysisError)
-- **DiagnosticReport**: Contains findings from ConsistencyGuardian
+- **DiagnosticReport**: Contains findings from ConsistencyGuardian (Act 1)
+- **RevisionDecision**: Tracks user decisions during Acts 2-5
 - **WorkflowStatus**: Tracks five-act workflow state machine
 - **JobStatus**: Tracks individual job states (QUEUED/PROCESSING/COMPLETED/FAILED)
+- **ActType**: Enum for Acts 2-5 (ACT2_CHARACTER, ACT3_WORLDBUILDING, etc.)
 
 ### Testing Conventions
 - Core V1 API tests: `tests/integration/v1-api-flow.test.ts`, `tests/unit/v1-api-service.test.ts`
+- Epic 005 tests: `tests/unit/character-architect.test.ts`, `tests/unit/revision-decision.service.test.ts`
+- E2E tests: `tests/e2e/workspace-basic.spec.ts`
 - Use `mockResolvedValue()` for continuous polling, not `mockResolvedValueOnce()`
 - Set proper timeouts (10-15 seconds) for async tests
 - Always call `v1ApiService.clearState()` in test cleanup
+
+### Epic Development Pattern
+When working on Epic features:
+1. Read Epic documentation first: `docs/epics/epic-[number]-*/README.md`
+2. Implement Stories in order (Story 1, Story 2, etc.)
+3. Database changes first (Prisma schema → migration)
+4. Then services layer (`lib/db/services/`)
+5. Then API routes (`app/api/v1/*/route.ts`)
+6. Then AI agents if needed (`lib/agents/`)
+7. Finally frontend components (`components/` and pages)
+8. Test each layer before moving to next
+9. Document decisions in Epic directory
+
+### AI Agent JSON Response Pattern
+When implementing agents that return structured data:
+```typescript
+const request: DeepSeekChatRequest = {
+  model: 'deepseek-chat',
+  messages: [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userPrompt }
+  ],
+  temperature: 0.7,
+  max_tokens: 2000,
+  response_format: { type: 'json_object' }  // Forces JSON output
+};
+```
+Always parse and validate JSON responses with proper error handling.
+
+## Workspace Components (Epic 005)
+
+### Reusable UI Components
+All components in `components/workspace/` are standalone and framework-agnostic:
+
+**ActProgressBar**: Five-act progress indicator
+- Shows current act, completed acts, and navigation
+- Supports compact mode
+- Click handlers for act switching
+
+**FindingsSelector**: Diagnostic findings selection
+- Lists Act 1 findings by category
+- Allows user to select focus areas
+- Triggers iteration workflow
+
+**ProposalComparison**: Side-by-side proposal display
+- Shows exactly 2 proposals with pros/cons
+- Highlights recommended option
+- Fires selection callback
+
+**ChangesDisplay**: Dramatic actions visualization
+- Displays "Show, Don't Tell" transformations
+- Shows overall character arc
+- Provides integration notes
+
+**Note**: WorkspaceLayout unified page is intentionally NOT implemented. These components can be used in any page structure. See `docs/epics/epic-007-synthesis-engine/WORKSPACE_DECISION.md` for rationale.
