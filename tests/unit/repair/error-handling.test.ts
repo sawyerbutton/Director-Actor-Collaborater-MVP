@@ -215,26 +215,20 @@ describe('Repair Error Handling', () => {
 
   describe('generateFix Method', () => {
     test('should provide backward compatibility', async () => {
-      const mockCallAI = jest.spyOn(revisionExecutive as any, 'callAI')
-        .mockResolvedValue({
-          raw: JSON.stringify([{
-            modification: 'Fixed content',
-            rationale: 'This fixes the issue',
-            impact: 'Resolved'
-          }]),
-          parsed: [{
-            modification: 'Fixed content',
-            rationale: 'This fixes the issue',
-            impact: 'Resolved'
-          }],
-          success: true
-        });
+      const mockGenerateSuggestions = jest.spyOn(revisionExecutive, 'generateSuggestions')
+        .mockResolvedValue([{
+          modification: 'Fixed content',
+          rationale: 'This fixes the issue',
+          impact: 'Resolved'
+        }] as any);
 
       const fix = await revisionExecutive.generateFix(testError, testContext);
 
       expect(fix).not.toBeNull();
       expect(fix?.modification).toBe('Fixed content');
       expect(fix?.rationale).toBe('This fixes the issue');
+
+      mockGenerateSuggestions.mockRestore();
     });
 
     test('should handle null context', async () => {

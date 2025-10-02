@@ -2,8 +2,9 @@
 import '@testing-library/jest-dom'
 
 // Mock environment variables for tests
-process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test'
-process.env.DIRECT_URL = 'postgresql://test:test@localhost:5432/test'
+// Use the same database as development for integration tests
+process.env.DATABASE_URL = 'postgresql://director_user:director_pass_2024@localhost:5432/director_actor_db?schema=public'
+process.env.DIRECT_URL = 'postgresql://director_user:director_pass_2024@localhost:5432/director_actor_db?schema=public'
 process.env.DEEPSEEK_API_KEY = 'test-api-key'
 process.env.DEEPSEEK_API_URL = 'https://api.deepseek.com'
 process.env.NEXTAUTH_SECRET = 'test-secret'
@@ -15,6 +16,11 @@ if (typeof global.TextEncoder === 'undefined') {
   const { TextEncoder, TextDecoder } = require('util');
   global.TextEncoder = TextEncoder;
   global.TextDecoder = TextDecoder;
+}
+
+// Add setImmediate for Prisma (if not defined)
+if (typeof global.setImmediate === 'undefined') {
+  global.setImmediate = (callback, ...args) => setTimeout(callback, 0, ...args);
 }
 
 // Mock fetch for tests

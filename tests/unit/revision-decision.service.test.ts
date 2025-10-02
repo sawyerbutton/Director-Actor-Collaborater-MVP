@@ -23,7 +23,7 @@ jest.mock('@/lib/db/client', () => ({
 
 describe('RevisionDecisionService', () => {
   let service: RevisionDecisionService;
-  const mockPrisma = prisma as jest.Mocked<typeof prisma>;
+  const mockPrisma = prisma as any;
 
   beforeEach(() => {
     service = new RevisionDecisionService();
@@ -335,7 +335,7 @@ describe('RevisionDecisionService', () => {
         where: { id: 'decision-1' },
         data: {
           userChoice: null,
-          generatedChanges: undefined,
+          generatedChanges: null,
           updatedAt: expect.any(Date)
         }
       });

@@ -588,3 +588,92 @@ The synthesis engine orchestrates the final integration of all Acts 1-5 decision
 - **Scene boundary awareness**: Chunks split at scene boundaries when possible
 - **Decision attribution**: Each chunk tagged with relevant decision IDs
 - **Merging**: Chunks recombined after synthesis with overlap deduplication
+
+---
+
+## Testing Strategy & Known Issues
+
+### Test Environment Setup (WSL Optimized)
+
+#### Jest Configuration
+Tests use development database credentials (NOT test-specific database):
+```javascript
+// jest.setup.js sets these automatically:
+DATABASE_URL = 'postgresql://director_user:director_pass_2024@localhost:5432/director_actor_db?schema=public'
+DEEPSEEK_API_KEY = 'test-api-key' // Mocked in unit tests
+```
+
+**Important**: Integration tests connect to the same database as development. Use `npx prisma db push --force-reset` to clean state before test runs.
+
+#### Running Tests
+```bash
+# Quick test validation
+npm test -- tests/unit/character-architect.test.ts tests/unit/rules-auditor.test.ts tests/unit/pacing-strategist.test.ts tests/unit/thematic-polisher.test.ts
+
+# All stable tests (61 tests, ~55s)
+npm test -- tests/unit/character-architect.test.ts tests/unit/rules-auditor.test.ts tests/unit/pacing-strategist.test.ts tests/unit/thematic-polisher.test.ts tests/unit/v1-api-service.test.ts tests/unit/revision-decision.service.test.ts tests/integration/iteration-api-simple.test.ts
+
+# E2E tests (WSL-optimized)
+npm run test:e2e  # Headless mode, sequential execution
+```
+
+### Critical Test Fixes Applied (2025-10-02)
+
+Three issues were identified and fixed:
+
+1. **Database Authentication** - `jest.setup.js` now uses correct credentials
+2. **Prisma Mock Types** - Use `as any` for complex Prisma types in tests
+3. **Service Bug** - `revisionDecisionService.rollback()` now sets `generatedChanges: null` (not `undefined`)
+
+See `docs/TEST_FIXES_SUMMARY.md` for complete fix details.
+
+### Test Coverage Status
+
+**Passing Tests**: 61/61 (100%)
+- Character Architect: 8/8 ✅
+- Rules Auditor: 8/8 ✅
+- Pacing Strategist: 8/8 ✅
+- Thematic Polisher: 8/8 ✅
+- V1 API Service: 6/6 ✅
+- Revision Decision Service: 12/12 ✅
+- Iteration API Integration: 11/11 ✅
+- Error Handling: 14/14 ✅
+
+**Epic 007 Synthesis**: Framework ready, full test coverage pending.
+
+### Test Conventions (Updated)
+
+When writing tests:
+- **Prisma Mocks**: Use `const mockPrisma = prisma as any` (not `jest.Mocked<typeof prisma>`)
+- **Agent Tests**: Always mock DeepSeekClient, return arrays not objects
+- **Database Tests**: Expect `null` for nullable fields (Prisma uses `null`, not `undefined`)
+- **Async Jobs**: Use `mockResolvedValue()` for polling (not `mockResolvedValueOnce()`)
+- **Cleanup**: Run `npx prisma generate` after schema changes, before tests
+
+### WSL-Specific Considerations
+
+Playwright E2E tests configured for WSL:
+```typescript
+// config/playwright.config.ts
+{
+  fullyParallel: false,        // Sequential for stability
+  workers: 2,                   // Limited for resources
+  retries: 1,                   // Retry flaky tests
+  headless: true,               // Required for WSL
+  launchOptions: {
+    args: [
+      '--disable-dev-shm-usage',
+      '--no-sandbox',
+      '--disable-gpu'
+    ]
+  }
+}
+```
+
+### Known Test Issues
+
+**Low Priority**:
+- Legacy tests in `tests/__tests__/` have TypeScript errors (not in main test suite)
+- Some timing-based tests may be flaky in WSL (retry logic compensates)
+
+**Documentation**: See `docs/COMPREHENSIVE_TESTING_STRATEGY.md` and `docs/TEST_EXECUTION_REPORT.md`

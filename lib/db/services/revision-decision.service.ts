@@ -221,7 +221,7 @@ export class RevisionDecisionService extends BaseService {
         where: { id: decisionId },
         data: {
           userChoice: null,
-          generatedChanges: undefined,
+          generatedChanges: null,
           updatedAt: new Date()
         }
       })
