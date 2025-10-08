@@ -87,7 +87,14 @@ export default function IterationPage() {
       // Get diagnostic report if Act 1 is complete
       if (project.workflowStatus !== 'INITIALIZED' && project.workflowStatus !== 'ACT1_RUNNING') {
         const reportData = await v1ApiService.getDiagnosticReport(projectId);
+        console.log('[Iteration Page] Diagnostic report loaded:', {
+          hasReport: !!reportData.report,
+          findingsCount: reportData.report?.findings?.length || 0,
+          workflowStatus: project.workflowStatus
+        });
         setDiagnosticReport(reportData.report);
+      } else {
+        console.log('[Iteration Page] Act 1 not complete yet. Status:', project.workflowStatus);
       }
 
       // Load existing decisions
@@ -268,6 +275,20 @@ export default function IterationPage() {
     return match ? match[1] : finding.type;
   };
 
+  // Show loading while data is being fetched
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center space-y-4">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+            <p className="text-muted-foreground">加载项目数据中...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Check if Act 1 is complete
   if (!diagnosticReport) {
     return (
@@ -275,15 +296,22 @@ export default function IterationPage() {
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            请先完成 Act 1 基础诊断，然后返回此页面进行迭代修改。
-            <div className="mt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push(`/analysis/${projectId}`)}
-              >
-                前往 Act 1 分析
-              </Button>
+            <div className="space-y-2">
+              <p>请先完成 Act 1 基础诊断，然后返回此页面进行迭代修改。</p>
+              {workflowStatus && (
+                <p className="text-sm text-muted-foreground">
+                  当前工作流状态: <Badge variant="outline">{workflowStatus}</Badge>
+                </p>
+              )}
+              <div className="mt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push(`/analysis/${projectId}`)}
+                >
+                  前往 Act 1 分析
+                </Button>
+              </div>
             </div>
           </AlertDescription>
         </Alert>
