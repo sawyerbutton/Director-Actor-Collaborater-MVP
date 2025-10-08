@@ -18,7 +18,7 @@ export class DeepSeekClient {
       apiKey: config.apiKey,
       apiEndpoint: config.apiEndpoint,
       maxRetries: config.maxRetries ?? 3,
-      timeout: config.timeout ?? 30000
+      timeout: config.timeout ?? 120000 // Increased from 30s to 120s for long scripts
     }
     this.rateLimiter = new RateLimiter()
   }

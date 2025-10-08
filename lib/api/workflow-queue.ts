@@ -266,11 +266,22 @@ class WorkflowQueue {
     } catch (error) {
       console.error(`Failed to process Act 1 analysis for job ${jobId}:`, error);
 
-      // Fail the job
-      await analysisJobService.fail(
-        jobId,
-        error instanceof Error ? error.message : 'Unknown error occurred'
-      );
+      // Create detailed error message for frontend
+      let errorMessage = 'Unknown error occurred';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        // Add timeout hint if error suggests timeout
+        if (errorMessage.includes('timeout') || errorMessage.includes('AbortError')) {
+          errorMessage = `分析超时：剧本可能过长或API响应缓慢。请稍后重试或联系技术支持。(${errorMessage})`;
+        } else if (errorMessage.includes('rate limit') || errorMessage.includes('429')) {
+          errorMessage = `API调用频率超限，请稍后重试。(${errorMessage})`;
+        } else if (errorMessage.includes('API') || errorMessage.includes('network')) {
+          errorMessage = `API连接失败，请检查网络或稍后重试。(${errorMessage})`;
+        }
+      }
+
+      // Fail the job with detailed message
+      await analysisJobService.fail(jobId, errorMessage);
 
       // Reset workflow status
       await projectService.updateWorkflowStatus(projectId, WorkflowStatus.INITIALIZED);
@@ -348,10 +359,21 @@ class WorkflowQueue {
     } catch (error) {
       console.error(`Failed to process synthesis for job ${jobId}:`, error);
 
-      await analysisJobService.fail(
-        jobId,
-        error instanceof Error ? error.message : 'Synthesis failed'
-      );
+      // Create detailed error message for frontend
+      let errorMessage = 'Synthesis failed';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        // Add timeout hint if error suggests timeout
+        if (errorMessage.includes('timeout') || errorMessage.includes('AbortError')) {
+          errorMessage = `合成超时：剧本可能过长或决策过多。请稍后重试或联系技术支持。(${errorMessage})`;
+        } else if (errorMessage.includes('rate limit') || errorMessage.includes('429')) {
+          errorMessage = `API调用频率超限，请稍后重试。(${errorMessage})`;
+        } else if (errorMessage.includes('API') || errorMessage.includes('network')) {
+          errorMessage = `API连接失败，请检查网络或稍后重试。(${errorMessage})`;
+        }
+      }
+
+      await analysisJobService.fail(jobId, errorMessage);
 
       // Reset workflow status
       await projectService.updateWorkflowStatus(projectId, WorkflowStatus.ITERATING);

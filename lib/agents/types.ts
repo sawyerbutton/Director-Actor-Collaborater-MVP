@@ -94,7 +94,7 @@ export const DEFAULT_AGENT_CONFIG: ConsistencyAgentConfig = {
   modelName: 'deepseek-chat',
   temperature: 0.2,
   maxTokens: 4000,
-  timeout: 9000,
+  timeout: 120000, // 120 seconds for long scripts (was 9000 = 9s, too short for production)
   enableCaching: true,
   chunkSize: 10
 };
