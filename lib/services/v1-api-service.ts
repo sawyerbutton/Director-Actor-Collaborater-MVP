@@ -14,8 +14,8 @@ const getBaseUrl = () => {
 
 const API_BASE_URL = `${getBaseUrl()}/api/v1`;
 const DEFAULT_TIMEOUT = 30000;
-const POLL_INTERVAL = 2000; // 2 seconds
-const MAX_POLL_ATTEMPTS = 60; // 2 minutes max
+const POLL_INTERVAL = 5000; // 5 seconds - reduced API call frequency
+const MAX_POLL_ATTEMPTS = 60; // 5 minutes max
 
 export interface ProjectData {
   id: string;
