@@ -106,31 +106,35 @@ export async function POST(request: NextRequest) {
             selectedProposal as any,
             focusContext
           );
-          generatedChanges = showDontTellResult.dramaticActions;
-          result = {
-            selectedProposal,
+          // Store complete result object in database
+          generatedChanges = {
             dramaticActions: showDontTellResult.dramaticActions,
             overallArc: showDontTellResult.overallArc,
             integrationNotes: showDontTellResult.integrationNotes
+          };
+          result = {
+            selectedProposal,
+            generatedChanges: generatedChanges
           };
           break;
         }
 
         case 'ACT3_WORLDBUILDING': {
           const agent = createRulesAuditor();
-          const auditResult = decision.focusContext as any;
           const solution = selectedProposal as any;
           // P9: Align setting with theme (using selected solution)
           const alignmentResult = await agent.alignSettingWithTheme(
             solution.title, // setting aspect
             solution.adjustment || '' // theme alignment
           );
-          generatedChanges = alignmentResult.alignmentStrategies;
-          result = {
-            selectedProposal,
+          generatedChanges = {
             alignmentStrategies: alignmentResult.alignmentStrategies,
             coreRecommendation: alignmentResult.coreRecommendation,
             integrationNotes: `应用选定的世界观修复方案: ${solution.title}`
+          };
+          result = {
+            selectedProposal,
+            generatedChanges: generatedChanges
           };
           break;
         }
@@ -139,12 +143,14 @@ export async function POST(request: NextRequest) {
           // For pacing, the selected strategy IS the execution result
           // No additional AI call needed
           const strategy = selectedProposal as any;
-          generatedChanges = strategy.changes || [];
-          result = {
-            selectedProposal,
+          generatedChanges = {
             changes: strategy.changes || [],
             expectedImprovement: strategy.expectedImprovement || '',
             integrationNotes: `应用选定的节奏优化策略: ${strategy.title}`
+          };
+          result = {
+            selectedProposal,
+            generatedChanges: generatedChanges
           };
           break;
         }
@@ -157,11 +163,13 @@ export async function POST(request: NextRequest) {
             enhancedProfile.name || decision.focusName,
             enhancedProfile
           );
-          generatedChanges = coreDefinition.characterCore;
-          result = {
-            selectedProposal: enhancedProfile,
+          generatedChanges = {
             characterCore: coreDefinition.characterCore,
             integrationNotes: coreDefinition.integrationNotes
+          };
+          result = {
+            selectedProposal: enhancedProfile,
+            generatedChanges: generatedChanges
           };
           break;
         }
