@@ -1,11 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Check, X } from 'lucide-react';
+import { Check, X, Loader2 } from 'lucide-react';
 
 export interface Proposal {
   id: string;
@@ -21,6 +21,7 @@ export interface ProposalComparisonProps {
   proposals: Proposal[];
   onSelect: (proposalId: string, index: number) => void;
   selectedId?: string;
+  isExecuting?: boolean;
   className?: string;
 }
 
@@ -28,8 +29,11 @@ export function ProposalComparison({
   proposals,
   onSelect,
   selectedId,
+  isExecuting = false,
   className
 }: ProposalComparisonProps) {
+  const [executingProposalId, setExecutingProposalId] = useState<string | null>(null);
+
   if (proposals.length === 0) {
     return (
       <Card className={className}>
@@ -40,16 +44,29 @@ export function ProposalComparison({
     );
   }
 
+  const handleSelect = async (proposalId: string, index: number) => {
+    setExecutingProposalId(proposalId);
+    try {
+      await onSelect(proposalId, index);
+    } finally {
+      setExecutingProposalId(null);
+    }
+  };
+
   return (
     <div className={cn('grid grid-cols-1 md:grid-cols-2 gap-4', className)}>
-      {proposals.map((proposal, index) => (
+      {proposals.map((proposal, index) => {
+        const isThisExecuting = executingProposalId === proposal.id;
+        const isRecommended = selectedId === proposal.id;
+
+        return (
         <Card
           key={proposal.id}
           className={cn(
-            'cursor-pointer transition-all hover:shadow-lg',
-            selectedId === proposal.id && 'ring-2 ring-blue-500'
+            'transition-all',
+            isRecommended && 'ring-2 ring-blue-500',
+            isExecuting && !isThisExecuting && 'opacity-50'
           )}
-          onClick={() => onSelect(proposal.id, index)}
         >
           <CardHeader>
             <div className="flex items-start justify-between gap-2">
@@ -109,13 +126,31 @@ export function ProposalComparison({
             {/* Select button */}
             <Button
               className="w-full mt-4"
-              variant={selectedId === proposal.id ? 'default' : 'outline'}
+              variant={isRecommended ? 'default' : 'outline'}
+              disabled={isExecuting}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSelect(proposal.id, index);
+              }}
             >
-              {selectedId === proposal.id ? '已选择' : '选择此方案'}
+              {isThisExecuting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  AI生成中...
+                </>
+              ) : isRecommended ? (
+                <>
+                  <Check className="mr-2 h-4 w-4" />
+                  AI推荐
+                </>
+              ) : (
+                '选择此方案'
+              )}
             </Button>
           </CardContent>
         </Card>
-      ))}
+        );
+      })}
     </div>
   );
 }

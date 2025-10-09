@@ -55,6 +55,8 @@ export default function IterationPage() {
   const [currentAct, setCurrentAct] = useState<ActType>('ACT2_CHARACTER');
   const [workflowStep, setWorkflowStep] = useState<WorkflowStep>({ step: 'select_focus' });
   const [isLoading, setIsLoading] = useState(false);
+  const [isProposing, setIsProposing] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Project data
@@ -174,7 +176,7 @@ export default function IterationPage() {
     }
 
     try {
-      setIsLoading(true);
+      setIsProposing(true);
       setError(null);
 
       const response = await fetch('/api/v1/iteration/propose', {
@@ -190,7 +192,8 @@ export default function IterationPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get proposals');
+        const errorText = await response.text();
+        throw new Error(`获取提案失败: ${errorText || response.statusText}`);
       }
 
       const data = await response.json();
@@ -198,9 +201,9 @@ export default function IterationPage() {
       setWorkflowStep({ step: 'view_proposals', data: data.data });
     } catch (err) {
       console.error('Propose failed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to get proposals');
+      setError(err instanceof Error ? err.message : '获取AI提案失败，请重试');
     } finally {
-      setIsLoading(false);
+      setIsProposing(false);
     }
   };
 
@@ -209,7 +212,7 @@ export default function IterationPage() {
     if (!proposeResponse) return;
 
     try {
-      setIsLoading(true);
+      setIsExecuting(true);
       setError(null);
 
       const response = await fetch('/api/v1/iteration/execute', {
@@ -217,12 +220,13 @@ export default function IterationPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           decisionId: proposeResponse.decisionId,
-          proposalChoice: index.toString() // API expects string index
+          proposalChoice: index // Send as number (0 or 1), not string
         })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to execute proposal');
+        const errorText = await response.text();
+        throw new Error(`执行方案失败: ${errorText || response.statusText}`);
       }
 
       const data = await response.json();
@@ -233,9 +237,9 @@ export default function IterationPage() {
       await loadDecisions();
     } catch (err) {
       console.error('Execute failed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to execute proposal');
+      setError(err instanceof Error ? err.message : '执行方案失败，请重试');
     } finally {
-      setIsLoading(false);
+      setIsExecuting(false);
     }
   };
 
@@ -408,13 +412,13 @@ export default function IterationPage() {
                   <div className="mt-4 pt-4 border-t">
                     <Button
                       onClick={handlePropose}
-                      disabled={isLoading}
+                      disabled={isProposing}
                       className="w-full"
                     >
-                      {isLoading ? (
+                      {isProposing ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          AI生成提案中...
+                          AI分析中，请稍候...
                         </>
                       ) : (
                         <>
@@ -423,6 +427,11 @@ export default function IterationPage() {
                         </>
                       )}
                     </Button>
+                    {isProposing && (
+                      <p className="text-sm text-muted-foreground mt-2 text-center">
+                        AI正在分析问题并生成解决方案，预计需要10-30秒
+                      </p>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -443,6 +452,7 @@ export default function IterationPage() {
                   proposals={proposeResponse.proposals}
                   onSelect={handleExecute}
                   selectedId={proposeResponse.recommendation}
+                  isExecuting={isExecuting}
                 />
 
                 <div className="mt-4 pt-4 border-t flex justify-between">
