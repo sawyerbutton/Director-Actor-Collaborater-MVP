@@ -281,6 +281,27 @@ export default function IterationPage() {
     return match ? match[1] : finding.type;
   };
 
+  // Helper function to determine completed acts based on executed decisions
+  const getCompletedActs = (): ActType[] => {
+    const actDecisions: Record<string, number> = {
+      ACT2_CHARACTER: 0,
+      ACT3_WORLDBUILDING: 0,
+      ACT4_PACING: 0,
+      ACT5_THEME: 0
+    };
+
+    // Count executed decisions per act
+    decisions.forEach(decision => {
+      if (decision.userChoice && decision.generatedChanges) {
+        actDecisions[decision.act] = (actDecisions[decision.act] || 0) + 1;
+      }
+    });
+
+    // Return acts with at least 1 executed decision
+    return Object.keys(actDecisions)
+      .filter(act => actDecisions[act] > 0) as ActType[];
+  };
+
   // Show loading while data is being fetched
   if (isLoading) {
     return (
@@ -366,7 +387,7 @@ export default function IterationPage() {
       {/* Act Progress Bar */}
       <ActProgressBar
         currentAct={currentAct}
-        completedActs={[]}
+        completedActs={getCompletedActs()}
         onActClick={(act: WorkspaceActType) => {
           setCurrentAct(act as ActType);
           // Reset workflow when changing acts

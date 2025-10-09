@@ -25,7 +25,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       const project = await projectService.findById(id);
 
       if (!project) {
-        throw new NotFoundError(`Project with ID ${id} not found`);
+        console.log(`[API] Project not found: ${id}`);
+        throw new NotFoundError('Project');
       }
 
       // Format response
