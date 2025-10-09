@@ -121,18 +121,23 @@ export function FindingsSelector({
             </CardContent>
           </Card>
         ) : (
-          filteredFindings.map((finding, index) => (
+          filteredFindings.map((finding, index) => {
+            const isSelected = selectedFinding === finding;
+            return (
             <Card
               key={index}
               className={cn(
-                'cursor-pointer transition-all hover:shadow-md',
-                selectedFinding === finding && 'ring-2 ring-blue-500'
+                'cursor-pointer transition-all hover:shadow-md relative',
+                isSelected && 'ring-2 ring-blue-500 bg-blue-50/50 border-blue-300'
               )}
               onClick={() => onSelect(finding)}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2 flex-1">
+                    {isSelected && (
+                      <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                    )}
                     {getSeverityIcon(finding.severity)}
                     <Badge variant="outline" className="text-xs">
                       {getTypeLabel(finding.type)}
@@ -144,8 +149,13 @@ export function FindingsSelector({
                       {finding.severity}
                     </Badge>
                   </div>
+                  {isSelected && (
+                    <Badge className="bg-blue-600">已选择</Badge>
+                  )}
                 </div>
-                <CardTitle className="text-base mt-2">{finding.description}</CardTitle>
+                <CardTitle className={cn('text-base mt-2', isSelected && 'text-blue-900')}>
+                  {finding.description}
+                </CardTitle>
                 {finding.location && (
                   <CardDescription className="text-xs">
                     {finding.location.sceneNumber && `场景 ${finding.location.sceneNumber}`}
@@ -163,7 +173,8 @@ export function FindingsSelector({
                 </CardContent>
               )}
             </Card>
-          ))
+            );
+          })
         )}
       </div>
     </div>
