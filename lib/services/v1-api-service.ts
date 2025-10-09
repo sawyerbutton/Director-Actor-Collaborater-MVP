@@ -260,6 +260,32 @@ class V1ApiService {
   }
 
   /**
+   * Trigger manual job processing (for Serverless environments)
+   */
+  async triggerProcessing(): Promise<void> {
+    try {
+      const response = await this.fetchWithTimeout(
+        `${API_BASE_URL}/analyze/process`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        },
+        15000 // 15 second timeout for processing trigger
+      );
+
+      if (!response.ok) {
+        // Silently fail - this is just a trigger, not critical
+        console.warn('Failed to trigger processing, but continuing polling');
+      }
+    } catch (error) {
+      // Silently fail - processing might succeed anyway via setImmediate
+      console.warn('Processing trigger error:', error);
+    }
+  }
+
+  /**
    * Poll job status until completion
    */
   async pollJobStatus(
@@ -276,6 +302,10 @@ class V1ApiService {
       }
 
       try {
+        // Trigger processing first (for Serverless environments)
+        // This ensures jobs are processed even if setInterval doesn't work
+        await this.triggerProcessing();
+
         const status = await this.getJobStatus(jobId);
 
         if (onProgress) {

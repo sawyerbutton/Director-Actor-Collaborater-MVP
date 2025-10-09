@@ -30,10 +30,20 @@ class WorkflowQueue {
     }
     this.consistencyGuardian = new ConsistencyGuardian(apiKey);
 
-    // Start processing jobs every 3 seconds
-    this.processInterval = setInterval(() => {
-      this.processNext();
-    }, 3000);
+    // In Serverless environments (like Vercel), setInterval doesn't work
+    // because the function terminates after each request.
+    // We'll rely on manual processing via API calls instead.
+    const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+
+    if (!isServerless) {
+      // Only start interval in traditional server environments
+      this.processInterval = setInterval(() => {
+        this.processNext();
+      }, 3000);
+      console.log('✅ WorkflowQueue: Started background processing (traditional server)');
+    } else {
+      console.log('⚡ WorkflowQueue: Serverless mode - use manual processing');
+    }
   }
 
   static getInstance(): WorkflowQueue {
@@ -117,24 +127,22 @@ class WorkflowQueue {
   }
 
   /**
-   * Process next job in queue
+   * Manually process next job (for Serverless environments)
+   * This method can be called by API endpoints to trigger processing
    */
-  private async processNext(): Promise<void> {
+  async processNextManually(): Promise<{ processed: boolean; message: string }> {
     if (this.processing) {
-      return;
+      return { processed: false, message: 'Already processing a job' };
+    }
+
+    const job = await analysisJobService.getNextQueued();
+
+    if (!job) {
+      return { processed: false, message: 'No jobs in queue' };
     }
 
     try {
-      // Get next queued job
-      const job = await analysisJobService.getNextQueued();
-
-      if (!job) {
-        return; // No jobs to process
-      }
-
       this.processing = true;
-
-      // Start processing
       await analysisJobService.startProcessing(job.id);
 
       // Process based on job type
@@ -143,17 +151,29 @@ class WorkflowQueue {
           await this.processAct1Analysis(job.id, job.projectId);
           break;
         case JobType.SYNTHESIS:
-          // TODO: Implement synthesis processing
           await this.processSynthesis(job.id, job.projectId);
           break;
         default:
           throw new Error(`Unknown job type: ${job.type}`);
       }
+
+      return { processed: true, message: `Successfully processed job ${job.id}` };
     } catch (error) {
       console.error('Error processing job:', error);
+      return {
+        processed: false,
+        message: `Failed to process job: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
     } finally {
       this.processing = false;
     }
+  }
+
+  /**
+   * Process next job in queue (used by setInterval in traditional servers)
+   */
+  private async processNext(): Promise<void> {
+    await this.processNextManually();
   }
 
   /**
