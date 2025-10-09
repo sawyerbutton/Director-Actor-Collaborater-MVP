@@ -230,6 +230,8 @@ export default function IterationPage() {
       }
 
       const data = await response.json();
+      console.log('[Execute] Response data:', data.data);
+      console.log('[Execute] Generated Changes:', data.data.generatedChanges);
       setExecuteResponse(data.data);
       setWorkflowStep({ step: 'view_changes', data: data.data });
 
@@ -519,11 +521,39 @@ export default function IterationPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ChangesDisplay
-                  changes={executeResponse.generatedChanges?.dramaticActions || []}
-                  overallArc={executeResponse.generatedChanges?.overallArc}
-                  integrationNotes={executeResponse.generatedChanges?.integrationNotes}
-                />
+                {/* Render changes based on current Act */}
+                {currentAct === 'ACT2_CHARACTER' && (
+                  <ChangesDisplay
+                    changes={executeResponse.generatedChanges?.dramaticActions || []}
+                    overallArc={executeResponse.generatedChanges?.overallArc}
+                    integrationNotes={executeResponse.generatedChanges?.integrationNotes}
+                  />
+                )}
+
+                {/* For other Acts, show raw JSON data temporarily */}
+                {currentAct !== 'ACT2_CHARACTER' && (
+                  <div className="space-y-4">
+                    {executeResponse.generatedChanges ? (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>生成的修改内容</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <pre className="bg-gray-50 p-4 rounded-md overflow-auto text-sm">
+                            {JSON.stringify(executeResponse.generatedChanges, null, 2)}
+                          </pre>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          暂无生成的变更数据
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </div>
+                )}
 
                 <div className="mt-6 pt-4 border-t flex justify-between">
                   <Button

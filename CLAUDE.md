@@ -122,10 +122,80 @@ The system implements a five-act interactive workflow for script analysis:
   - Updates WorkflowStatus state machine
   - Stores DiagnosticReport in database
 
+#### Serverless (Vercel) Compatibility Architecture **NEW 2025-10-09**
+
+**Problem**: Traditional `setInterval()` background processing doesn't work in Serverless environments (Vercel, AWS Lambda) because:
+- Functions terminate after request completion
+- All timer callbacks (`setInterval`, `setImmediate`) are cleared on termination
+- Jobs remained stuck in QUEUED/PROCESSING state indefinitely
+
+**Solution**: Dual-mode WorkflowQueue with active polling pattern
+
+**Architecture Components**:
+
+1. **Environment Detection** (`lib/api/workflow-queue.ts:25-47`):
+   ```typescript
+   const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+
+   if (!isServerless) {
+     // Traditional server: background processing with setInterval
+     this.processInterval = setInterval(() => {
+       this.processNext();
+     }, 3000);
+   } else {
+     // Serverless: manual trigger mode
+     console.log('⚡ WorkflowQueue: Serverless mode - use manual processing');
+   }
+   ```
+
+2. **Manual Processing Endpoint** (`app/api/v1/analyze/process/route.ts`):
+   - `POST /api/v1/analyze/process` - Manually triggers job processing
+   - Called by frontend during polling loop
+   - Returns: `{ processed: 0|1, message: string }`
+   - Used in Serverless environments to trigger job execution
+
+3. **Active Polling Pattern** (`lib/services/v1-api-service.ts:305-307`):
+   ```typescript
+   async pollJobStatus(jobId: string) {
+     while (attempts < MAX_POLL_ATTEMPTS) {
+       // Trigger processing BEFORE checking status (Serverless compatibility)
+       await this.triggerProcessing();
+
+       const status = await this.getJobStatus(jobId);
+       // ... polling logic
+     }
+   }
+   ```
+
+4. **Analysis Page Integration** (`app/analysis/[id]/page.tsx:57-59`):
+   ```typescript
+   // Ensure processing is triggered even for initial page load
+   await v1ApiService.triggerProcessing();
+   const status = await v1ApiService.getJobStatus(jobId);
+   ```
+
+**Key Methods**:
+- `workflowQueue.processNextManually()` - Public method for manual processing
+- `v1ApiService.triggerProcessing()` - Client-side trigger with silent failure
+- Both traditional and Serverless modes use the same processing logic
+
+**Debugging Tool**: `scripts/debug-act1-analysis.ts`
+- Diagnoses stuck jobs (QUEUED/PROCESSING)
+- Checks environment variables
+- Analyzes job timing
+- Provides manual intervention steps
+- Usage: `npx tsx scripts/debug-act1-analysis.ts [jobId]`
+
+**Performance**:
+- No performance impact on traditional servers (still uses setInterval)
+- Serverless: Jobs processed within 5 seconds of being queued (polling interval)
+- Compatible with both environments without code changes
+
 #### Status Polling Pattern
 - Frontend polls job status every 5 seconds (reduced from 2s on 2025-10-02)
 - Client: `v1ApiService.pollJobStatus()` in `lib/services/v1-api-service.ts`
 - Server: `GET /api/v1/analyze/jobs/:jobId`
+- **Serverless**: Each poll triggers `POST /api/v1/analyze/process` first
 - Supports long-running AI operations without blocking
 
 #### Database Persistence
@@ -155,6 +225,7 @@ The system implements a five-act interactive workflow for script analysis:
 - `GET /api/v1/projects` - List user projects
 - `GET /api/v1/projects/[id]` - Get project details (**CRITICAL**: Added 2025-10-09 to fix iteration page 404 errors)
 - `POST /api/v1/analyze` - Start Act 1 analysis (returns jobId)
+- `POST /api/v1/analyze/process` - Manual job processing trigger (**NEW 2025-10-09**: Serverless compatibility)
 - `GET /api/v1/analyze/jobs/:jobId` - Poll job status
 - `GET /api/v1/projects/[id]/status` - Get workflow status
 - `GET /api/v1/projects/[id]/report` - Get diagnostic report
@@ -270,6 +341,9 @@ The system now has a **complete UI implementation** for the full five-act workfl
 **Complete Acts 2-5 interactive workflow:**
 1. Select Act (2/3/4/5) using ActProgressBar
 2. Choose focus problem from Act 1 findings (FindingsSelector)
+   - **Enhanced UX (2025-10-09)**: Selected finding has 5 visual indicators (border, background, checkmark, badge, text color)
+   - Selection context summary shown in Alert component before submission
+   - Larger submit button for better visibility
 3. Click "获取AI解决方案提案" to get 2 AI proposals
 4. Review proposals with pros/cons (ProposalComparison)
 5. Select and execute a proposal
@@ -413,6 +487,7 @@ All agents follow the same pattern - see Epic 005/006 implementations for refere
   - `projects/route.ts` - Project CRUD (list and create)
   - `projects/[id]/route.ts` - Get single project details (**NEW 2025-10-09**)
   - `analyze/route.ts` - Start Act 1 analysis
+  - `analyze/process/route.ts` - Manual job processing trigger (**NEW 2025-10-09**: Serverless compatibility)
   - `analyze/jobs/[jobId]/route.ts` - Job status polling
   - `projects/[id]/status/route.ts` - Workflow status
   - `projects/[id]/report/route.ts` - Diagnostic report
@@ -442,6 +517,8 @@ All agents follow the same pattern - see Epic 005/006 implementations for refere
 - **Database Services**: `lib/db/services/*.service.ts`
   - `revision-decision.service.ts` - NEW in Epic 005
 - **Script Parsers**: `lib/parser/script-parser.ts`, `lib/parser/markdown-script-parser.ts`
+- **Debug Tools**:
+  - `scripts/debug-act1-analysis.ts` - Diagnose stuck jobs (QUEUED/PROCESSING) (**NEW 2025-10-09**)
 
 ### Documentation
 - **Main Workflow Guide**: `docs/ai-analysis-repair-workflow.md` - Complete V1 API workflow documentation (v3.0.0)
@@ -482,6 +559,52 @@ When using connection pooling (pgbouncer), there may be brief delays between wri
 - Dashboard adds 500ms delay after project creation before starting analysis
 - Includes retry logic for "Project not found" errors
 - See `app/dashboard/page.tsx:48-82` for implementation
+
+### Stuck Jobs in Serverless Environments (Fixed 2025-10-09)
+
+**Symptoms**:
+- Jobs remain in QUEUED state for minutes without transitioning to PROCESSING
+- Jobs stuck in PROCESSING state for >2 minutes without completing
+- Analysis never completes in Vercel/Serverless deployments
+
+**Root Causes**:
+1. **setInterval doesn't work**: Serverless functions terminate after request completion
+2. **No background processing**: Jobs created but never processed
+3. **Missing trigger calls**: Analysis page not calling manual processing endpoint
+
+**Solutions Implemented**:
+
+1. **WorkflowQueue Dual-Mode Architecture**:
+   - Detects Serverless environment via `process.env.VERCEL` or `process.env.AWS_LAMBDA_FUNCTION_NAME`
+   - Traditional servers: Use `setInterval()` for background processing
+   - Serverless: Disable `setInterval`, rely on manual triggers
+   - See `lib/api/workflow-queue.ts:25-47`
+
+2. **Manual Processing Endpoint**:
+   - `POST /api/v1/analyze/process` triggers job processing on-demand
+   - Returns: `{ processed: 0|1, message: string }`
+   - Called by frontend during polling
+   - See `app/api/v1/analyze/process/route.ts`
+
+3. **Active Polling Pattern**:
+   - `v1ApiService.pollJobStatus()` calls `triggerProcessing()` before checking status
+   - Analysis page calls `triggerProcessing()` on initial load
+   - Jobs processed within 5 seconds (polling interval)
+   - Silent failure if trigger fails (non-critical)
+
+**Debugging Steps**:
+1. Run debug script: `npx tsx scripts/debug-act1-analysis.ts [jobId]`
+2. Check environment variables (DEEPSEEK_API_KEY, DATABASE_URL)
+3. Verify job timing (createdAt, updatedAt timestamps)
+4. Review server logs for API errors
+5. Test DeepSeek API connection manually
+6. If stuck, manually reset job status via Prisma Studio
+
+**Prevention**:
+- Use `v1ApiService.triggerProcessing()` before all status checks
+- Monitor job timing (warn if >2 minutes in PROCESSING)
+- Implement exponential backoff in polling (5s → 10s max)
+- Always check for Serverless mode in background processing code
 
 ### Timeout Configuration (CRITICAL - Updated 2025-10-09)
 **Production Issue**: Default timeouts were too short for large scripts (3000+ lines), causing analysis to fail after 9 seconds.
@@ -625,6 +748,13 @@ All components in `components/workspace/` are standalone and framework-agnostic:
 - Lists Act 1 findings by category
 - Allows user to select focus areas
 - Triggers iteration workflow
+- **Enhanced 2025-10-09**: 5-layer visual feedback system for selected state:
+  1. Blue border ring (`ring-2 ring-blue-500`)
+  2. Blue background color (`bg-blue-50/50`)
+  3. Checkmark icon (`CheckCircle2`)
+  4. "已选择" badge
+  5. Blue title text (`text-blue-900`)
+- See `components/workspace/findings-selector.tsx:124-158` for implementation
 
 **ProposalComparison**: Side-by-side proposal display
 - Shows exactly 2 proposals with pros/cons
@@ -914,12 +1044,41 @@ For future development, refer to:
 
 ---
 
-**Last Updated**: 2025-10-09 (Production bug fixes and API completion)
+**Last Updated**: 2025-10-09 (Serverless compatibility and UX enhancements)
 **Architecture Version**: V1 API (Epic 004-007 Complete)
-**System Status**: Production Ready with Complete UI
+**System Status**: Production Ready with Complete UI (Serverless Compatible)
 **Test Coverage**: 97.5% (77/79 tests passing)
+
 **Recent Fixes** (2025-10-09):
-- Fixed timeout configuration (9s → 120s) for large script analysis
-- Added missing `GET /api/v1/projects/[id]` endpoint
-- Resolved iteration page loading race condition
-- Enhanced error messages with Chinese translations
+
+**Critical Production Fixes**:
+1. **Serverless (Vercel) Job Processing** (Commits 396947c, f96fad2):
+   - Fixed jobs stuck in QUEUED/PROCESSING state in Serverless environments
+   - Implemented dual-mode WorkflowQueue (traditional vs Serverless)
+   - Added `POST /api/v1/analyze/process` manual processing endpoint
+   - Integrated `triggerProcessing()` into polling and analysis page
+   - Created `scripts/debug-act1-analysis.ts` diagnostic tool
+   - See "Serverless Compatibility Architecture" section for details
+
+2. **Timeout Configuration**:
+   - Increased DeepSeek API timeout from 9s to 120s for large scripts
+   - Updated `lib/agents/types.ts` and `lib/api/deepseek/client.ts`
+   - Enhanced error messages with Chinese translations
+
+**API Completeness**:
+3. **Missing Project Endpoint**:
+   - Added `GET /api/v1/projects/[id]` for single project retrieval
+   - Fixed iteration page 404 errors
+
+**UX Enhancements**:
+4. **Act 2 Selection Feedback** (Commit 4839a84):
+   - Enhanced `FindingsSelector` with 5-layer visual feedback system
+   - Added selection context Alert component in iteration page
+   - Increased submit button size for better visibility
+   - Improved user confidence before AI proposal submission
+   - See `components/workspace/findings-selector.tsx:124-158`
+
+5. **Iteration Page Loading**:
+   - Resolved race condition between component render and data loading
+   - Added loading state guard before Act 1 completion check
+   - Prevented premature "请先完成 Act 1" error messages
