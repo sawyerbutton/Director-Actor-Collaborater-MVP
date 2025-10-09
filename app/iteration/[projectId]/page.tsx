@@ -409,11 +409,50 @@ export default function IterationPage() {
                 />
 
                 {selectedFinding && (
-                  <div className="mt-4 pt-4 border-t">
+                  <div className="mt-4 pt-4 border-t space-y-4">
+                    {/* Selected Finding Summary */}
+                    <Alert className="bg-blue-50 border-blue-200">
+                      <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                      <AlertDescription>
+                        <div className="space-y-2">
+                          <p className="font-medium text-blue-900">
+                            已选择焦点问题：
+                          </p>
+                          <div className="bg-white p-3 rounded-md border border-blue-200">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant="outline" className="text-xs">
+                                {selectedFinding.type === 'character' && '角色'}
+                                {selectedFinding.type === 'timeline' && '时间线'}
+                                {selectedFinding.type === 'scene' && '场景'}
+                                {selectedFinding.type === 'plot' && '情节'}
+                                {selectedFinding.type === 'dialogue' && '对话'}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                {selectedFinding.severity}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-900">
+                              {selectedFinding.description}
+                            </p>
+                            {selectedFinding.location?.characterName && (
+                              <p className="text-xs text-gray-600 mt-2">
+                                角色: {selectedFinding.location.characterName}
+                              </p>
+                            )}
+                          </div>
+                          <p className="text-sm text-blue-700 mt-2">
+                            点击下方按钮，让 AI 为此问题生成解决方案
+                          </p>
+                        </div>
+                      </AlertDescription>
+                    </Alert>
+
+                    {/* Submit Button */}
                     <Button
                       onClick={handlePropose}
                       disabled={isProposing}
                       className="w-full"
+                      size="lg"
                     >
                       {isProposing ? (
                         <>
