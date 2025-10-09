@@ -54,6 +54,10 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
 
         // If there's an active job, poll it
         if (workflowStatus.latestJob) {
+          // Trigger processing first (for Serverless environments like Vercel)
+          // This ensures jobs are processed even if setInterval doesn't work
+          await v1ApiService.triggerProcessing()
+
           const status = await v1ApiService.getJobStatus(workflowStatus.latestJob.id)
 
           if (!isMounted || !shouldPoll) return
