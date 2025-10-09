@@ -153,11 +153,11 @@ The system implements a five-act interactive workflow for script analysis:
 #### V1 Core Endpoints (Epic 004)
 - `POST /api/v1/projects` - Create new project with script
 - `GET /api/v1/projects` - List user projects
-- `GET /api/v1/projects/:id` - Get project details
+- `GET /api/v1/projects/[id]` - Get project details (**CRITICAL**: Added 2025-10-09 to fix iteration page 404 errors)
 - `POST /api/v1/analyze` - Start Act 1 analysis (returns jobId)
 - `GET /api/v1/analyze/jobs/:jobId` - Poll job status
-- `GET /api/v1/projects/:id/status` - Get workflow status
-- `GET /api/v1/projects/:id/report` - Get diagnostic report
+- `GET /api/v1/projects/[id]/status` - Get workflow status
+- `GET /api/v1/projects/[id]/report` - Get diagnostic report
 
 #### V1 Iteration Endpoints (Epic 005 & 006)
 - `POST /api/v1/iteration/propose` - Generate AI proposals for focus area
@@ -410,7 +410,8 @@ All agents follow the same pattern - see Epic 005/006 implementations for refere
 
 ### Backend (Server-Side)
 - **V1 API Routes**: `app/api/v1/*/route.ts`
-  - `projects/route.ts` - Project CRUD
+  - `projects/route.ts` - Project CRUD (list and create)
+  - `projects/[id]/route.ts` - Get single project details (**NEW 2025-10-09**)
   - `analyze/route.ts` - Start Act 1 analysis
   - `analyze/jobs/[jobId]/route.ts` - Job status polling
   - `projects/[id]/status/route.ts` - Workflow status
@@ -481,6 +482,41 @@ When using connection pooling (pgbouncer), there may be brief delays between wri
 - Dashboard adds 500ms delay after project creation before starting analysis
 - Includes retry logic for "Project not found" errors
 - See `app/dashboard/page.tsx:48-82` for implementation
+
+### Timeout Configuration (CRITICAL - Updated 2025-10-09)
+**Production Issue**: Default timeouts were too short for large scripts (3000+ lines), causing analysis to fail after 9 seconds.
+
+**Current Configuration**:
+- `lib/agents/types.ts`: `timeout: 120000` (120 seconds, was 9000)
+- `lib/api/deepseek/client.ts`: `timeout: 120000` (120 seconds, was 30000)
+
+**Performance Expectations**:
+- Small scripts (<1000 lines): 10-20 seconds
+- Medium scripts (1000-3000 lines): 30-60 seconds
+- Large scripts (3000-10000 lines): 2-5 minutes
+
+**Error Messages**: Enhanced with Chinese user-facing messages in `workflow-queue.ts`:
+- Timeout errors: "分析超时：剧本可能过长或API响应缓慢"
+- Rate limit errors: "API调用频率超限，请稍后重试"
+- Network errors: "API连接失败，请检查网络或稍后重试"
+
+### Iteration Page Loading (Fixed 2025-10-09)
+**Issue**: Race condition between component render and async data loading caused premature "请先完成 Act 1" error.
+
+**Solution**: Added loading state guard in `app/iteration/[projectId]/page.tsx:272-283`:
+```typescript
+// Show loading spinner BEFORE checking diagnosticReport
+if (isLoading) {
+  return <LoadingSpinner />;
+}
+
+// THEN check if Act 1 is complete
+if (!diagnosticReport) {
+  return <Act1RequiredError />;
+}
+```
+
+**Debug Logs**: Console logs added for troubleshooting data loading issues.
 
 ## Important Conventions
 
@@ -878,8 +914,12 @@ For future development, refer to:
 
 ---
 
-**Last Updated**: 2025-10-02 (Post-documentation cleanup)
+**Last Updated**: 2025-10-09 (Production bug fixes and API completion)
 **Architecture Version**: V1 API (Epic 004-007 Complete)
 **System Status**: Production Ready with Complete UI
 **Test Coverage**: 97.5% (77/79 tests passing)
-**Documentation**: Reorganized for clarity (root and docs/ directories cleaned)
+**Recent Fixes** (2025-10-09):
+- Fixed timeout configuration (9s → 120s) for large script analysis
+- Added missing `GET /api/v1/projects/[id]` endpoint
+- Resolved iteration page loading race condition
+- Enhanced error messages with Chinese translations
