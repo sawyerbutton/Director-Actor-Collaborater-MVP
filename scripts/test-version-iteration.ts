@@ -48,6 +48,7 @@ async function main() {
         {
           id: 'prop1',
           title: '增强情感表达',
+          description: '通过动作展现内心情感',
           approach: '通过动作展现内心',
           pros: ['更有戏剧张力'],
           cons: ['可能过于明显']
@@ -55,6 +56,7 @@ async function main() {
         {
           id: 'prop2',
           title: '保持含蓄',
+          description: '通过对话暗示情感',
           approach: '通过对话暗示',
           pros: ['更有韵味'],
           cons: ['可能不够清晰']
@@ -138,6 +140,7 @@ async function main() {
         {
           id: 'prop3',
           title: '增加细节描写',
+          description: '通过微表情展现角色情感',
           approach: '通过微表情展现',
           pros: ['更细腻'],
           cons: ['需要演员功力']
