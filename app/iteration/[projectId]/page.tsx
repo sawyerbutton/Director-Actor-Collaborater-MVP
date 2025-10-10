@@ -123,40 +123,40 @@ export default function IterationPage() {
     }
   };
 
-  // Act type metadata
+  // Act type metadata - 创作深化定位
   const getActMetadata = (act: ActType) => {
     const metadata = {
       ACT2_CHARACTER: {
-        title: 'Act 2 - 角色弧光',
-        description: '修复角色行为矛盾，构建一致的角色发展弧线',
+        title: 'Act 2 - 角色深度创作',
+        description: '构建角色成长弧线和心理深度（基于 Act 1 修复后的剧本）',
         icon: '🎭',
-        focusLabel: '选择角色矛盾',
-        proposalLabel: '解决方案提案',
-        changesLabel: '戏剧化修改'
+        focusLabel: '选择角色创作焦点',
+        proposalLabel: 'AI创作方案提案',
+        changesLabel: '角色深化修改'
       },
       ACT3_WORLDBUILDING: {
-        title: 'Act 3 - 世界观审查',
-        description: '审查设定逻辑一致性，确保世界观与主题对齐',
+        title: 'Act 3 - 世界观丰富化',
+        description: '深化世界观细节和设定逻辑（不是修复错误，而是丰富世界）',
         icon: '🌍',
-        focusLabel: '选择设定问题',
-        proposalLabel: '世界观解决方案',
-        changesLabel: '设定修正策略'
+        focusLabel: '选择世界观焦点',
+        proposalLabel: 'AI创作方案',
+        changesLabel: '世界观深化'
       },
       ACT4_PACING: {
-        title: 'Act 4 - 节奏优化',
-        description: '优化情节节奏，重新分配冲突和情感空间',
+        title: 'Act 4 - 叙事节奏优化',
+        description: '优化情节节奏和戏剧张力（从流畅到扣人心弦）',
         icon: '⚡',
-        focusLabel: '选择节奏问题',
-        proposalLabel: '节奏优化策略',
-        changesLabel: '结构调整方案'
+        focusLabel: '选择节奏焦点',
+        proposalLabel: 'AI节奏优化方案',
+        changesLabel: '节奏优化调整'
       },
       ACT5_THEME: {
-        title: 'Act 5 - 主题润色',
-        description: '强化角色深度，定义核心恐惧与信念',
+        title: 'Act 5 - 主题精神深化',
+        description: '定义角色内核和主题意境（从表层故事到精神深度）',
         icon: '✨',
-        focusLabel: '选择角色',
-        proposalLabel: '角色深度分析',
-        changesLabel: '角色核心定义'
+        focusLabel: '选择主题焦点',
+        proposalLabel: 'AI主题深化方案',
+        changesLabel: '主题精神定义'
       }
     };
     return metadata[act];
@@ -539,10 +539,10 @@ export default function IterationPage() {
               <CardHeader>
                 <CardTitle>{actMeta.focusLabel}</CardTitle>
                 <CardDescription>
-                  {currentAct === 'ACT2_CHARACTER' && '从 ACT1 诊断中选择一个角色矛盾问题进行深度分析'}
-                  {currentAct === 'ACT3_WORLDBUILDING' && '从 ACT1 诊断中选择一个世界观设定或情节逻辑问题'}
-                  {currentAct === 'ACT4_PACING' && '从 ACT1 诊断中选择一个时间线或节奏问题进行优化'}
-                  {currentAct === 'ACT5_THEME' && '从 ACT1 诊断中选择一个角色或对话问题进行主题深化'}
+                  {currentAct === 'ACT2_CHARACTER' && '💡 不是修复错误，而是深化角色弧线：从平面角色 → 立体角色（成长、转变、内在冲突）'}
+                  {currentAct === 'ACT3_WORLDBUILDING' && '💡 不是修复错误，而是丰富世界观：从合理设定 → 引人入胜的世界（细节、深度、主题对齐）'}
+                  {currentAct === 'ACT4_PACING' && '💡 不是修复错误，而是优化节奏：从流畅叙事 → 扣人心弦的节奏（张力、留白、高潮分布）'}
+                  {currentAct === 'ACT5_THEME' && '💡 不是修复错误，而是深化主题：从表层故事 → 精神内核（恐惧、信念、共情）'}
                 </CardDescription>
               </CardHeader>
               <CardContent>

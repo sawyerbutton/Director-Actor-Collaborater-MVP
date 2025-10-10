@@ -22,33 +22,33 @@ export interface ActInfo {
 const ACT_INFO: Record<ActType, ActInfo> = {
   ACT1_DIAGNOSTICS: {
     type: 'ACT1_DIAGNOSTICS',
-    label: 'Act 1: 基础诊断',
+    label: 'Act 1: 逻辑诊断',
     shortLabel: 'Act 1',
-    description: '识别剧本中的逻辑错误和不一致性'
+    description: '识别时间线、角色行为等逻辑错误'
   },
   ACT2_CHARACTER: {
     type: 'ACT2_CHARACTER',
-    label: 'Act 2: 角色弧光',
+    label: 'Act 2: 角色深度创作',
     shortLabel: 'Act 2',
-    description: '深化角色发展和内在矛盾'
+    description: '构建角色成长弧线和心理深度'
   },
   ACT3_WORLDBUILDING: {
     type: 'ACT3_WORLDBUILDING',
-    label: 'Act 3: 世界构建',
+    label: 'Act 3: 世界观丰富化',
     shortLabel: 'Act 3',
-    description: '完善故事世界的逻辑和细节'
+    description: '深化世界观细节和设定逻辑'
   },
   ACT4_PACING: {
     type: 'ACT4_PACING',
-    label: 'Act 4: 节奏调整',
+    label: 'Act 4: 叙事节奏优化',
     shortLabel: 'Act 4',
-    description: '优化叙事节奏和戏剧张力'
+    description: '优化情节节奏和戏剧张力'
   },
   ACT5_THEME: {
     type: 'ACT5_THEME',
-    label: 'Act 5: 主题提炼',
+    label: 'Act 5: 主题精神深化',
     shortLabel: 'Act 5',
-    description: '强化主题表达和深层含义'
+    description: '定义角色内核和主题意境'
   }
 };
 
