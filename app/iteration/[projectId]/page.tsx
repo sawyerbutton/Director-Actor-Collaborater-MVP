@@ -13,6 +13,7 @@ import { ActProgressBar, type ActType as WorkspaceActType } from '@/components/w
 import { FindingsSelector, type Finding } from '@/components/workspace/findings-selector';
 import { ProposalComparison, type Proposal as WorkspaceProposal } from '@/components/workspace/proposal-comparison';
 import { ChangesDisplay } from '@/components/workspace/changes-display';
+import { DecisionCard } from '@/components/workspace/decision-card';
 import { v1ApiService } from '@/lib/services/v1-api-service';
 import {
   Loader2,
@@ -237,6 +238,10 @@ export default function IterationPage() {
 
       // Reload decisions
       await loadDecisions();
+
+      // Reload project data to get updated workflow status
+      const project = await v1ApiService.getProject(projectId);
+      setWorkflowStatus(project.workflowStatus);
     } catch (err) {
       console.error('Execute failed:', err);
       setError(err instanceof Error ? err.message : '执行方案失败，请重试');
@@ -300,6 +305,29 @@ export default function IterationPage() {
     // Return acts with at least 1 executed decision
     return Object.keys(actDecisions)
       .filter(act => actDecisions[act] > 0) as ActType[];
+  };
+
+  // Helper function to check if a finding is processed
+  const isFindingProcessed = (finding: Finding): boolean => {
+    return decisions.some(decision => {
+      if (!decision.userChoice || !decision.generatedChanges) return false;
+
+      // Match by description similarity
+      const focusDesc = String(decision.focusContext?.contradiction || '');
+      return focusDesc.includes(finding.description) ||
+             finding.description.includes(focusDesc);
+    });
+  };
+
+  // Count how many times a finding was processed
+  const getProcessedCount = (finding: Finding): number => {
+    return decisions.filter(decision => {
+      if (!decision.userChoice || !decision.generatedChanges) return false;
+
+      const focusDesc = String(decision.focusContext?.contradiction || '');
+      return focusDesc.includes(finding.description) ||
+             finding.description.includes(focusDesc);
+    }).length;
   };
 
   // Show loading while data is being fetched
@@ -429,6 +457,14 @@ export default function IterationPage() {
                   findings={transformDiagnosticFindings(diagnosticReport?.findings || [])}
                   onSelect={handleFindingSelect}
                   selectedFinding={selectedFinding || undefined}
+                  processedFindings={new Set(
+                    diagnosticReport?.findings
+                      .map((f: any, idx: number) =>
+                        isFindingProcessed(transformDiagnosticFindings([f])[0]) ? idx : -1
+                      )
+                      .filter((idx: number) => idx !== -1) || []
+                  )}
+                  getProcessedCount={(finding) => getProcessedCount(finding)}
                 />
 
                 {selectedFinding && (
@@ -626,32 +662,7 @@ export default function IterationPage() {
               ) : (
                 <div className="space-y-4">
                   {decisions.map((decision) => (
-                    <div
-                      key={decision.id}
-                      className="border rounded-lg p-4 hover:bg-accent/50 transition-colors"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge>{decision.act.replace('_', ' ')}</Badge>
-                            <span className="font-medium">{decision.focusName}</span>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {JSON.stringify(decision.focusContext).substring(0, 100)}...
-                          </p>
-                          {decision.userChoice && (
-                            <div className="mt-2">
-                              <Badge variant="outline" className="text-green-600">
-                                ✓ 已执行方案 #{decision.userChoice}
-                              </Badge>
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {new Date(decision.createdAt).toLocaleString('zh-CN')}
-                        </div>
-                      </div>
-                    </div>
+                    <DecisionCard key={decision.id} decision={decision} />
                   ))}
                 </div>
               )}

@@ -187,6 +187,11 @@ export async function POST(request: NextRequest) {
         }
       );
 
+      // Update project workflow status to ITERATING (if first decision)
+      if (project.workflowStatus === 'ACT1_COMPLETE') {
+        await projectService.updateWorkflowStatus(project.id, 'ITERATING');
+      }
+
       // Return execution result to user
       return NextResponse.json(
         createApiResponse({

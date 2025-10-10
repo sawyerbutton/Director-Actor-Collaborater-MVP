@@ -24,6 +24,8 @@ export interface FindingsSelectorProps {
   onSelect: (finding: Finding) => void;
   className?: string;
   selectedFinding?: Finding;
+  processedFindings?: Set<number>;
+  getProcessedCount?: (finding: Finding) => number;
 }
 
 function getSeverityIcon(severity: Finding['severity']) {
@@ -66,7 +68,9 @@ export function FindingsSelector({
   findings,
   onSelect,
   className,
-  selectedFinding
+  selectedFinding,
+  processedFindings,
+  getProcessedCount
 }: FindingsSelectorProps) {
   const [filter, setFilter] = useState<Finding['type'] | 'all'>('all');
 
@@ -123,18 +127,21 @@ export function FindingsSelector({
         ) : (
           filteredFindings.map((finding, index) => {
             const isSelected = selectedFinding === finding;
+            const isProcessed = processedFindings?.has(index) || false;
+            const processedCount = getProcessedCount?.(finding) || 0;
             return (
             <Card
               key={index}
               className={cn(
                 'cursor-pointer transition-all hover:shadow-md relative',
-                isSelected && 'ring-2 ring-blue-500 bg-blue-50/50 border-blue-300'
+                isSelected && 'ring-2 ring-blue-500 bg-blue-50/50 border-blue-300',
+                isProcessed && !isSelected && 'opacity-60 bg-gray-50'
               )}
               onClick={() => onSelect(finding)}
             >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-1">
+                  <div className="flex items-center gap-2 flex-1 flex-wrap">
                     {isSelected && (
                       <CheckCircle2 className="w-5 h-5 text-blue-600 flex-shrink-0" />
                     )}
@@ -148,12 +155,22 @@ export function FindingsSelector({
                     >
                       {finding.severity}
                     </Badge>
+                    {isProcessed && (
+                      <Badge variant="outline" className="text-green-600 border-green-300 text-xs">
+                        <CheckCircle2 className="mr-1 h-3 w-3" />
+                        已处理 {processedCount > 1 && `(${processedCount}次)`}
+                      </Badge>
+                    )}
                   </div>
                   {isSelected && (
                     <Badge className="bg-blue-600">已选择</Badge>
                   )}
                 </div>
-                <CardTitle className={cn('text-base mt-2', isSelected && 'text-blue-900')}>
+                <CardTitle className={cn(
+                  'text-base mt-2',
+                  isSelected && 'text-blue-900',
+                  isProcessed && !isSelected && 'text-gray-600'
+                )}>
                   {finding.description}
                 </CardTitle>
                 {finding.location && (
