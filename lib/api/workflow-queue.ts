@@ -128,9 +128,14 @@ class WorkflowQueue {
 
   /**
    * Manually process next job (for Serverless environments)
-   * This method can be called by API endpoints to trigger processing
+   *
+   * In Serverless, we must process synchronously because:
+   * 1. Async operations are killed when the function returns
+   * 2. We need to ensure the job completes before the container freezes
+   *
+   * This endpoint should have a 60s timeout configured in vercel.json
    */
-  async processNextManually(): Promise<{ processed: boolean; message: string }> {
+  async processNextManually(): Promise<{ processed: boolean; message: string; jobId?: string }> {
     if (this.processing) {
       return { processed: false, message: 'Already processing a job' };
     }
@@ -145,7 +150,7 @@ class WorkflowQueue {
       this.processing = true;
       await analysisJobService.startProcessing(job.id);
 
-      // Process based on job type
+      // Process based on job type (synchronously to ensure completion)
       switch (job.type) {
         case JobType.ACT1_ANALYSIS:
           await this.processAct1Analysis(job.id, job.projectId);
@@ -157,12 +162,18 @@ class WorkflowQueue {
           throw new Error(`Unknown job type: ${job.type}`);
       }
 
-      return { processed: true, message: `Successfully processed job ${job.id}` };
+      console.log(`✅ Successfully processed job ${job.id}`);
+      return {
+        processed: true,
+        message: `Successfully processed job ${job.id}`,
+        jobId: job.id
+      };
     } catch (error) {
-      console.error('Error processing job:', error);
+      console.error(`❌ Error processing job ${job.id}:`, error);
       return {
         processed: false,
-        message: `Failed to process job: ${error instanceof Error ? error.message : 'Unknown error'}`
+        message: `Failed to process job: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        jobId: job.id
       };
     } finally {
       this.processing = false;
