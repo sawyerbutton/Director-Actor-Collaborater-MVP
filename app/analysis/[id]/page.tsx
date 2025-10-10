@@ -217,11 +217,24 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || '保存失败')
+        // Try to parse error as JSON, fallback to text
+        let errorMessage = '保存失败';
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const error = await response.json();
+            errorMessage = error.error?.message || error.error || error.message || '保存失败';
+          } else {
+            const text = await response.text();
+            errorMessage = text || `服务器错误 (${response.status})`;
+          }
+        } catch (e) {
+          errorMessage = `服务器错误 (${response.status})`;
+        }
+        throw new Error(errorMessage);
       }
 
-      const result = await response.json()
+      const result = await response.json();
 
       // Show success message
       alert(`✅ ${result.data.message}\n\n已应用 ${result.data.details.errorsApplied} 项修改\n版本号: V${result.data.version}`)
@@ -229,10 +242,10 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
       // Navigate to iteration workspace
       router.push(`/iteration/${params.id}`)
     } catch (error) {
-      console.error('保存失败:', error)
-      alert(`保存失败: ${error instanceof Error ? error.message : '未知错误'}`)
+      console.error('保存失败:', error);
+      alert(`保存失败: ${error instanceof Error ? error.message : '未知错误'}`);
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
   }
 
