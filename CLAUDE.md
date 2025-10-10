@@ -2,6 +2,41 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 🚀 Quick Start (5 Minutes)
+
+**First time in this codebase? Start here:**
+
+```bash
+# 1. Clone and install
+npm install
+
+# 2. Start PostgreSQL (Docker)
+docker run -d --name director-postgres \
+  -e POSTGRES_USER=director_user \
+  -e POSTGRES_PASSWORD=director_pass_2024 \
+  -e POSTGRES_DB=director_actor_db \
+  -p 5432:5432 postgres:16-alpine
+
+# 3. Setup environment (.env file)
+# DATABASE_URL="postgresql://director_user:director_pass_2024@localhost:5432/director_actor_db?schema=public"
+# DEEPSEEK_API_KEY=your_key_here
+# DISABLE_RATE_LIMIT=true
+
+# 4. Initialize database
+npx prisma db push && npx prisma db seed
+
+# 5. Start development server
+npm run dev  # Visit http://localhost:3000/dashboard
+```
+
+**Critical Gotchas:**
+- ❌ Never throw errors in API handlers (Serverless compatibility) - always return JSON
+- ❌ Never use localStorage - all data is server-side
+- ✅ Always use `v1ApiService` for API calls (client-side)
+- ✅ Always use async job pattern for long operations (ACT1, ACT2-5, Synthesis)
+- ✅ Run `npx prisma generate` after schema changes
+- ✅ Check CLAUDE.md when stuck - it contains all architecture details
+
 ## Project Overview
 
 ScriptAI MVP - An AI-powered script analysis system that detects and fixes logical errors in screenplays using a five-act interactive workflow and DeepSeek API. Built with Next.js 14, TypeScript, PostgreSQL/Prisma, and async job queue architecture.
@@ -59,46 +94,78 @@ npx prisma db push
 
 ## Architecture Overview
 
+### 🎯 Product Positioning & Value Proposition
+
+**Core Philosophy**: ScriptAI is an **AI Creative Assistant** for screenwriters, not an error-fixing tool. The system provides differentiated value across two distinct phases:
+
+#### **Phase 1: ACT1 - Quick Logic Repair (修Bug)**
+- **Focus**: Fix objective logical errors (timeline contradictions, character inconsistencies)
+- **Speed**: 5-10 minutes for most scripts
+- **Output**: V1 script with logical consistency
+- **User Decision**: Use repaired script directly OR continue to creative enhancement
+
+#### **Phase 2: ACT2-5 - Creative Enhancement (创作升级)**
+- **Focus**: Deepen artistic quality beyond logical correctness
+- **Value Transformation**:
+  - **ACT2**: Flat characters → Three-dimensional characters (growth arcs, inner conflicts)
+  - **ACT3**: Reasonable worldbuilding → Compelling worldbuilding (rich details, dramatic tension)
+  - **ACT4**: Smooth pacing → Riveting pacing (suspense, emotional intensity)
+  - **ACT5**: Surface story → Spiritual depth (thematic resonance, emotional penetration)
+- **Output**: V2+ scripts with progressive artistic enhancement
+
+**Key Distinction**:
+- ACT1 makes your script **correct** (logical repair)
+- ACT2-5 make your script **great** (creative enhancement)
+
+This differentiated positioning ensures users understand each phase serves a distinct purpose in the creative journey.
+
 ### Five-Act Workflow State Machine
 The system implements a five-act interactive workflow for script analysis:
 - `INITIALIZED` → `ACT1_RUNNING` → `ACT1_COMPLETE` → `ITERATING` → `SYNTHESIZING` → `COMPLETED`
 
-**Act 1 (Foundational Diagnosis)**: ConsistencyGuardian analyzes script for 5 error types
-**Act 2 (Character Arc)**: CharacterArchitect iterates on character contradictions
-**Act 3 (Worldbuilding)**: RulesAuditor audits setting consistency and theme alignment
-**Act 4 (Pacing)**: PacingStrategist optimizes rhythm and conflict distribution
-**Act 5 (Theme)**: ThematicPolisher enhances character depth and empathy
+**Act 1 (Logic Repair)**: ConsistencyGuardian detects 5 logic error types for quick fixes
+**Act 2 (Character Depth Creation)**: CharacterArchitect deepens character arcs and psychological complexity
+**Act 3 (Worldbuilding Enrichment)**: RulesAuditor enriches setting details and dramatic potential
+**Act 4 (Pacing Enhancement)**: PacingStrategist optimizes rhythm and dramatic tension
+**Act 5 (Spiritual Depth)**: ThematicPolisher enhances thematic resonance and emotional core
 **Synthesis (Epic 007)**: SynthesisEngine merges all decisions into final script (V2) with conflict resolution and style preservation
 
 ### Core AI Agents
-1. **ConsistencyGuardian** (`lib/agents/consistency-guardian.ts`) - Epic 004
-   - Detects 5 error types: timeline, character, plot, dialogue, scene inconsistencies
+
+**Positioning Note**: All ACT2-5 agents are **creative enhancement oriented**, not error-fixing tools. They help screenwriters deepen artistic quality beyond logical correctness.
+
+1. **ConsistencyGuardian** (`lib/agents/consistency-guardian.ts`) - Epic 004 | **ACT1 Logic Repair**
+   - Detects 5 logic error types: timeline, character, plot, dialogue, scene inconsistencies
    - Chinese language prompts for Chinese output
    - Parallel chunk processing for performance
-   - Used in Act 1 analysis
+   - Purpose: Quick logical error detection and repair (5-10 minutes)
 
-2. **CharacterArchitect** (`lib/agents/character-architect.ts`) - Epic 005
-   - Implements P4-P6 prompt chain for Act 2
-   - P4: Focus on character contradiction and analyze context
-   - P5: Generate exactly 2 solution proposals with pros/cons
-   - P6: Execute "Show, Don't Tell" transformation to dramatic actions
+2. **CharacterArchitect** (`lib/agents/character-architect.ts`) - Epic 005 | **ACT2 Character Depth Creation**
+   - Implements P4-P6 prompt chain for character arc deepening
+   - P4: Analyze character growth potential (not contradiction fixing)
+   - P5: Generate 2 creative development paths (渐进式 vs 戏剧性)
+   - P6: Execute "Show, Don't Tell" transformation for dramatic presentation
+   - **Value**: Transforms flat characters → three-dimensional characters with growth arcs
    - Returns structured JSON with DeepSeek `response_format: { type: 'json_object' }`
 
-3. **RulesAuditor** (`lib/agents/rules-auditor.ts`) - Epic 006
-   - Implements P7-P9 prompt chain for Act 3
-   - P7: Core setting logic audit - detects worldbuilding inconsistencies
-   - P8: Dynamic rule verification - analyzes ripple effects of fixes
-   - P9: Setting-theme alignment - ensures worldbuilding serves theme
+3. **RulesAuditor** (`lib/agents/rules-auditor.ts`) - Epic 006 | **ACT3 Worldbuilding Enrichment**
+   - Implements P7-P9 prompt chain for worldbuilding enhancement
+   - P7: Analyze worldbuilding depth potential (not audit inconsistencies)
+   - P8: Generate enrichment paths with dramatic ripple effects
+   - P9: Execute setting-theme integration for thematic resonance
+   - **Value**: Transforms reasonable worldbuilding → compelling worldbuilding with rich details
 
-4. **PacingStrategist** (`lib/agents/pacing-strategist.ts`) - Epic 006
-   - Implements P10-P11 prompt chain for Act 4
-   - P10: Rhythm and emotional space analysis - identifies pacing issues
-   - P11: Conflict redistribution - generates restructuring strategies
+4. **PacingStrategist** (`lib/agents/pacing-strategist.ts`) - Epic 006 | **ACT4 Pacing Enhancement**
+   - Implements P10-P11 prompt chain for rhythm optimization
+   - P10: Analyze pacing enhancement opportunities (not identify issues)
+   - P11: Generate pacing enhancement strategies (suspense, climax, tension)
+   - **Value**: Transforms smooth pacing → riveting pacing with dramatic tension
 
-5. **ThematicPolisher** (`lib/agents/thematic-polisher.ts`) - Epic 006
-   - Implements P12-P13 prompt chain for Act 5
-   - P12: Character de-labeling and depth - removes generic traits
-   - P13: Core fears and beliefs - defines emotional core
+5. **ThematicPolisher** (`lib/agents/thematic-polisher.ts`) - Epic 006 | **ACT5 Spiritual Depth**
+   - Implements P12-P13 prompt chain for thematic resonance
+   - P12: Enhance character spiritual depth (not de-label generic traits)
+   - P13: Define empathy core and thematic resonance (not fears/beliefs fixing)
+   - **Value**: Transforms surface story → spiritual depth with emotional penetration
 
 6. **RevisionExecutive** (`lib/agents/revision-executive.ts`)
    - Generates contextual fixes for detected errors
@@ -301,39 +368,36 @@ DEEPSEEK_API_URL=https://api.deepseek.com
 DISABLE_RATE_LIMIT=true  # Optional: disable rate limiting in development
 ```
 
-### Vercel Deployment Configuration
+### Vercel Deployment (Quick Reference)
 
-**Critical**: Review these settings before deploying to Vercel:
+**Prerequisites:**
+- Vercel Pro Plan or higher (for 60s function timeouts)
+- Supabase account for production database
 
-1. **Function Timeouts** (`vercel.json`):
-   - All AI endpoints: 60s (analyze, process, propose, execute, synthesize)
-   - Requires **Vercel Pro Plan** or higher (Hobby Plan limited to 10s)
-   - See `docs/VERCEL_DEPLOYMENT_CHECKLIST.md` for complete configuration
+**Deployment Steps:**
+```bash
+# 1. Set up Supabase database
+# DATABASE_URL="postgresql://...@pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
+# DIRECT_URL="postgresql://...@pooler.supabase.com:5432/postgres"
 
-2. **Database Connection** (Production):
-   ```bash
-   # Use Supabase Connection Pooler for Serverless
-   DATABASE_URL="postgresql://...@pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
-   DIRECT_URL="postgresql://...@pooler.supabase.com:5432/postgres"
-   ```
+# 2. Configure vercel.json
+# All AI endpoints need 60s timeout (analyze, process, propose, execute, synthesize)
 
-3. **Build Command**:
-   ```bash
-   npx prisma generate && npm run build
-   # Do NOT include prisma db push/seed in build (no database access during build)
-   ```
+# 3. Build and deploy
+npx prisma generate && npm run build
+vercel --prod
 
-4. **Post-Deployment**:
-   ```bash
-   vercel env pull .env.production
-   npx prisma migrate deploy
-   npx prisma db seed  # Creates demo-user
-   ```
+# 4. Post-deployment
+npx prisma migrate deploy
+npx prisma db seed  # Creates demo-user
+```
 
-**Key Documentation**:
-- `docs/VERCEL_DEPLOYMENT_CHECKLIST.md` - Complete deployment guide
-- `docs/DEPLOYMENT_READINESS_REPORT.md` - Pre-deployment verification
-- `docs/fixes/VERCEL_504_TIMEOUT_FIX.md` - Timeout troubleshooting
+**Critical Configuration:**
+- ⚠️ Hobby Plan has 10s timeout limit - will cause 504 errors on large scripts
+- ✅ Use Supabase Connection Pooler (pgbouncer=true) for Serverless
+- ✅ Do NOT include `prisma db push` in build command (no DB access during build)
+
+**Full Documentation**: `docs/VERCEL_DEPLOYMENT_CHECKLIST.md`
 
 ## Key Implementation Details
 
@@ -589,20 +653,37 @@ if (!response.ok) {
 
 ### Modifying AI Agent Prompts
 
-All agents follow the same pattern - see Epic 005/006 implementations for reference:
+**Important**: All ACT2-5 agent prompts follow **creative enhancement** philosophy, not error-fixing. See Epic 005/006 implementations for reference.
 
 #### Act-Specific Prompt Files
-- **Act 1**: `lib/agents/prompts/consistency-prompts.ts` - Error detection rules
-- **Act 2**: `lib/agents/prompts/character-architect-prompts.ts` - P4-P6 prompts
-- **Act 3**: `lib/agents/prompts/rules-auditor-prompts.ts` - P7-P9 prompts
-- **Act 4**: `lib/agents/prompts/pacing-strategist-prompts.ts` - P10-P11 prompts
-- **Act 5**: `lib/agents/prompts/thematic-polisher-prompts.ts` - P12-P13 prompts
+- **Act 1**: `lib/agents/prompts/consistency-prompts.ts` - Logic error detection (repair-oriented)
+- **Act 2**: `lib/agents/prompts/character-architect-prompts.ts` - Character depth creation (creative-oriented)
+- **Act 3**: `lib/agents/prompts/rules-auditor-prompts.ts` - Worldbuilding enrichment (creative-oriented)
+- **Act 4**: `lib/agents/prompts/pacing-strategist-prompts.ts` - Pacing enhancement (creative-oriented)
+- **Act 5**: `lib/agents/prompts/thematic-polisher-prompts.ts` - Spiritual depth (creative-oriented)
+
+#### Prompt Design Principles (ACT2-5)
+
+**Positioning**:
+- ❌ **Avoid**: "修复错误"、"解决矛盾"、"审计问题"、"识别缺陷"
+- ✅ **Use**: "深化创作"、"丰富细节"、"增强张力"、"优化体验"、"精神共鸣"
+
+**Tone**:
+- Frame as **creative mentor** (创作导师), not bug fixer
+- Focus on **artistic value** and **dramatic potential**, not correctness
+- Emphasize **enhancement opportunities**, not problems
+
+**Key Declaration** (must include in system prompts):
+```
+重要：你不是在"修复错误"，而是在"深化创作"。即使逻辑一致，也可以通过增强使其更具艺术价值。
+```
 
 #### Prompt Requirements
 - All prompts must output Chinese language
 - Use `response_format: { type: 'json_object' }` in DeepSeek API calls
 - Return structured JSON matching interface types
 - Include validation methods in agent classes
+- ACT2-5 prompts must emphasize **creative enhancement**, not error fixing
 
 ## Critical File Locations
 
@@ -1198,110 +1279,80 @@ For future development, refer to:
 
 ---
 
-**Last Updated**: 2025-10-10 (ACT2-5 Async Queue + Act Filtering + ACT1 Repair + Vercel 504 + Script Versioning)
-**Architecture Version**: V1 API (Epic 004-007 Complete + Version Iteration)
-**System Status**: Production Ready - Vercel Deployment Verified ✅
-**Test Coverage**: 100% (Unit 19/19, E2E 9/9 steps with real PostgreSQL)
+**Last Updated**: 2025-10-10
+**Architecture Version**: V1 API (Epic 004-007 Complete)
+**System Status**: Production Ready ✅
+**Test Coverage**: 97.5% (77/79 tests passing)
+**Product Positioning**: Plan B - Differentiated Value (ACT1=Logic Repair, ACT2-5=Creative Enhancement) ✨ **NEW**
 
-**Recent Fixes** (2025-10-10):
+## Product Positioning Update (2025-10-10) ✨
 
-**Critical Production Fixes**:
+**Implemented Plan B - Differentiated Value Strategy**:
 
-**ACT2-5 Async Queue Implementation** (Commits de44d3d - 2025-10-10):
-   - **Problem**: ACT2-5 propose endpoint hit Vercel Hobby Plan 10-second timeout
-   - **Root Cause**: Synchronous AI agent calls took 30-60 seconds to complete
-   - **Solution**: Refactored to async job queue pattern (matching ACT1 architecture)
-   - **Implementation**:
-     - `app/api/v1/iteration/propose/route.ts`: Changed from sync to async job creation
-     - `lib/api/workflow-queue.ts`: Added `processIteration()` method (~180 lines) with dynamic imports
-     - `app/api/v1/iteration/jobs/[jobId]/route.ts`: New polling endpoint for ITERATION jobs
-     - `app/iteration/[projectId]/page.tsx`: Frontend now polls every 5 seconds (was immediate)
-   - **Performance**: Response time < 1 second (job creation), processing 30-60s in background
-   - **Serverless Compatible**: Uses dynamic imports for code splitting, reduces bundle size
-   - **Pattern**: Create Job → Return jobId → Poll status → Display proposals
-   - **All Acts Supported**: ACT2_CHARACTER, ACT3_WORLDBUILDING, ACT4_PACING, ACT5_THEME
-   - **Documentation**: `docs/fixes/ACT2_ASYNC_QUEUE_IMPLEMENTATION.md` (complete architecture)
+### Background
+Original system positioned both ACT1 and ACT2-5 as "error fixing" tools, creating confusion about the value proposition. ACT1's "AI智能修复" overlapped with ACT2-5's purpose.
 
-**Act Filtering Business Logic** (Commits 6941f26, e90732f - 2025-10-10):
-   - **Problem**: All Acts (ACT2-5) displayed all ACT1 findings regardless of relevance
-   - **User Impact**: Confusing UX - ACT3 showed character/timeline/dialogue issues (should only show scene/plot)
-   - **Root Cause**: No filtering logic in `FindingsSelector` component
-   - **Solution**: Added `filterFindingsByAct()` function with act-to-finding-type mapping
-   - **Business Logic**:
-     - ACT2_CHARACTER → ['character'] only
-     - ACT3_WORLDBUILDING → ['scene', 'plot'] only
-     - ACT4_PACING → ['timeline'] only
-     - ACT5_THEME → ['character', 'dialogue'] only
-   - **Implementation**:
-     - `app/iteration/[projectId]/page.tsx`: Added filter function and empty state handling
-     - Updated CardDescription with act-specific guidance text
-     - Added friendly Alert when no findings match current Act
-   - **UX Improvements**: Clear focus per Act, reduced cognitive load, professional workflow
-   - **Documentation**: `docs/fixes/ACT_FILTERING_FIX.md` (complete business rationale)
+### Solution
+Implemented **differentiated positioning** strategy:
+- **ACT1**: Quick Logic Repair (修Bug) - Fix objective errors in 5-10 minutes
+- **ACT2-5**: Creative Enhancement (创作升级) - Deepen artistic quality progressively
 
-0. **ACT1 Repair API Error Handling** (Commit c435f08 - 2025-10-10):
-   - Fixed 500 errors returning HTML instead of JSON in Serverless environments
-   - **Backend**: Wrapped handler in comprehensive try-catch, always returns JSON responses
-   - **Frontend**: Added content-type checking before parsing, handles HTML error pages gracefully
-   - **Enum Usage**: Fixed WorkflowStatus.ITERATING (was using string literal)
-   - **Logging**: Added detailed console.log at each step for debugging
-   - **Reference**: See `app/api/v1/projects/[id]/apply-act1-repair/route.ts` for pattern
-   - **Documentation**: `docs/fixes/ACT1_REPAIR_API_DEBUGGING.md` for troubleshooting guide
-   - **Key Learning**: Never throw errors in Serverless API handlers - always return NextResponse.json()
+### Changes Made
+1. **UI Copy Updates** (Stage 1):
+   - Updated ACT1 Analysis page: Emphasized "逻辑快速修复" vs "深度创作"
+   - Updated ActProgressBar: Changed labels to reflect creative enhancement (角色深度创作, 世界观丰富化, etc.)
+   - Updated Iteration page: Added 💡 guidance text emphasizing creative enhancement
 
-1. **Serverless (Vercel) Job Processing** (Commits 396947c, f96fad2):
-   - Fixed jobs stuck in QUEUED/PROCESSING state in Serverless environments
-   - Implemented dual-mode WorkflowQueue (traditional vs Serverless)
-   - Added `POST /api/v1/analyze/process` manual processing endpoint
-   - Integrated `triggerProcessing()` into polling and analysis page
-   - Created `scripts/debug-act1-analysis.ts` diagnostic tool
-   - See "Serverless Compatibility Architecture" section for details
+2. **Prompt Refactoring** (Stage 2):
+   - Refactored all 4 ACT2-5 Agent prompts (~800 lines rewritten)
+   - Changed from "修复导向" to "创作导向"
+   - Added key declaration: "重要：你不是在'修复错误'，而是在'深化创作'"
+   - Updated terminology: 潜力/深化/优化/丰富/共鸣 (not 矛盾/问题/修复/解决/错误)
 
-2. **Timeout Configuration**:
-   - Increased DeepSeek API timeout from 9s to 120s for large scripts
-   - Updated `lib/agents/types.ts` and `lib/api/deepseek/client.ts`
-   - Enhanced error messages with Chinese translations
+3. **Documentation Updates** (Stage 3):
+   - Added Product Positioning section in CLAUDE.md
+   - Updated Core AI Agents descriptions with value transformations
+   - Added Prompt Design Principles for future development
 
-**API Completeness**:
-3. **Missing Project Endpoint**:
-   - Added `GET /api/v1/projects/[id]` for single project retrieval
-   - Fixed iteration page 404 errors
+### Impact
+- Clear differentiation between "correctness" (ACT1) and "greatness" (ACT2-5)
+- Users understand each phase serves distinct creative purposes
+- AI generates enhancement-focused content, not error-fixing suggestions
 
-**UX Enhancements**:
-4. **Act 2 Selection Feedback** (Commit 4839a84):
-   - Enhanced `FindingsSelector` with 5-layer visual feedback system
-   - Added selection context Alert component in iteration page
-   - Increased submit button size for better visibility
-   - Improved user confidence before AI proposal submission
-   - See `components/workspace/findings-selector.tsx:124-158`
+**Files Modified**:
+- `app/analysis/[id]/page.tsx`
+- `components/workspace/act-progress-bar.tsx`
+- `app/iteration/[projectId]/page.tsx`
+- `lib/agents/prompts/character-architect-prompts.ts`
+- `lib/agents/prompts/rules-auditor-prompts.ts`
+- `lib/agents/prompts/pacing-strategist-prompts.ts`
+- `lib/agents/prompts/thematic-polisher-prompts.ts`
+- `CLAUDE.md`
 
-5. **Iteration Page Loading**:
-   - Resolved race condition between component render and data loading
-   - Added loading state guard before Act 1 completion check
-   - Prevented premature "请先完成 Act 1" error messages
+## Recent Critical Fixes (2025-10-10)
 
-**Vercel 504 Timeout Fix** (2025-10-10 - Commit e99a630):
-6. **Process Endpoint Timeout Issue**:
-   - **Problem**: `/api/v1/analyze/process` returned 504 Gateway Timeout after deployment
-   - **Root Cause**: API timeout was 10s, but actual Act 1 analysis takes 30-60s
-   - **Solution**: Increased timeout from 10s to 60s in `vercel.json`
-   - **Critical Understanding**: In Serverless (Vercel), functions MUST process synchronously
-     - Async operations are terminated when function returns
-     - Cannot use "fire and forget" pattern
-     - `processNextManually()` must await complete analysis before returning
-   - **Requires**: Vercel Pro Plan or higher (Hobby Plan limited to 10s)
-   - See `docs/fixes/VERCEL_504_TIMEOUT_FIX.md` for complete analysis
+**Quick Summary** - Full details in `docs/fixes/`:
 
-**Script Versioning Iteration** (2025-10-10 - Commits 800dc79 through b1a9c68):
-7. **Gradual Version Updates (方案A)**:
-   - **Feature**: Each ACT2-5 decision creates incremental script versions (V1, V2, V3...)
-   - **Key Change**: `POST /api/v1/iteration/execute` now creates ScriptVersion records
-   - **Cumulative Iteration**: V2 includes V1 changes, V3 includes V1+V2, etc.
-   - **Implementation**:
-     - `lib/synthesis/change-applicator.ts` - Applies generatedChanges to script (500+ lines)
-     - `lib/synthesis/version-manager.ts` - Manages version creation and retrieval
-     - Execute API creates version after each decision
-     - Propose API uses latest version (not V1) as base
-   - **E2E Verified**: 100% tests passing with real PostgreSQL database
-   - See `docs/fixes/SCRIPT_VERSIONING_ITERATION_TASK.md` for requirements
-   - See `docs/fixes/E2E_TEST_RESULTS.md` for test validation
+1. **ACT2-5 Async Queue** - Refactored propose endpoint to async job pattern to avoid 10s Vercel timeout
+   - See: `docs/fixes/ACT2_ASYNC_QUEUE_IMPLEMENTATION.md`
+
+2. **Act Filtering** - Each Act now only shows relevant finding types (ACT2=character, ACT3=scene/plot, etc.)
+   - See: `docs/fixes/ACT_FILTERING_FIX.md`
+
+3. **ACT1 Repair API** - Fixed 500 errors returning HTML instead of JSON in Serverless
+   - Pattern: Always return `NextResponse.json()`, never throw in API handlers
+   - See: `docs/fixes/ACT1_REPAIR_API_DEBUGGING.md`
+
+4. **Serverless Job Processing** - Implemented dual-mode WorkflowQueue with manual trigger endpoint
+   - Traditional: `setInterval()` background processing
+   - Serverless: Manual `POST /api/v1/analyze/process` trigger from frontend
+   - See: "Serverless Compatibility Architecture" section below
+
+5. **Script Versioning** - Each ACT2-5 decision now creates incremental versions (V1, V2, V3...)
+   - Execute API creates version after each decision
+   - Propose API uses latest version as base
+   - See: `docs/fixes/SCRIPT_VERSIONING_ITERATION_TASK.md`
+
+6. **Timeout Configuration** - Increased DeepSeek API timeout to 120s for large scripts
+   - Vercel endpoints: 60s timeout (requires Pro Plan)
+   - See: `docs/fixes/VERCEL_504_TIMEOUT_FIX.md`
