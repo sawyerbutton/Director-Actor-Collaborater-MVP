@@ -1,21 +1,26 @@
 /**
- * PacingStrategist Agent Prompts
- * Epic 006: Act 4 - Pacing and Structure Optimization
+ * PacingStrategist Agent Prompts - 创作优化导向
+ * Epic 006: Act 4 - Pacing Enhancement and Rhythm Optimization (叙事节奏优化)
+ *
+ * 业务定位：不是修复节奏问题，而是优化叙事节奏和戏剧张力
+ * 价值转化：从流畅节奏 → 扣人心弦的节奏（戏剧张力强、情感起伏饱满）
  *
  * Prompt Chain:
- * P10: Rhythm and emotional space analysis
- * P11: Conflict redistribution
+ * P10: Analyze pacing enhancement opportunities (分析节奏优化机会)
+ * P11: Generate pacing enhancement strategies (生成节奏优化策略)
  */
 
-// P10: Rhythm and Emotional Space Analysis - Analyze pacing issues
-export const P10_ANALYZE_SYSTEM_PROMPT = `你是一位资深的节奏与结构专家，专注于分析剧本的叙事节奏和情感空间。
+// P10: Pacing Enhancement Analysis - Identify opportunities for dramatic rhythm
+export const P10_ANALYZE_SYSTEM_PROMPT = `你是一位叙事节奏创作导师，专注于帮助编剧构建扣人心弦的戏剧节奏。
 
 你的职责是：
-1. 识别剧本中的节奏问题（信息过载、情感压缩、冲突堆叠）
-2. 分析每个问题对观众体验的影响
-3. 评估节奏问题的严重程度
-4. 定位具体出现问题的剧集/场景
-5. 提供观众情感曲线分析
+1. 深入分析剧本的叙事节奏和情感曲线
+2. 识别可以优化的节奏维度（信息分布、情感起伏、冲突密度）
+3. 发掘增强戏剧张力和观众沉浸感的机会
+4. 评估节奏优化的戏剧价值
+5. 构建更具吸引力的情感体验路径
+
+重要：你不是在"修复节奏问题"，而是在"优化戏剧体验"。即使节奏流畅，也可以通过增强张力和情感起伏使其更扣人心弦。
 
 你必须以有效的JSON格式输出分析结果。所有输出必须使用中文。`;
 
@@ -23,7 +28,7 @@ export function buildP10AnalyzePrompt(
   episodes: string,
   timeRange: string
 ): string {
-  return `请深入分析以下剧集范围的叙事节奏和情感空间：
+  return `请深入分析以下剧集范围的叙事节奏优化潜力，发掘增强戏剧张力的机会：
 
 ## 剧集内容
 ${episodes}
@@ -31,115 +36,132 @@ ${episodes}
 ## 分析时间范围
 ${timeRange}
 
-## 节奏分析维度
-请从以下维度识别节奏问题：
+## 节奏优化分析维度
+请从创作增强的角度分析叙事节奏：
 
-1. **信息密度问题**：
-   - 是否存在信息过载（一次性塞入太多情节）？
-   - 关键信息是否被淹没在次要内容中？
-   - 观众是否有足够时间消化重要信息？
+1. **信息分布优化机会**：
+   - 如何通过调整信息披露节奏增强悬念？
+   - 哪些关键信息可以延迟揭示来制造张力？
+   - 如何利用信息差创造戏剧性反转？
 
-2. **情感节奏问题**：
-   - 是否存在情感压缩（情绪转换过快）？
-   - 高潮场景之间是否有足够的情感缓冲？
-   - 观众是否有情感投入和释放的空间？
+2. **情感起伏强化机会**：
+   - 如何增强情感高潮的冲击力？
+   - 哪些场景可以拉长以深化情感共鸣？
+   - 如何优化情感过渡使观众更投入？
 
-3. **冲突分布问题**：
-   - 是否存在冲突堆叠（多个矛盾同时爆发）？
-   - 冲突强度是否合理递进？
-   - 是否有冲突真空期导致节奏拖沓？
+3. **冲突密度调优机会**：
+   - 如何重新编排冲突使节奏更扣人心弦？
+   - 哪些冲突可以递进叠加以制造高潮？
+   - 如何在高强度冲突间设计恰当的节奏缓冲？
 
-4. **观众体验影响**：
-   - 节奏问题如何影响观众的沉浸感？
-   - 哪些问题会导致观众疲劳或失去兴趣？
+4. **观众体验提升潜力**：
+   - 节奏优化如何增强观众的沉浸感和期待感？
+   - 哪些调整会让故事更有吸引力和话题性？
 
 ## 输出格式
 请以JSON格式返回分析结果：
 
 {
-  "pacingIssues": [
+  "pacingOpportunities": [
     {
       "episode": 剧集编号（数字）,
-      "issue": "问题类型：information_overload | emotional_compression | conflict_stacking",
-      "severity": "严重程度：high | medium | low",
-      "description": "问题详细描述（中文，150-200字）",
+      "dimension": "优化维度：information_distribution | emotional_impact | conflict_orchestration",
+      "opportunity": "优化机会描述（中文，150-200字，说明如何让节奏更扣人心弦）",
+      "currentState": "当前节奏状态（中文，100字）",
+      "enhancementPotential": "增强潜力（high/medium/low）及原因（中文）",
       "location": "具体位置（中文，章节/场景）",
-      "audienceImpact": "对观众体验的影响（中文，100-150字）"
+      "audienceImpact": "对观众体验的提升（中文，100-150字）"
     }
   ],
   "emotionalCurve": {
-    "peaks": ["高潮点1（中文）", "高潮点2（中文）"],
-    "valleys": ["低谷点1（中文）", "低谷点2（中文）"],
-    "transitions": ["情感转换点1（中文）", "情感转换点2（中文）"]
+    "currentPeaks": ["当前高潮点1（中文）", "当前高潮点2（中文）"],
+    "enhancementOpportunities": ["可强化高潮1（中文）", "可强化高潮2（中文）"],
+    "newDramaticMoments": ["可创造的新戏剧点1（中文）", "可创造的新戏剧点2（中文）"]
   },
-  "overallAssessment": "整体节奏评估（中文，200-300字）"
+  "overallPotential": "整体节奏优化潜力评估（中文，200-300字，强调如何从流畅变得扣人心弦）"
 }
 
 确保返回的JSON格式正确，所有内容使用中文。`;
 }
 
-// P11: Conflict Redistribution - Restructure conflicts for better pacing
-export const P11_RESTRUCTURE_SYSTEM_PROMPT = `你是一位冲突重构大师，专注于优化剧本的冲突分布和叙事节奏。
+// P11: Pacing Enhancement Strategies - Optimize dramatic rhythm and tension
+export const P11_RESTRUCTURE_SYSTEM_PROMPT = `你是一位叙事节奏创作大师，专注于设计扣人心弦的戏剧节奏和张力曲线。
 
 你的职责是：
-1. 基于节奏分析设计冲突重构方案
-2. 提供多种优化策略（铺垫、重排序、拉开间距）
-3. 确保重构后的节奏更符合观众预期
-4. 保持剧情逻辑和因果关系
-5. 评估每种策略的预期效果
+1. 基于节奏分析设计创作性的优化策略
+2. 提供多种节奏强化路径（悬念铺垫、高潮编排、张力控制）
+3. 确保优化后的节奏更具戏剧性和吸引力
+4. 保持剧情逻辑和因果链条的完整性
+5. 评估每种策略的艺术价值和观众体验提升
 
-你必须以有效的JSON格式输出重构方案。所有输出必须使用中文。`;
+重要：你提供的是"创作增强方案"，不是"问题修复方案"。目标是让节奏从"流畅"变得"扣人心弦"。
+
+你必须以有效的JSON格式输出优化策略。所有输出必须使用中文。`;
 
 export function buildP11RestructurePrompt(
-  issues: any[]
+  opportunities: any[]
 ): string {
-  return `基于以下检测到的节奏问题，设计冲突重构方案：
+  return `基于以下识别的节奏优化机会，设计创作性的节奏强化策略：
 
-## 检测到的节奏问题
-${JSON.stringify(issues, null, 2)}
+## 节奏优化机会分析
+${JSON.stringify(opportunities, null, 2)}
 
-## 重构策略要求
-1. 提供3-4种不同的优化策略
-2. 每种策略明确具体的调整动作
+## 创作优化策略要求
+1. 提供3-4种不同的节奏强化策略
+2. 每种策略明确具体的创作优化动作
 3. 策略类型包括：
-   - **铺垫（foreshadowing）**：提前埋设线索，降低突然性
-   - **重排序（resequencing）**：调整事件发生顺序
-   - **拉开间距（spacing）**：在高强度冲突间增加缓冲
+   - **悬念铺垫（suspense_building）**：通过延迟信息披露和伏笔制造张力
+   - **高潮编排（climax_orchestration）**：重新编排冲突和情感高潮使其更震撼
+   - **张力控制（tension_modulation）**：在高强度场景间设计恰当的节奏起伏
 
-4. 确保调整后：
-   - 剧情逻辑依然自洽
-   - 因果链条保持完整
-   - 观众情感体验更佳
+4. 确保优化后：
+   - 剧情逻辑依然自洽且因果链条完整
+   - 节奏更扣人心弦，戏剧张力显著增强
+   - 观众情感投入和沉浸感大幅提升
 
-## 重构示例
-问题：第3-4集冲突堆叠严重
-✅ 铺垫策略：将第4集的冲突B在第2集埋设线索
-✅ 重排序策略：将冲突C移至第5集，与冲突D形成递进
-✅ 拉开间距：在第3集冲突A后增加一场情感缓冲戏
+## 创作优化示例（从流畅→扣人心弦）
+当前状态：第3-4集节奏平稳流畅
+
+✅ 悬念铺垫策略：
+- 将第4集的重要揭示延迟到结尾，中间穿插误导性线索
+- 效果：观众一直处于猜测和期待状态，张力持续积累
+
+✅ 高潮编排策略：
+- 将第3集的冲突A与第4集的冲突B重新编排，形成递进式双重高潮
+- 效果：情感冲击力翻倍，观众体验更震撼
+
+✅ 张力控制策略：
+- 在第3集高潮后增加一场看似平静实则暗藏危机的过渡场景
+- 效果：形成"暴风雨前的宁静"效果，为下一次爆发积蓄能量
 
 ## 输出格式
-请以JSON格式返回重构策略：
+请以JSON格式返回优化策略：
 
 {
   "strategies": [
     {
       "id": "strategy_1",
-      "approach": "策略类型：foreshadowing | resequencing | spacing",
-      "title": "策略标题（中文，简洁）",
-      "description": "策略概述（中文，100-150字）",
-      "changes": [
+      "approach": "策略类型：suspense_building | climax_orchestration | tension_modulation",
+      "title": "策略标题（中文，简洁有力，体现优化方向）",
+      "description": "策略概述（中文，100-150字，强调如何增强戏剧性）",
+      "enhancements": [
         {
           "episode": 剧集编号（数字）,
-          "modification": "具体调整内容（中文，150-200字）",
-          "rationale": "调整理由（中文，100字）"
+          "modification": "具体优化内容（中文，150-200字）",
+          "dramaticValue": "戏剧价值（中文，说明如何让节奏更扣人心弦）"
         }
       ],
-      "expectedImprovement": "预期改善效果（中文，150-200字）",
-      "risks": ["潜在风险1（中文）", "潜在风险2（中文）"]
+      "expectedImpact": {
+        "suspenseLevel": "悬念提升程度（high/medium/low）",
+        "emotionalIntensity": "情感强度提升（high/medium/low）",
+        "audienceEngagement": "观众投入度提升（中文描述）"
+      },
+      "artisticValue": "艺术价值评估（中文，150-200字）",
+      "executionNotes": ["执行要点1（中文）", "执行要点2（中文）"]
     }
   ],
-  "recommendedSequence": "推荐的策略组合及实施顺序（中文）",
-  "continuityChecks": ["连续性检查点1（中文）", "连续性检查点2（中文）"]
+  "recommendedApproach": "推荐的策略组合及创作实施建议（中文，强调如何达到最佳戏剧效果）",
+  "continuityGuidelines": ["保持连贯性的创作指引1（中文）", "保持连贯性的创作指引2（中文）"]
 }
 
 确保返回的JSON格式正确，所有内容使用中文。`;

@@ -445,15 +445,18 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
           <Alert className="mb-6 bg-blue-50 border-blue-200">
             <AlertCircle className="h-4 w-4 text-blue-600" />
             <AlertDescription className="flex items-center justify-between">
-              <span className="text-blue-800">
-                ✓ Act 1 基础诊断已完成！您可以进入 Acts 2-5 进行深度迭代修改
-              </span>
+              <div className="text-blue-800">
+                <div className="font-medium">✓ Act 1 逻辑诊断已完成！</div>
+                <div className="text-sm mt-1">
+                  可选：使用下方"AI智能修复"快速修复逻辑错误，或直接进入 Acts 2-5 进行创作深化
+                </div>
+              </div>
               <Button
                 onClick={() => router.push(`/iteration/${params.id}`)}
                 className="ml-4"
                 size="sm"
               >
-                进入迭代工作区
+                进入创作工作区
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </AlertDescription>
@@ -571,7 +574,7 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
         {/* Smart Repair Section */}
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle>智能修复与导出</CardTitle>
+            <CardTitle>Act 1 - 逻辑快速修复</CardTitle>
             <CardDescription>
               已接受 {errors.filter(e => e.accepted).length} 项修改，
               拒绝 {errors.filter(e => e.accepted === false).length} 项修改
@@ -580,9 +583,12 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
           <CardContent className="space-y-4">
             {/* 智能修复按钮 */}
             <div className="p-4 bg-blue-50 rounded-lg">
-              <h4 className="font-medium mb-2">🤖 AI智能修复</h4>
+              <h4 className="font-medium mb-2">🤖 AI智能修复（快速模式）</h4>
+              <p className="text-sm text-gray-600 mb-1">
+                <strong>定位：</strong>快速修复时间线矛盾、角色前后不一致等<strong>逻辑错误</strong>
+              </p>
               <p className="text-sm text-gray-600 mb-3">
-                使用AI根据您接受的修改建议，智能重写剧本，保持内容连贯性和风格一致性
+                修复后的剧本将逻辑一致、可直接使用。如需深度创作优化，请保存后进入 Acts 2-5 工作区。
               </p>
               <Button
                 onClick={handleSmartRepair}
@@ -663,7 +669,7 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
             <Card className="max-w-4xl w-full max-h-[80vh] overflow-hidden">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>AI智能修复预览</CardTitle>
+                  <CardTitle>Act 1 逻辑修复预览</CardTitle>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -673,7 +679,8 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
                   </Button>
                 </div>
                 <CardDescription>
-                  AI已根据您的选择智能修复剧本，请预览修复结果
+                  AI已修复剧本的逻辑错误，保证时间线一致性和角色前后一致性。
+                  保存后可继续 Acts 2-5 进行创作深化（角色弧光、世界观丰富、节奏优化、主题深化）。
                 </CardDescription>
               </CardHeader>
               <CardContent className="overflow-y-auto max-h-[60vh]">
@@ -683,7 +690,7 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
                   </ReactMarkdown>
                 </div>
                 <div className="mt-4 flex flex-col gap-2">
-                  {/* Primary Action: Save and Enter Iteration */}
+                  {/* Primary Action: Save and Enter Creative Workspace */}
                   <Button
                     onClick={saveRepairedScript}
                     disabled={isSaving}
@@ -697,7 +704,7 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
                     ) : (
                       <>
                         <Save className="mr-2 h-4 w-4" />
-                        保存并进入迭代工作区
+                        保存并进入创作工作区（Acts 2-5）
                       </>
                     )}
                   </Button>
