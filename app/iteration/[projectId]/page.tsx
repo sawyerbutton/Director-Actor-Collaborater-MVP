@@ -237,6 +237,10 @@ export default function IterationPage() {
 
       // Reload decisions
       await loadDecisions();
+
+      // Reload project data to get updated workflow status
+      const project = await v1ApiService.getProject(projectId);
+      setWorkflowStatus(project.workflowStatus);
     } catch (err) {
       console.error('Execute failed:', err);
       setError(err instanceof Error ? err.message : '执行方案失败，请重试');
