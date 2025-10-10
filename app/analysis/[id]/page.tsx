@@ -10,6 +10,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle, XCircle, AlertTriangle, AlertCircle, FileText, Download, ArrowLeft, Loader2, Wand2, Eye, ArrowRight } from 'lucide-react'
 import { v1ApiService, type DiagnosticReportData, type JobStatusData } from '@/lib/services/v1-api-service'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface AnalysisError {
   id: string
@@ -614,10 +616,10 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
                 </CardDescription>
               </CardHeader>
               <CardContent className="overflow-y-auto max-h-[60vh]">
-                <div className="bg-gray-50 p-4 rounded">
-                  <pre className="whitespace-pre-wrap font-mono text-sm">
+                <div className="bg-gray-50 p-4 rounded prose prose-sm max-w-none">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {repairedScript}
-                  </pre>
+                  </ReactMarkdown>
                 </div>
                 <div className="mt-4 flex gap-2">
                   <Button onClick={() => {
