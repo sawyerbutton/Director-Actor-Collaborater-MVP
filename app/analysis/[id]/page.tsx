@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle, XCircle, AlertTriangle, AlertCircle, FileText, Download, ArrowLeft, Loader2, Wand2, Eye, ArrowRight } from 'lucide-react'
+import { CheckCircle, XCircle, AlertTriangle, AlertCircle, FileText, Download, ArrowLeft, Loader2, Wand2, Eye, ArrowRight, Save } from 'lucide-react'
 import { v1ApiService, type DiagnosticReportData, type JobStatusData } from '@/lib/services/v1-api-service'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -41,6 +41,7 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
   const [pollingError, setPollingError] = useState<string | null>(null)
   const [shouldPoll, setShouldPoll] = useState(true)
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
     let isMounted = true
@@ -185,6 +186,53 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
       alert('智能修复失败，请稍后重试')
     } finally {
       setIsRepairing(false)
+    }
+  }
+
+  // 保存修复结果到数据库
+  const saveRepairedScript = async () => {
+    if (!repairedScript) {
+      alert('没有可保存的修复结果')
+      return
+    }
+
+    const acceptedErrors = errors.filter(e => e.accepted === true)
+    setIsSaving(true)
+
+    try {
+      const response = await fetch(`/api/v1/projects/${params.id}/apply-act1-repair`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          repairedScript,
+          acceptedErrors,
+          metadata: {
+            source: 'ACT1_SMART_REPAIR',
+            errorCount: acceptedErrors.length,
+            timestamp: new Date().toISOString()
+          }
+        })
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || '保存失败')
+      }
+
+      const result = await response.json()
+
+      // Show success message
+      alert(`✅ ${result.data.message}\n\n已应用 ${result.data.details.errorsApplied} 项修改\n版本号: V${result.data.version}`)
+
+      // Navigate to iteration workspace
+      router.push(`/iteration/${params.id}`)
+    } catch (error) {
+      console.error('保存失败:', error)
+      alert(`保存失败: ${error instanceof Error ? error.message : '未知错误'}`)
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -621,17 +669,47 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
                     {repairedScript}
                   </ReactMarkdown>
                 </div>
-                <div className="mt-4 flex gap-2">
-                  <Button onClick={() => {
-                    setShowPreview(false)
-                    handleExport('txt')
-                  }}>
-                    <Download className="mr-2 h-4 w-4" />
-                    导出修复后的剧本
+                <div className="mt-4 flex flex-col gap-2">
+                  {/* Primary Action: Save and Enter Iteration */}
+                  <Button
+                    onClick={saveRepairedScript}
+                    disabled={isSaving}
+                    className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        保存中...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        保存并进入迭代工作区
+                      </>
+                    )}
                   </Button>
-                  <Button variant="outline" onClick={() => setShowPreview(false)}>
-                    关闭预览
-                  </Button>
+
+                  {/* Secondary Actions */}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        setShowPreview(false)
+                        handleExport('txt')
+                      }}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      仅导出
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setShowPreview(false)}
+                    >
+                      关闭预览
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

@@ -281,6 +281,40 @@ DEEPSEEK_API_URL=https://api.deepseek.com
 DISABLE_RATE_LIMIT=true  # Optional: disable rate limiting in development
 ```
 
+### Vercel Deployment Configuration
+
+**Critical**: Review these settings before deploying to Vercel:
+
+1. **Function Timeouts** (`vercel.json`):
+   - All AI endpoints: 60s (analyze, process, propose, execute, synthesize)
+   - Requires **Vercel Pro Plan** or higher (Hobby Plan limited to 10s)
+   - See `docs/VERCEL_DEPLOYMENT_CHECKLIST.md` for complete configuration
+
+2. **Database Connection** (Production):
+   ```bash
+   # Use Supabase Connection Pooler for Serverless
+   DATABASE_URL="postgresql://...@pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1"
+   DIRECT_URL="postgresql://...@pooler.supabase.com:5432/postgres"
+   ```
+
+3. **Build Command**:
+   ```bash
+   npx prisma generate && npm run build
+   # Do NOT include prisma db push/seed in build (no database access during build)
+   ```
+
+4. **Post-Deployment**:
+   ```bash
+   vercel env pull .env.production
+   npx prisma migrate deploy
+   npx prisma db seed  # Creates demo-user
+   ```
+
+**Key Documentation**:
+- `docs/VERCEL_DEPLOYMENT_CHECKLIST.md` - Complete deployment guide
+- `docs/DEPLOYMENT_READINESS_REPORT.md` - Pre-deployment verification
+- `docs/fixes/VERCEL_504_TIMEOUT_FIX.md` - Timeout troubleshooting
+
 ## Key Implementation Details
 
 ### Chinese Language Support
@@ -1044,10 +1078,10 @@ For future development, refer to:
 
 ---
 
-**Last Updated**: 2025-10-09 (Serverless compatibility and UX enhancements)
-**Architecture Version**: V1 API (Epic 004-007 Complete)
-**System Status**: Production Ready with Complete UI (Serverless Compatible)
-**Test Coverage**: 97.5% (77/79 tests passing)
+**Last Updated**: 2025-10-10 (Vercel 504 fix + Script Versioning Iteration)
+**Architecture Version**: V1 API (Epic 004-007 Complete + Version Iteration)
+**System Status**: Production Ready - Vercel Deployment Verified
+**Test Coverage**: 100% (Unit 19/19, E2E 9/9 steps with real PostgreSQL)
 
 **Recent Fixes** (2025-10-09):
 
@@ -1082,3 +1116,29 @@ For future development, refer to:
    - Resolved race condition between component render and data loading
    - Added loading state guard before Act 1 completion check
    - Prevented premature "请先完成 Act 1" error messages
+
+**Vercel 504 Timeout Fix** (2025-10-10 - Commit e99a630):
+6. **Process Endpoint Timeout Issue**:
+   - **Problem**: `/api/v1/analyze/process` returned 504 Gateway Timeout after deployment
+   - **Root Cause**: API timeout was 10s, but actual Act 1 analysis takes 30-60s
+   - **Solution**: Increased timeout from 10s to 60s in `vercel.json`
+   - **Critical Understanding**: In Serverless (Vercel), functions MUST process synchronously
+     - Async operations are terminated when function returns
+     - Cannot use "fire and forget" pattern
+     - `processNextManually()` must await complete analysis before returning
+   - **Requires**: Vercel Pro Plan or higher (Hobby Plan limited to 10s)
+   - See `docs/fixes/VERCEL_504_TIMEOUT_FIX.md` for complete analysis
+
+**Script Versioning Iteration** (2025-10-10 - Commits 800dc79 through b1a9c68):
+7. **Gradual Version Updates (方案A)**:
+   - **Feature**: Each ACT2-5 decision creates incremental script versions (V1, V2, V3...)
+   - **Key Change**: `POST /api/v1/iteration/execute` now creates ScriptVersion records
+   - **Cumulative Iteration**: V2 includes V1 changes, V3 includes V1+V2, etc.
+   - **Implementation**:
+     - `lib/synthesis/change-applicator.ts` - Applies generatedChanges to script (500+ lines)
+     - `lib/synthesis/version-manager.ts` - Manages version creation and retrieval
+     - Execute API creates version after each decision
+     - Propose API uses latest version (not V1) as base
+   - **E2E Verified**: 100% tests passing with real PostgreSQL database
+   - See `docs/fixes/SCRIPT_VERSIONING_ITERATION_TASK.md` for requirements
+   - See `docs/fixes/E2E_TEST_RESULTS.md` for test validation
