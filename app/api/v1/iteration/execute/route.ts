@@ -16,6 +16,8 @@ import { createPacingStrategist } from '@/lib/agents/pacing-strategist';
 import { createThematicPolisher } from '@/lib/agents/thematic-polisher';
 import { HTTP_STATUS } from '@/lib/config/constants';
 import { sanitizeInput, validateRequestSize } from '@/lib/api/sanitization';
+import { VersionManager } from '@/lib/synthesis/version-manager';
+import { applyChanges } from '@/lib/synthesis/change-applicator';
 
 // Validation schema
 const executeRequestSchema = z.object({
@@ -187,15 +189,72 @@ export async function POST(request: NextRequest) {
         }
       );
 
+      // ===== NEW: Gradual Version Update (方案A) =====
+      // 1. Get current latest version
+      const versionManager = new VersionManager();
+      const currentVersion = await versionManager.getLatestVersion(project.id);
+      const currentScript = currentVersion?.content || project.content;
+
+      // 2. Apply changes to script
+      let newScript: string;
+      try {
+        newScript = await applyChanges({
+          act: decision.act,
+          generatedChanges: generatedChanges,
+          currentScript: currentScript,
+          focusContext: decision.focusContext
+        });
+      } catch (applyError) {
+        console.error('[Execute API] Failed to apply changes:', applyError);
+        // If apply fails, use original script (graceful degradation)
+        newScript = currentScript;
+      }
+
+      // 3. Create new version
+      const changeEntry = {
+        id: `change_${decision.id}`,
+        decisionId: decision.id,
+        act: decision.act,
+        focusName: decision.focusName,
+        changeType: 'modification' as const,
+        originalText: currentScript.substring(0, 100), // First 100 chars as sample
+        modifiedText: newScript.substring(0, 100), // First 100 chars as sample
+        location: {
+          scene: 0,
+          line: 0
+        },
+        rationale: `Applied ${decision.act} decision: ${decision.focusName}`,
+        appliedAt: new Date()
+      };
+
+      const newVersion = await versionManager.createVersion(project.id, newScript, {
+        synthesisLog: [changeEntry],
+        decisionsApplied: [decision.id],
+        confidence: 0.9, // Single decision has high confidence
+        timestamp: new Date(),
+        previousVersion: currentVersion?.version || 0
+      });
+
+      // 4. Update Project.content to latest version
+      await projectService.updateContent(project.id, newScript);
+
+      // 5. Update RevisionDecision.version field
+      await revisionDecisionService.updateVersion(decision.id, newVersion.version);
+
+      console.log(`[Execute API] Created version ${newVersion.version} for decision ${decision.id}`);
+      // ===== END: Gradual Version Update =====
+
       // Update project workflow status to ITERATING (if first decision)
       if (project.workflowStatus === 'ACT1_COMPLETE') {
         await projectService.updateWorkflowStatus(project.id, 'ITERATING');
       }
 
-      // Return execution result to user
+      // Return execution result to user (with new version info)
       return NextResponse.json(
         createApiResponse({
           decisionId: updatedDecision.id,
+          versionId: newVersion.id, // NEW: Return version ID
+          version: newVersion.version, // NEW: Return version number
           ...result
         }),
         { status: HTTP_STATUS.OK }

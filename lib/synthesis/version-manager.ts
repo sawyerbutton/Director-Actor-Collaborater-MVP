@@ -157,6 +157,16 @@ export class VersionManager {
   }
 
   /**
+   * Gets the latest version for a project (for gradual iteration)
+   */
+  async getLatestVersion(projectId: string): Promise<any | null> {
+    return await prisma.scriptVersion.findFirst({
+      where: { projectId },
+      orderBy: { version: 'desc' }
+    });
+  }
+
+  /**
    * Counts affected scenes in diff
    */
   private countAffectedScenes(entries: DiffEntry[]): number {
