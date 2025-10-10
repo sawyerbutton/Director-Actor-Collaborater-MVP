@@ -65,6 +65,19 @@ export async function POST(
         );
       }
 
+      console.log('[ACT1 Repair] Current project status:', {
+        projectId,
+        workflowStatus: project.workflowStatus
+      });
+
+      // Fix workflow status if needed
+      // If project is still in ACT1_RUNNING but has diagnostic report, update to ACT1_COMPLETE first
+      if (project.workflowStatus === WorkflowStatus.ACT1_RUNNING) {
+        console.log('[ACT1 Repair] Project still in ACT1_RUNNING, updating to ACT1_COMPLETE first');
+        await projectService.updateWorkflowStatus(projectId, WorkflowStatus.ACT1_COMPLETE);
+        console.log('[ACT1 Repair] Status updated to ACT1_COMPLETE');
+      }
+
       // Create VersionManager instance
       const versionManager = new VersionManager();
 

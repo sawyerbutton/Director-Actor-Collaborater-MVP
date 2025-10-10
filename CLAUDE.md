@@ -230,6 +230,16 @@ The system implements a five-act interactive workflow for script analysis:
 - `GET /api/v1/projects/[id]/status` - Get workflow status
 - `GET /api/v1/projects/[id]/report` - Get diagnostic report
 
+#### V1 ACT1 Repair Endpoint (NEW 2025-10-10)
+- `POST /api/v1/projects/[id]/apply-act1-repair` - Apply ACT1 AI repair to project
+  - Input: repairedScript, acceptedErrors[], metadata
+  - Creates ScriptVersion V1 (or next version)
+  - Updates Project.content with repaired script
+  - Updates WorkflowStatus to ITERATING (enables ACT2-5)
+  - **Critical**: Always returns JSON (never throws, even on error)
+  - **Error Handling**: Content-type checking, HTML fallback, comprehensive logging
+  - See `docs/fixes/ACT1_REPAIR_API_DEBUGGING.md` for troubleshooting
+
 #### V1 Iteration Endpoints (Epic 005 & 006)
 - `POST /api/v1/iteration/propose` - Generate AI proposals for focus area
   - Supports: `ACT2_CHARACTER`, `ACT3_WORLDBUILDING`, `ACT4_PACING`, `ACT5_THEME`
@@ -481,6 +491,86 @@ The system now has a **complete UI implementation** for the full five-act workfl
 4. Use `createApiResponse()` for responses
 5. Add service in `lib/db/services/`
 
+### API Error Handling Pattern (CRITICAL - Updated 2025-10-10)
+
+**Problem**: In Serverless environments (Vercel), throwing errors inside API handlers causes Next.js to return HTML error pages instead of JSON, breaking frontend error handling.
+
+**Solution**: Always return JSON responses, never throw errors
+
+**Correct Pattern**:
+```typescript
+export async function POST(request: NextRequest) {
+  return withMiddleware(request, async () => {
+    try {
+      // Validation
+      const body = await request.json();
+      const result = schema.safeParse(body);
+      if (!result.success) {
+        return NextResponse.json(
+          createErrorResponse('VALIDATION_ERROR', result.error.message),
+          { status: 400 }
+        );
+      }
+
+      // Business logic
+      const data = await someOperation();
+
+      return NextResponse.json(
+        createApiResponse(data),
+        { status: 200 }
+      );
+    } catch (error) {
+      // ✅ ALWAYS return JSON, NEVER throw
+      console.error('[Operation] Error:', error);
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorDetails = error instanceof Error ? {
+        name: error.name,
+        message: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      } : { error: String(error) };
+
+      return NextResponse.json(
+        createErrorResponse('INTERNAL_ERROR', errorMessage, errorDetails),
+        { status: 500 }
+      );
+    }
+  });
+}
+```
+
+**Frontend Error Handling**:
+```typescript
+const response = await fetch('/api/v1/endpoint', { ... });
+
+if (!response.ok) {
+  // ✅ Check content-type before parsing
+  let errorMessage = '操作失败';
+  try {
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const error = await response.json();
+      errorMessage = error.error?.message || error.error || '操作失败';
+    } else {
+      // Handle HTML error pages
+      const text = await response.text();
+      errorMessage = text || `服务器错误 (${response.status})`;
+    }
+  } catch (e) {
+    errorMessage = `服务器错误 (${response.status})`;
+  }
+  throw new Error(errorMessage);
+}
+```
+
+**Key Points**:
+- Use `try-catch` to wrap all handler logic
+- Return `NextResponse.json(createErrorResponse(...))` for all errors
+- Never use `throw` inside handlers (except for validation that returns early)
+- Frontend must check `content-type` header before parsing JSON
+- Add comprehensive logging with `console.error()` for debugging
+- See `app/api/v1/projects/[id]/apply-act1-repair/route.ts` for reference implementation
+
 ### Modifying AI Agent Prompts
 
 All agents follow the same pattern - see Epic 005/006 implementations for reference:
@@ -520,6 +610,7 @@ All agents follow the same pattern - see Epic 005/006 implementations for refere
 - **V1 API Routes**: `app/api/v1/*/route.ts`
   - `projects/route.ts` - Project CRUD (list and create)
   - `projects/[id]/route.ts` - Get single project details (**NEW 2025-10-09**)
+  - `projects/[id]/apply-act1-repair/route.ts` - Apply ACT1 repair to project (**NEW 2025-10-10**)
   - `analyze/route.ts` - Start Act 1 analysis
   - `analyze/process/route.ts` - Manual job processing trigger (**NEW 2025-10-09**: Serverless compatibility)
   - `analyze/jobs/[jobId]/route.ts` - Job status polling
@@ -564,6 +655,10 @@ All agents follow the same pattern - see Epic 005/006 implementations for refere
 - **Phase Summaries**:
   - `docs/archive/implementations/ITERATION_PAGE_IMPLEMENTATION.md` - Phase 1: Acts 2-5 UI
   - `docs/archive/implementations/PHASE_2_COMPLETION_SUMMARY.md` - Phase 2: Synthesis UI
+- **Troubleshooting Guides**: `docs/fixes/`
+  - `ACT1_REPAIR_API_DEBUGGING.md` - ACT1 repair API 500 errors, Vercel logs, common errors (**NEW 2025-10-10**)
+  - `VERCEL_504_TIMEOUT_FIX.md` - Serverless timeout configuration
+  - `ACT1_TO_ACT2_WORKFLOW_ISSUE.md` - Workflow state transitions
 - **Test Results**: `docs/epics/epic-*/TEST_RESULTS.md`
 - **Verification Reports**: `docs/epics/epic-*/EPIC_*_VERIFICATION_REPORT.md`
 - **Reference Documents**: `docs/references/` - Prompt design and workflow architecture references
@@ -1078,14 +1173,24 @@ For future development, refer to:
 
 ---
 
-**Last Updated**: 2025-10-10 (Vercel 504 fix + Script Versioning Iteration)
+**Last Updated**: 2025-10-10 (ACT1 Repair API Error Handling + Vercel 504 fix + Script Versioning Iteration)
 **Architecture Version**: V1 API (Epic 004-007 Complete + Version Iteration)
 **System Status**: Production Ready - Vercel Deployment Verified
 **Test Coverage**: 100% (Unit 19/19, E2E 9/9 steps with real PostgreSQL)
 
-**Recent Fixes** (2025-10-09):
+**Recent Fixes** (2025-10-10):
 
 **Critical Production Fixes**:
+0. **ACT1 Repair API Error Handling** (Commit c435f08 - 2025-10-10):
+   - Fixed 500 errors returning HTML instead of JSON in Serverless environments
+   - **Backend**: Wrapped handler in comprehensive try-catch, always returns JSON responses
+   - **Frontend**: Added content-type checking before parsing, handles HTML error pages gracefully
+   - **Enum Usage**: Fixed WorkflowStatus.ITERATING (was using string literal)
+   - **Logging**: Added detailed console.log at each step for debugging
+   - **Reference**: See `app/api/v1/projects/[id]/apply-act1-repair/route.ts` for pattern
+   - **Documentation**: `docs/fixes/ACT1_REPAIR_API_DEBUGGING.md` for troubleshooting guide
+   - **Key Learning**: Never throw errors in Serverless API handlers - always return NextResponse.json()
+
 1. **Serverless (Vercel) Job Processing** (Commits 396947c, f96fad2):
    - Fixed jobs stuck in QUEUED/PROCESSING state in Serverless environments
    - Implemented dual-mode WorkflowQueue (traditional vs Serverless)

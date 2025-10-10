@@ -60,6 +60,7 @@ export interface ActProgressBarProps {
   className?: string;
   onActClick?: (act: ActType) => void;
   compact?: boolean;
+  unlockedActs?: ActType[]; // Acts that are unlocked but not completed
 }
 
 function getActStatus(
@@ -103,7 +104,8 @@ export function ActProgressBar({
   completedActs,
   className,
   onActClick,
-  compact = false
+  compact = false,
+  unlockedActs = []
 }: ActProgressBarProps) {
   const acts: ActType[] = [
     'ACT1_DIAGNOSTICS',
@@ -122,7 +124,9 @@ export function ActProgressBar({
           const status = getActStatus(act, currentAct, completedActs);
           const icon = getActIcon(status);
           const colorClass = getActColor(status);
-          const isClickable = onActClick && status !== 'upcoming';
+          // Allow clicking on completed, current, or unlocked acts
+          const isUnlocked = unlockedActs.includes(act);
+          const isClickable = onActClick && (status !== 'upcoming' || isUnlocked);
 
           return (
             <React.Fragment key={act}>
@@ -130,8 +134,8 @@ export function ActProgressBar({
               <div
                 className={cn(
                   'flex flex-col items-center gap-2 flex-1',
-                  isClickable && 'cursor-pointer hover:opacity-80',
-                  !isClickable && 'cursor-not-allowed'
+                  isClickable && 'cursor-pointer hover:opacity-80 hover:scale-105 transition-transform',
+                  !isClickable && 'cursor-not-allowed opacity-60'
                 )}
                 onClick={() => isClickable && onActClick(act)}
                 role={isClickable ? 'button' : undefined}
@@ -146,7 +150,9 @@ export function ActProgressBar({
                 <div
                   className={cn(
                     'flex items-center justify-center rounded-full border-2 p-3 transition-colors',
-                    colorClass
+                    status === 'upcoming' && isUnlocked
+                      ? 'text-amber-600 bg-amber-50 border-amber-200'
+                      : colorClass
                   )}
                 >
                   {icon}
@@ -165,6 +171,11 @@ export function ActProgressBar({
                   {status === 'completed' && (
                     <Badge variant="outline" className="text-xs bg-green-50 text-green-600">
                       已完成
+                    </Badge>
+                  )}
+                  {status === 'upcoming' && isUnlocked && (
+                    <Badge variant="outline" className="text-xs bg-amber-50 text-amber-600">
+                      已解锁
                     </Badge>
                   )}
                 </div>

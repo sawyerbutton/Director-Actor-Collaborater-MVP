@@ -307,6 +307,38 @@ export default function IterationPage() {
       .filter(act => actDecisions[act] > 0) as ActType[];
   };
 
+  // Helper function to determine unlocked acts (渐进式解锁机制)
+  const getUnlockedActs = (): ActType[] => {
+    const unlocked: ActType[] = ['ACT2_CHARACTER']; // ACT2 always unlocked as starting point
+
+    const actDecisions: Record<ActType, number> = {
+      ACT2_CHARACTER: 0,
+      ACT3_WORLDBUILDING: 0,
+      ACT4_PACING: 0,
+      ACT5_THEME: 0
+    };
+
+    // Count executed decisions per act
+    decisions.forEach(decision => {
+      if (decision.userChoice && decision.generatedChanges) {
+        actDecisions[decision.act as ActType] = (actDecisions[decision.act as ActType] || 0) + 1;
+      }
+    });
+
+    // Progressive unlock logic
+    if (actDecisions.ACT2_CHARACTER > 0) {
+      unlocked.push('ACT3_WORLDBUILDING');
+    }
+    if (actDecisions.ACT3_WORLDBUILDING > 0) {
+      unlocked.push('ACT4_PACING');
+    }
+    if (actDecisions.ACT4_PACING > 0) {
+      unlocked.push('ACT5_THEME');
+    }
+
+    return unlocked;
+  };
+
   // Helper function to check if a finding is processed
   const isFindingProcessed = (finding: Finding): boolean => {
     return decisions.some(decision => {
@@ -416,6 +448,7 @@ export default function IterationPage() {
       <ActProgressBar
         currentAct={currentAct}
         completedActs={getCompletedActs()}
+        unlockedActs={getUnlockedActs()}
         onActClick={(act: WorkspaceActType) => {
           setCurrentAct(act as ActType);
           // Reset workflow when changing acts
@@ -635,12 +668,39 @@ export default function IterationPage() {
 
           {/* Step 4: Completed */}
           {workflowStep.step === 'completed' && (
-            <Alert className="bg-green-50 border-green-200">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              <AlertDescription className="text-green-800">
-                ✓ 本次迭代已完成！决策已保存到数据库。
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-4">
+              <Alert className="bg-green-50 border-green-200">
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <AlertDescription className="text-green-800">
+                  <div className="space-y-2">
+                    <p>✓ 本次迭代已完成！决策已保存到数据库。</p>
+                    {/* Check if new act is unlocked */}
+                    {(() => {
+                      const unlockedActs = getUnlockedActs();
+                      const completedActs = getCompletedActs();
+                      const actOrder: ActType[] = ['ACT2_CHARACTER', 'ACT3_WORLDBUILDING', 'ACT4_PACING', 'ACT5_THEME'];
+                      const currentIndex = actOrder.indexOf(currentAct);
+                      const nextAct = actOrder[currentIndex + 1];
+
+                      if (nextAct && unlockedActs.includes(nextAct) && !completedActs.includes(nextAct)) {
+                        const nextActName = getActMetadata(nextAct).title;
+                        return (
+                          <div className="mt-3 pt-3 border-t border-green-300">
+                            <p className="font-semibold text-green-900 flex items-center gap-2">
+                              🎉 恭喜！{nextActName} 已解锁
+                            </p>
+                            <p className="text-sm text-green-700 mt-1">
+                              点击上方进度条中的"{nextActName}"可以切换到下一个阶段
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            </div>
           )}
         </TabsContent>
 
