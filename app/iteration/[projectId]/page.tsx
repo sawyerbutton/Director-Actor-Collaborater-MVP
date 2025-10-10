@@ -307,6 +307,29 @@ export default function IterationPage() {
       .filter(act => actDecisions[act] > 0) as ActType[];
   };
 
+  // Helper function to check if a finding is processed
+  const isFindingProcessed = (finding: Finding): boolean => {
+    return decisions.some(decision => {
+      if (!decision.userChoice || !decision.generatedChanges) return false;
+
+      // Match by description similarity
+      const focusDesc = String(decision.focusContext?.contradiction || '');
+      return focusDesc.includes(finding.description) ||
+             finding.description.includes(focusDesc);
+    });
+  };
+
+  // Count how many times a finding was processed
+  const getProcessedCount = (finding: Finding): number => {
+    return decisions.filter(decision => {
+      if (!decision.userChoice || !decision.generatedChanges) return false;
+
+      const focusDesc = String(decision.focusContext?.contradiction || '');
+      return focusDesc.includes(finding.description) ||
+             finding.description.includes(focusDesc);
+    }).length;
+  };
+
   // Show loading while data is being fetched
   if (isLoading) {
     return (
@@ -434,6 +457,14 @@ export default function IterationPage() {
                   findings={transformDiagnosticFindings(diagnosticReport?.findings || [])}
                   onSelect={handleFindingSelect}
                   selectedFinding={selectedFinding || undefined}
+                  processedFindings={new Set(
+                    diagnosticReport?.findings
+                      .map((f: any, idx: number) =>
+                        isFindingProcessed(transformDiagnosticFindings([f])[0]) ? idx : -1
+                      )
+                      .filter((idx: number) => idx !== -1) || []
+                  )}
+                  getProcessedCount={(finding) => getProcessedCount(finding)}
                 />
 
                 {selectedFinding && (
