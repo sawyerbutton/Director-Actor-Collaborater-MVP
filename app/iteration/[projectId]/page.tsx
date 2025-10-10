@@ -169,7 +169,7 @@ export default function IterationPage() {
     setSelectedFinding(finding);
   };
 
-  // Handle propose - get AI proposals
+  // Handle propose - get AI proposals (async job with polling)
   const handlePropose = async () => {
     if (!selectedFinding) {
       setError('请先选择一个焦点问题');
@@ -180,6 +180,7 @@ export default function IterationPage() {
       setIsProposing(true);
       setError(null);
 
+      // Step 1: Create async job
       const response = await fetch('/api/v1/iteration/propose', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -194,16 +195,59 @@ export default function IterationPage() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`获取提案失败: ${errorText || response.statusText}`);
+        throw new Error(`创建任务失败: ${errorText || response.statusText}`);
       }
 
       const data = await response.json();
-      setProposeResponse(data.data);
-      setWorkflowStep({ step: 'view_proposals', data: data.data });
+      const jobId = data.data.jobId;
+
+      console.log('[Propose] Job created:', jobId);
+
+      // Step 2: Poll job status until complete
+      const pollInterval = setInterval(async () => {
+        try {
+          // Trigger processing first (Serverless compatibility)
+          await v1ApiService.triggerProcessing();
+
+          // Check job status
+          const statusResponse = await fetch(`/api/v1/iteration/jobs/${jobId}`);
+          if (!statusResponse.ok) {
+            throw new Error('获取任务状态失败');
+          }
+
+          const statusData = await statusResponse.json();
+          const jobStatus = statusData.data;
+
+          console.log('[Propose] Job status:', jobStatus.status);
+
+          if (jobStatus.status === 'COMPLETED') {
+            clearInterval(pollInterval);
+
+            // Extract result from job
+            const result = jobStatus.result;
+            setProposeResponse({
+              decisionId: result.decisionId,
+              focusContext: result.focusContext,
+              proposals: result.proposals,
+              recommendation: result.recommendation
+            });
+            setWorkflowStep({ step: 'view_proposals', data: result });
+            setIsProposing(false);
+          } else if (jobStatus.status === 'FAILED') {
+            clearInterval(pollInterval);
+            setError(jobStatus.error || 'AI分析失败');
+            setIsProposing(false);
+          }
+          // Continue polling if status is QUEUED or PROCESSING
+        } catch (err) {
+          console.error('[Propose] Polling error:', err);
+          // Don't stop polling on error, allow retry
+        }
+      }, 5000); // Poll every 5 seconds
+
     } catch (err) {
       console.error('Propose failed:', err);
       setError(err instanceof Error ? err.message : '获取AI提案失败，请重试');
-    } finally {
       setIsProposing(false);
     }
   };
@@ -560,7 +604,7 @@ export default function IterationPage() {
                     </Button>
                     {isProposing && (
                       <p className="text-sm text-muted-foreground mt-2 text-center">
-                        AI正在分析问题并生成解决方案，预计需要10-30秒
+                        AI正在分析问题并生成解决方案，预计需要30-60秒，请耐心等待...
                       </p>
                     )}
                   </div>

@@ -155,6 +155,9 @@ class WorkflowQueue {
         case JobType.ACT1_ANALYSIS:
           await this.processAct1Analysis(job.id, job.projectId);
           break;
+        case JobType.ITERATION:
+          await this.processIteration(job.id, job.projectId);
+          break;
         case JobType.SYNTHESIS:
           await this.processSynthesis(job.id, job.projectId);
           break;
@@ -317,6 +320,196 @@ class WorkflowQueue {
       // Reset workflow status
       await projectService.updateWorkflowStatus(projectId, WorkflowStatus.INITIALIZED);
 
+      throw error;
+    }
+  }
+
+  /**
+   * Process Iteration Job (Epic 005 & 006)
+   * Executes ACT2-5 propose logic in background
+   */
+  private async processIteration(jobId: string, projectId: string): Promise<void> {
+    try {
+      // Get job metadata
+      const job = await analysisJobService.getById(jobId);
+      if (!job || !job.metadata) {
+        throw new Error('Job or metadata not found');
+      }
+
+      const metadata = job.metadata as any;
+      const { act, focusName, contradiction, scriptContext: providedContext, userId } = metadata;
+
+      console.log('[Iteration Process] Starting:', {
+        jobId,
+        act,
+        focusName
+      });
+
+      // Get script context from latest version (for gradual iteration)
+      let scriptContext = providedContext;
+      if (!scriptContext) {
+        const { VersionManager } = await import('@/lib/synthesis/version-manager');
+        const versionManager = new VersionManager();
+        const latestVersion = await versionManager.getLatestVersion(projectId);
+        scriptContext = latestVersion?.content || (await projectService.findById(projectId))?.content;
+
+        // For ACT2_CHARACTER, also fetch diagnostic report for character issues
+        if (act === 'ACT2_CHARACTER') {
+          const report = await diagnosticReportService.getParsedReport(projectId);
+          if (report) {
+            const characterFindings = report.parsedFindings.filter(
+              (f: any) => f.type === 'character'
+            );
+            if (characterFindings.length > 0) {
+              scriptContext += '\n\n## 相关诊断发现:\n' +
+                characterFindings
+                  .map((f: any) => `- ${f.description}`)
+                  .join('\n');
+            }
+          }
+        }
+      }
+
+      if (!scriptContext) {
+        throw new Error('Script context is required');
+      }
+
+      // Execute act-specific agent logic
+      let focusContext: any;
+      let proposals: any[];
+      let recommendation: string;
+
+      switch (act) {
+        case 'ACT2_CHARACTER': {
+          const { createCharacterArchitect } = await import('@/lib/agents/character-architect');
+          const agent = createCharacterArchitect();
+          const focus = await agent.focusCharacter(
+            focusName,
+            contradiction,
+            scriptContext
+          );
+          const proposalSet = await agent.proposeSolutions(focus);
+          focusContext = focus;
+          proposals = proposalSet.proposals;
+          recommendation = proposalSet.recommendation;
+          break;
+        }
+
+        case 'ACT3_WORLDBUILDING': {
+          const { createRulesAuditor } = await import('@/lib/agents/rules-auditor');
+          const agent = createRulesAuditor();
+          const auditResult = await agent.auditWorldRules(
+            focusName, // setting description
+            scriptContext
+          );
+          let verificationResult;
+          if (auditResult.inconsistencies.length > 0) {
+            verificationResult = await agent.verifyDynamicConsistency(
+              auditResult.inconsistencies
+            );
+          } else {
+            verificationResult = {
+              solutions: [],
+              recommendation: '未发现设定矛盾'
+            };
+          }
+          focusContext = auditResult;
+          proposals = verificationResult.solutions;
+          recommendation = verificationResult.recommendation;
+          break;
+        }
+
+        case 'ACT4_PACING': {
+          const { createPacingStrategist } = await import('@/lib/agents/pacing-strategist');
+          const agent = createPacingStrategist();
+          const analysisResult = await agent.analyzePacing(
+            scriptContext,
+            focusName // time range
+          );
+          let restructureResult;
+          if (analysisResult.pacingIssues.length > 0) {
+            restructureResult = await agent.restructureConflicts(
+              analysisResult.pacingIssues
+            );
+          } else {
+            restructureResult = {
+              strategies: [],
+              recommendedSequence: '未发现节奏问题',
+              continuityChecks: []
+            };
+          }
+          focusContext = analysisResult;
+          proposals = restructureResult.strategies;
+          recommendation = restructureResult.recommendedSequence;
+          break;
+        }
+
+        case 'ACT5_THEME': {
+          const { createThematicPolisher } = await import('@/lib/agents/thematic-polisher');
+          const agent = createThematicPolisher();
+          const enhanced = await agent.enhanceCharacterDepth(
+            focusName, // character name
+            contradiction, // theme
+            scriptContext // style reference
+          );
+          focusContext = enhanced;
+          proposals = [enhanced.characterProfile];
+          recommendation = `建议采用增强后的角色设定以深化主题表达`;
+          break;
+        }
+
+        default:
+          throw new Error(`Unsupported act type: ${act}`);
+      }
+
+      console.log('[Iteration Process] AI analysis complete:', {
+        jobId,
+        proposalsCount: proposals.length
+      });
+
+      // Store decision in database
+      const { revisionDecisionService } = await import('@/lib/db/services/revision-decision.service');
+      const decision = await revisionDecisionService.create({
+        projectId,
+        act: act as any,
+        focusName,
+        focusContext: focusContext as any,
+        proposals: proposals as any
+      });
+
+      console.log('[Iteration Process] Decision created:', {
+        jobId,
+        decisionId: decision.id
+      });
+
+      // Complete the job with decision data
+      await analysisJobService.complete(jobId, {
+        decisionId: decision.id,
+        focusContext,
+        proposals,
+        recommendation,
+        completedAt: new Date().toISOString()
+      });
+
+      console.log('[Iteration Process] Job completed successfully:', jobId);
+
+    } catch (error) {
+      console.error(`Failed to process iteration for job ${jobId}:`, error);
+
+      // Create detailed error message
+      let errorMessage = 'Iteration processing failed';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+        if (errorMessage.includes('timeout') || errorMessage.includes('AbortError')) {
+          errorMessage = `AI分析超时：问题可能过于复杂或API响应缓慢。请稍后重试。(${errorMessage})`;
+        } else if (errorMessage.includes('rate limit') || errorMessage.includes('429')) {
+          errorMessage = `API调用频率超限，请稍后重试。(${errorMessage})`;
+        } else if (errorMessage.includes('API') || errorMessage.includes('network')) {
+          errorMessage = `API连接失败，请检查网络或稍后重试。(${errorMessage})`;
+        }
+      }
+
+      await analysisJobService.fail(jobId, errorMessage);
       throw error;
     }
   }
