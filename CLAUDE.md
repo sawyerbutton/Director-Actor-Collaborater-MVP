@@ -240,12 +240,22 @@ The system implements a five-act interactive workflow for script analysis:
   - **Error Handling**: Content-type checking, HTML fallback, comprehensive logging
   - See `docs/fixes/ACT1_REPAIR_API_DEBUGGING.md` for troubleshooting
 
-#### V1 Iteration Endpoints (Epic 005 & 006)
-- `POST /api/v1/iteration/propose` - Generate AI proposals for focus area
+#### V1 Iteration Endpoints (Epic 005 & 006 + Async Queue - 2025-10-10)
+- `POST /api/v1/iteration/propose` - Generate AI proposals for focus area (**ASYNC JOB**)
   - Supports: `ACT2_CHARACTER`, `ACT3_WORLDBUILDING`, `ACT4_PACING`, `ACT5_THEME`
   - Input: projectId, act, focusName, contradiction, scriptContext
-  - Output: decisionId, focusContext, proposals, recommendation
-  - Creates RevisionDecision record
+  - **Output**: jobId for polling (< 1 second response)
+  - **Pattern**: Create ITERATION job → Poll status → Retrieve proposals when COMPLETED
+  - **Processing Time**: 30-60 seconds (background processing)
+  - **Serverless Compatible**: Uses dynamic imports for code splitting
+  - See `docs/fixes/ACT2_ASYNC_QUEUE_IMPLEMENTATION.md` for architecture
+- `GET /api/v1/iteration/jobs/[jobId]` - Poll ITERATION job status (**NEW 2025-10-10**)
+  - Returns: jobId, status (QUEUED/PROCESSING/COMPLETED/FAILED), progress, result, error
+  - **Result structure** (when COMPLETED):
+    - decisionId: string
+    - focusContext: object
+    - proposals: array (2 proposals for ACT2-5)
+    - recommendation: string (recommended proposal ID)
   - **ACT2**: Returns 2 character proposals with pros/cons
   - **ACT3**: Returns worldbuilding solutions with ripple effects
   - **ACT4**: Returns pacing restructure strategies
@@ -385,10 +395,16 @@ The system now has a **complete UI implementation** for the full five-act workfl
 **Complete Acts 2-5 interactive workflow:**
 1. Select Act (2/3/4/5) using ActProgressBar
 2. Choose focus problem from Act 1 findings (FindingsSelector)
+   - **Act-Specific Filtering (2025-10-10)**: Each Act only shows relevant finding types
+     - ACT2: Character contradictions only
+     - ACT3: Scene and plot issues only
+     - ACT4: Timeline issues only
+     - ACT5: Character and dialogue issues only
    - **Enhanced UX (2025-10-09)**: Selected finding has 5 visual indicators (border, background, checkmark, badge, text color)
    - Selection context summary shown in Alert component before submission
    - Larger submit button for better visibility
-3. Click "获取AI解决方案提案" to get 2 AI proposals
+   - Empty state message if no findings match current Act
+3. Click "获取AI解决方案提案" to get 2 AI proposals (async job, 30-60s processing)
 4. Review proposals with pros/cons (ProposalComparison)
 5. Select and execute a proposal
 6. View generated changes (ChangesDisplay)
@@ -656,7 +672,9 @@ All agents follow the same pattern - see Epic 005/006 implementations for refere
   - `docs/archive/implementations/ITERATION_PAGE_IMPLEMENTATION.md` - Phase 1: Acts 2-5 UI
   - `docs/archive/implementations/PHASE_2_COMPLETION_SUMMARY.md` - Phase 2: Synthesis UI
 - **Troubleshooting Guides**: `docs/fixes/`
-  - `ACT1_REPAIR_API_DEBUGGING.md` - ACT1 repair API 500 errors, Vercel logs, common errors (**NEW 2025-10-10**)
+  - `ACT2_ASYNC_QUEUE_IMPLEMENTATION.md` - ACT2-5 async job queue architecture (**NEW 2025-10-10**)
+  - `ACT_FILTERING_FIX.md` - Act-specific findings filtering business logic (**NEW 2025-10-10**)
+  - `ACT1_REPAIR_API_DEBUGGING.md` - ACT1 repair API 500 errors, Vercel logs, common errors (2025-10-10)
   - `VERCEL_504_TIMEOUT_FIX.md` - Serverless timeout configuration
   - `ACT1_TO_ACT2_WORKFLOW_ISSUE.md` - Workflow state transitions
 - **Test Results**: `docs/epics/epic-*/TEST_RESULTS.md`
@@ -790,15 +808,22 @@ For long-running operations (Act 1 analysis, synthesis):
 5. When complete (JobStatus: COMPLETED), fetch results
 6. WorkflowQueue handles both ACT1_ANALYSIS and SYNTHESIS job types
 
-### Iteration API Pattern (Epic 005 & 006)
-For interactive decision-making across all Acts 2-5:
+### Iteration API Pattern (Epic 005 & 006 + Async Queue - 2025-10-10)
+For interactive decision-making across all Acts 2-5 (ASYNC JOB PATTERN):
 1. Call `POST /api/v1/iteration/propose` with focus area and act type
-2. System routes to appropriate agent (CharacterArchitect/RulesAuditor/PacingStrategist/ThematicPolisher)
-3. AI generates proposals and creates RevisionDecision record
-4. User reviews proposals in UI
-5. Call `POST /api/v1/iteration/execute` with selected proposal
-6. Agent executes act-specific transformation (P6/P9/P11/P13)
-7. RevisionDecision updated with userChoice and generatedChanges
+2. **System creates ITERATION job** (returns jobId immediately, < 1 second)
+3. **Client polls** `GET /api/v1/iteration/jobs/[jobId]` every 5 seconds
+4. **Background processing** (30-60 seconds):
+   - WorkflowQueue routes to appropriate agent (CharacterArchitect/RulesAuditor/PacingStrategist/ThematicPolisher)
+   - Agent uses dynamic imports for code splitting (Serverless optimization)
+   - AI generates proposals and creates RevisionDecision record
+   - Job status updates: QUEUED → PROCESSING → COMPLETED
+5. **When COMPLETED**, client retrieves proposals from job result
+6. User reviews proposals in UI (ProposalComparison component)
+7. Call `POST /api/v1/iteration/execute` with selected proposal (synchronous, < 5 seconds)
+8. Agent executes act-specific transformation (P6/P9/P11/P13)
+9. RevisionDecision updated with userChoice and generatedChanges
+10. ScriptVersion created with incremental changes (V2, V3, V4...)
 
 ### Type Definitions
 - **LogicError**: Used for analysis errors (NOT AnalysisError)
@@ -1173,14 +1198,47 @@ For future development, refer to:
 
 ---
 
-**Last Updated**: 2025-10-10 (ACT1 Repair API Error Handling + Vercel 504 fix + Script Versioning Iteration)
+**Last Updated**: 2025-10-10 (ACT2-5 Async Queue + Act Filtering + ACT1 Repair + Vercel 504 + Script Versioning)
 **Architecture Version**: V1 API (Epic 004-007 Complete + Version Iteration)
-**System Status**: Production Ready - Vercel Deployment Verified
+**System Status**: Production Ready - Vercel Deployment Verified ✅
 **Test Coverage**: 100% (Unit 19/19, E2E 9/9 steps with real PostgreSQL)
 
 **Recent Fixes** (2025-10-10):
 
 **Critical Production Fixes**:
+
+**ACT2-5 Async Queue Implementation** (Commits de44d3d - 2025-10-10):
+   - **Problem**: ACT2-5 propose endpoint hit Vercel Hobby Plan 10-second timeout
+   - **Root Cause**: Synchronous AI agent calls took 30-60 seconds to complete
+   - **Solution**: Refactored to async job queue pattern (matching ACT1 architecture)
+   - **Implementation**:
+     - `app/api/v1/iteration/propose/route.ts`: Changed from sync to async job creation
+     - `lib/api/workflow-queue.ts`: Added `processIteration()` method (~180 lines) with dynamic imports
+     - `app/api/v1/iteration/jobs/[jobId]/route.ts`: New polling endpoint for ITERATION jobs
+     - `app/iteration/[projectId]/page.tsx`: Frontend now polls every 5 seconds (was immediate)
+   - **Performance**: Response time < 1 second (job creation), processing 30-60s in background
+   - **Serverless Compatible**: Uses dynamic imports for code splitting, reduces bundle size
+   - **Pattern**: Create Job → Return jobId → Poll status → Display proposals
+   - **All Acts Supported**: ACT2_CHARACTER, ACT3_WORLDBUILDING, ACT4_PACING, ACT5_THEME
+   - **Documentation**: `docs/fixes/ACT2_ASYNC_QUEUE_IMPLEMENTATION.md` (complete architecture)
+
+**Act Filtering Business Logic** (Commits 6941f26, e90732f - 2025-10-10):
+   - **Problem**: All Acts (ACT2-5) displayed all ACT1 findings regardless of relevance
+   - **User Impact**: Confusing UX - ACT3 showed character/timeline/dialogue issues (should only show scene/plot)
+   - **Root Cause**: No filtering logic in `FindingsSelector` component
+   - **Solution**: Added `filterFindingsByAct()` function with act-to-finding-type mapping
+   - **Business Logic**:
+     - ACT2_CHARACTER → ['character'] only
+     - ACT3_WORLDBUILDING → ['scene', 'plot'] only
+     - ACT4_PACING → ['timeline'] only
+     - ACT5_THEME → ['character', 'dialogue'] only
+   - **Implementation**:
+     - `app/iteration/[projectId]/page.tsx`: Added filter function and empty state handling
+     - Updated CardDescription with act-specific guidance text
+     - Added friendly Alert when no findings match current Act
+   - **UX Improvements**: Clear focus per Act, reduced cognitive load, professional workflow
+   - **Documentation**: `docs/fixes/ACT_FILTERING_FIX.md` (complete business rationale)
+
 0. **ACT1 Repair API Error Handling** (Commit c435f08 - 2025-10-10):
    - Fixed 500 errors returning HTML instead of JSON in Serverless environments
    - **Backend**: Wrapped handler in comprehensive try-catch, always returns JSON responses
