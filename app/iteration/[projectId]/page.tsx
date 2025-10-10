@@ -319,6 +319,19 @@ export default function IterationPage() {
     }));
   };
 
+  // Filter findings by current Act (each Act focuses on specific finding types)
+  const filterFindingsByAct = (findings: Finding[], act: ActType): Finding[] => {
+    const actFindingTypeMap: Record<ActType, Finding['type'][]> = {
+      ACT2_CHARACTER: ['character'],  // Focus on character contradictions
+      ACT3_WORLDBUILDING: ['scene', 'plot'],  // Focus on worldbuilding and setting logic
+      ACT4_PACING: ['timeline'],  // Focus on pacing and rhythm
+      ACT5_THEME: ['character', 'dialogue']  // Focus on character depth and thematic dialogue
+    };
+
+    const allowedTypes = actFindingTypeMap[act];
+    return findings.filter(f => allowedTypes.includes(f.type));
+  };
+
   // Helper function to extract focus name from finding
   const extractFocusName = (finding: Finding): string => {
     // Try to extract character/element name from description
@@ -526,23 +539,53 @@ export default function IterationPage() {
               <CardHeader>
                 <CardTitle>{actMeta.focusLabel}</CardTitle>
                 <CardDescription>
-                  从 Act 1 诊断报告中选择一个问题作为本次迭代的焦点
+                  {currentAct === 'ACT2_CHARACTER' && '从 ACT1 诊断中选择一个角色矛盾问题进行深度分析'}
+                  {currentAct === 'ACT3_WORLDBUILDING' && '从 ACT1 诊断中选择一个世界观设定或情节逻辑问题'}
+                  {currentAct === 'ACT4_PACING' && '从 ACT1 诊断中选择一个时间线或节奏问题进行优化'}
+                  {currentAct === 'ACT5_THEME' && '从 ACT1 诊断中选择一个角色或对话问题进行主题深化'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <FindingsSelector
-                  findings={transformDiagnosticFindings(diagnosticReport?.findings || [])}
-                  onSelect={handleFindingSelect}
-                  selectedFinding={selectedFinding || undefined}
-                  processedFindings={new Set(
-                    diagnosticReport?.findings
-                      .map((f: any, idx: number) =>
-                        isFindingProcessed(transformDiagnosticFindings([f])[0]) ? idx : -1
-                      )
-                      .filter((idx: number) => idx !== -1) || []
-                  )}
-                  getProcessedCount={(finding) => getProcessedCount(finding)}
-                />
+                {(() => {
+                  // Transform and filter findings based on current Act
+                  const allFindings = transformDiagnosticFindings(diagnosticReport?.findings || []);
+                  const filteredFindings = filterFindingsByAct(allFindings, currentAct);
+
+                  // If no findings for this Act, show informative message
+                  if (filteredFindings.length === 0) {
+                    return (
+                      <Alert>
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>
+                          <p className="font-medium mb-2">当前 Act 没有相关的诊断问题</p>
+                          <p className="text-sm text-muted-foreground">
+                            {currentAct === 'ACT2_CHARACTER' && 'ACT2 关注角色矛盾，但 ACT1 诊断中没有发现角色类型的问题。'}
+                            {currentAct === 'ACT3_WORLDBUILDING' && 'ACT3 关注世界观设定，但 ACT1 诊断中没有发现场景或情节类型的问题。'}
+                            {currentAct === 'ACT4_PACING' && 'ACT4 关注节奏优化，但 ACT1 诊断中没有发现时间线类型的问题。'}
+                            {currentAct === 'ACT5_THEME' && 'ACT5 关注主题深化，但 ACT1 诊断中没有发现角色或对话类型的问题。'}
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-2">
+                            您可以切换到其他 Act，或者直接进入合成阶段。
+                          </p>
+                        </AlertDescription>
+                      </Alert>
+                    );
+                  }
+
+                  return (
+                    <FindingsSelector
+                      findings={filteredFindings}
+                      onSelect={handleFindingSelect}
+                      selectedFinding={selectedFinding || undefined}
+                      processedFindings={new Set(
+                        filteredFindings
+                          .map((f, idx) => isFindingProcessed(f) ? idx : -1)
+                          .filter((idx: number) => idx !== -1)
+                      )}
+                      getProcessedCount={(finding) => getProcessedCount(finding)}
+                    />
+                  );
+                })()}
 
                 {selectedFinding && (
                   <div className="mt-4 pt-4 border-t space-y-4">
