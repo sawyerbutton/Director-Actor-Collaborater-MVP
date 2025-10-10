@@ -18,6 +18,7 @@ import { createThematicPolisher } from '@/lib/agents/thematic-polisher';
 import { ActType } from '@prisma/client';
 import { HTTP_STATUS } from '@/lib/config/constants';
 import { sanitizeInput, validateRequestSize } from '@/lib/api/sanitization';
+import { VersionManager } from '@/lib/synthesis/version-manager';
 
 // Validation schema
 const proposeRequestSchema = z.object({
@@ -81,11 +82,13 @@ export async function POST(request: NextRequest) {
         throw new ForbiddenError('You do not have access to this project');
       }
 
-      // Get script context
+      // Get script context from latest version (for gradual iteration)
       let scriptContext = validatedData.scriptContext;
       if (!scriptContext) {
-        // Fetch from project content
-        scriptContext = project.content;
+        // Fetch from latest version (NOT original V1)
+        const versionManager = new VersionManager();
+        const latestVersion = await versionManager.getLatestVersion(project.id);
+        scriptContext = latestVersion?.content || project.content;
 
         // For ACT2_CHARACTER, also fetch diagnostic report for character issues
         if (validatedData.act === 'ACT2_CHARACTER') {

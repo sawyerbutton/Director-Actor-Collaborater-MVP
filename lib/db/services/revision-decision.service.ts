@@ -252,6 +252,20 @@ export class RevisionDecisionService extends BaseService {
     })
     return count > 0
   }
+
+  /**
+   * Update the version number for a decision (for gradual version iteration)
+   */
+  async updateVersion(decisionId: string, version: number): Promise<RevisionDecision> {
+    try {
+      return await prisma.revisionDecision.update({
+        where: { id: decisionId },
+        data: { version, updatedAt: new Date() }
+      })
+    } catch (error) {
+      return this.handleError(error)
+    }
+  }
 }
 
 export const revisionDecisionService = new RevisionDecisionService()

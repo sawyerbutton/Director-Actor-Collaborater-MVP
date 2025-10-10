@@ -204,6 +204,20 @@ export class ProjectService extends BaseService {
       },
     });
   }
+
+  /**
+   * Update project content (for gradual version iteration)
+   */
+  async updateContent(id: string, content: string): Promise<Project> {
+    try {
+      return await prisma.project.update({
+        where: { id },
+        data: { content, updatedAt: new Date() }
+      });
+    } catch (error) {
+      this.handleError(error);
+    }
+  }
 }
 
 export const projectService = new ProjectService();
