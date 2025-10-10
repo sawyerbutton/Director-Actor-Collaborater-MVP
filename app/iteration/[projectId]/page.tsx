@@ -13,6 +13,7 @@ import { ActProgressBar, type ActType as WorkspaceActType } from '@/components/w
 import { FindingsSelector, type Finding } from '@/components/workspace/findings-selector';
 import { ProposalComparison, type Proposal as WorkspaceProposal } from '@/components/workspace/proposal-comparison';
 import { ChangesDisplay } from '@/components/workspace/changes-display';
+import { DecisionCard } from '@/components/workspace/decision-card';
 import { v1ApiService } from '@/lib/services/v1-api-service';
 import {
   Loader2,
@@ -630,32 +631,7 @@ export default function IterationPage() {
               ) : (
                 <div className="space-y-4">
                   {decisions.map((decision) => (
-                    <div
-                      key={decision.id}
-                      className="border rounded-lg p-4 hover:bg-accent/50 transition-colors"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge>{decision.act.replace('_', ' ')}</Badge>
-                            <span className="font-medium">{decision.focusName}</span>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {JSON.stringify(decision.focusContext).substring(0, 100)}...
-                          </p>
-                          {decision.userChoice && (
-                            <div className="mt-2">
-                              <Badge variant="outline" className="text-green-600">
-                                ✓ 已执行方案 #{decision.userChoice}
-                              </Badge>
-                            </div>
-                          )}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {new Date(decision.createdAt).toLocaleString('zh-CN')}
-                        </div>
-                      </div>
-                    </div>
+                    <DecisionCard key={decision.id} decision={decision} />
                   ))}
                 </div>
               )}
