@@ -59,6 +59,10 @@ export default function IterationPage() {
   const [isProposing, setIsProposing] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // P0-2: 自由创作模式状态 (2025-10-11)
+  const [isFreeCreationMode, setIsFreeCreationMode] = useState(false);
+  const [manualFocusName, setManualFocusName] = useState('');
+  const [manualFocusDescription, setManualFocusDescription] = useState('');
 
   // Project data
   const [projectTitle, setProjectTitle] = useState('');
@@ -170,27 +174,47 @@ export default function IterationPage() {
   };
 
   // Handle propose - get AI proposals (async job with polling)
+  // P0-2: Support both diagnostic-driven and free creation modes
   const handlePropose = async () => {
-    if (!selectedFinding) {
-      setError('请先选择一个焦点问题');
-      return;
+    // Validate input based on mode
+    if (isFreeCreationMode) {
+      // Free creation mode validation
+      if (!manualFocusName.trim() || !manualFocusDescription.trim()) {
+        setError('请填写焦点名称和创作意图描述');
+        return;
+      }
+    } else {
+      // Diagnostic-driven mode validation
+      if (!selectedFinding) {
+        setError('请先选择一个焦点问题');
+        return;
+      }
     }
 
     try {
       setIsProposing(true);
       setError(null);
 
+      // Prepare request body based on mode
+      const requestBody = isFreeCreationMode ? {
+        projectId,
+        act: currentAct,
+        focusName: manualFocusName.trim(),
+        contradiction: manualFocusDescription.trim(),
+        scriptContext: '' // No specific context in free mode
+      } : {
+        projectId,
+        act: currentAct,
+        focusName: extractFocusName(selectedFinding!),
+        contradiction: selectedFinding!.description,
+        scriptContext: selectedFinding!.suggestion || ''
+      };
+
       // Step 1: Create async job
       const response = await fetch('/api/v1/iteration/propose', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId,
-          act: currentAct,
-          focusName: extractFocusName(selectedFinding),
-          contradiction: selectedFinding.description,
-          scriptContext: selectedFinding.suggestion || ''
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
@@ -364,36 +388,16 @@ export default function IterationPage() {
       .filter(act => actDecisions[act] > 0) as ActType[];
   };
 
-  // Helper function to determine unlocked acts (渐进式解锁机制)
+  // Helper function to determine unlocked acts (全解锁模式 - 修复2025-10-11)
   const getUnlockedActs = (): ActType[] => {
-    const unlocked: ActType[] = ['ACT2_CHARACTER']; // ACT2 always unlocked as starting point
-
-    const actDecisions: Record<ActType, number> = {
-      ACT2_CHARACTER: 0,
-      ACT3_WORLDBUILDING: 0,
-      ACT4_PACING: 0,
-      ACT5_THEME: 0
-    };
-
-    // Count executed decisions per act
-    decisions.forEach(decision => {
-      if (decision.userChoice && decision.generatedChanges) {
-        actDecisions[decision.act as ActType] = (actDecisions[decision.act as ActType] || 0) + 1;
-      }
-    });
-
-    // Progressive unlock logic
-    if (actDecisions.ACT2_CHARACTER > 0) {
-      unlocked.push('ACT3_WORLDBUILDING');
+    // ✅ P0修复：移除渐进式解锁，支持产品Plan B定位
+    // Acts 2-5 独立价值，用户可自由选择工作流
+    if (diagnosticReport) {
+      // 如果ACT1完成，解锁所有创作深化Acts
+      return ['ACT2_CHARACTER', 'ACT3_WORLDBUILDING', 'ACT4_PACING', 'ACT5_THEME'];
     }
-    if (actDecisions.ACT3_WORLDBUILDING > 0) {
-      unlocked.push('ACT4_PACING');
-    }
-    if (actDecisions.ACT4_PACING > 0) {
-      unlocked.push('ACT5_THEME');
-    }
-
-    return unlocked;
+    // 如果ACT1未完成，仍然只开放ACT2（降级兼容）
+    return ['ACT2_CHARACTER'];
   };
 
   // Helper function to check if a finding is processed
@@ -516,6 +520,26 @@ export default function IterationPage() {
         }}
       />
 
+      {/* P1-2: 使用指引 (2025-10-11) */}
+      {decisionsCount === 0 && (
+        <Alert className="bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200">
+          <BookOpen className="h-4 w-4 text-purple-600" />
+          <AlertDescription className="text-purple-900">
+            <p className="font-medium mb-2">💡 工作流程指引</p>
+            <ol className="text-sm space-y-1 list-decimal list-inside text-purple-800">
+              <li><strong>选择焦点</strong>：从 ACT1 诊断问题中选择，或使用自由创作模式手动输入</li>
+              <li><strong>获取方案</strong>：AI 生成 2 个创作增强方案（30-60秒）</li>
+              <li><strong>选择执行</strong>：选择最合适的方案，AI 生成具体修改</li>
+              <li><strong>重复迭代</strong>：切换不同 Act 继续深化创作</li>
+              <li><strong>生成剧本</strong>：完成后点击右上角"生成最终剧本"按钮</li>
+            </ol>
+            <p className="text-xs text-purple-600 mt-2">
+              提示：所有 Acts 2-5 可自由切换，无需按顺序完成
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Error Display */}
       {error && (
         <Alert variant="destructive">
@@ -551,24 +575,128 @@ export default function IterationPage() {
                   const allFindings = transformDiagnosticFindings(diagnosticReport?.findings || []);
                   const filteredFindings = filterFindingsByAct(allFindings, currentAct);
 
-                  // If no findings for this Act, show informative message
+                  // P0-2: If no findings for this Act, offer free creation mode
                   if (filteredFindings.length === 0) {
                     return (
-                      <Alert>
-                        <AlertCircle className="h-4 w-4" />
+                      <Alert className="bg-blue-50 border-blue-200">
+                        <AlertCircle className="h-4 w-4 text-blue-600" />
                         <AlertDescription>
-                          <p className="font-medium mb-2">当前 Act 没有相关的诊断问题</p>
-                          <p className="text-sm text-muted-foreground">
-                            {currentAct === 'ACT2_CHARACTER' && 'ACT2 关注角色矛盾，但 ACT1 诊断中没有发现角色类型的问题。'}
-                            {currentAct === 'ACT3_WORLDBUILDING' && 'ACT3 关注世界观设定，但 ACT1 诊断中没有发现场景或情节类型的问题。'}
+                          <p className="font-medium mb-2 text-blue-900">当前 Act 没有 ACT1 诊断问题</p>
+                          <p className="text-sm text-blue-700 mb-3">
+                            {currentAct === 'ACT2_CHARACTER' && 'ACT2 关注角色深化，但 ACT1 诊断中没有发现角色类型的问题。'}
+                            {currentAct === 'ACT3_WORLDBUILDING' && 'ACT3 关注世界观丰富化，但 ACT1 诊断中没有发现场景或情节类型的问题。'}
                             {currentAct === 'ACT4_PACING' && 'ACT4 关注节奏优化，但 ACT1 诊断中没有发现时间线类型的问题。'}
                             {currentAct === 'ACT5_THEME' && 'ACT5 关注主题深化，但 ACT1 诊断中没有发现角色或对话类型的问题。'}
                           </p>
-                          <p className="text-sm text-muted-foreground mt-2">
-                            您可以切换到其他 Act，或者直接进入合成阶段。
-                          </p>
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium text-blue-900">💡 您可以：</p>
+                            <div className="flex flex-col gap-2">
+                              <Button
+                                onClick={() => setIsFreeCreationMode(true)}
+                                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                                size="sm"
+                              >
+                                <Sparkles className="mr-2 h-4 w-4" />
+                                使用自由创作模式（手动输入焦点）
+                              </Button>
+                              <p className="text-xs text-blue-600 text-center">
+                                或切换到其他 Act，或直接进入合成阶段
+                              </p>
+                            </div>
+                          </div>
                         </AlertDescription>
                       </Alert>
+                    );
+                  }
+
+                  // P0-2: Free creation mode input (when enabled)
+                  if (isFreeCreationMode) {
+                    return (
+                      <div className="space-y-4">
+                        <Alert className="bg-purple-50 border-purple-200">
+                          <Sparkles className="h-4 w-4 text-purple-600" />
+                          <AlertDescription className="text-purple-900">
+                            <p className="font-medium">自由创作模式</p>
+                            <p className="text-sm text-purple-700 mt-1">
+                              手动输入您想要深化的创作焦点，AI 将基于当前剧本生成增强方案。
+                            </p>
+                          </AlertDescription>
+                        </Alert>
+
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-sm font-medium mb-1 block">
+                              焦点名称 *
+                            </label>
+                            <input
+                              type="text"
+                              value={manualFocusName}
+                              onChange={(e) => setManualFocusName(e.target.value)}
+                              placeholder={
+                                currentAct === 'ACT2_CHARACTER' ? '例如：主角李明' :
+                                currentAct === 'ACT3_WORLDBUILDING' ? '例如：未来都市世界观' :
+                                currentAct === 'ACT4_PACING' ? '例如：第二幕节奏' :
+                                '例如：角色内心世界'
+                              }
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-sm font-medium mb-1 block">
+                              创作意图描述 *
+                            </label>
+                            <textarea
+                              value={manualFocusDescription}
+                              onChange={(e) => setManualFocusDescription(e.target.value)}
+                              placeholder={
+                                currentAct === 'ACT2_CHARACTER' ? '描述您希望如何深化这个角色的成长弧线、内在冲突或心理转变...' :
+                                currentAct === 'ACT3_WORLDBUILDING' ? '描述您希望如何丰富世界观的细节、设定逻辑或戏剧张力...' :
+                                currentAct === 'ACT4_PACING' ? '描述您希望如何优化这部分的节奏、张力或情感强度...' :
+                                '描述您希望如何深化主题、角色精神内核或情感共鸣...'
+                              }
+                              rows={4}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+
+                          <div className="flex gap-2 pt-2">
+                            <Button
+                              onClick={handlePropose}
+                              disabled={isProposing || !manualFocusName.trim() || !manualFocusDescription.trim()}
+                              className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                            >
+                              {isProposing ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  AI分析中...
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="mr-2 h-4 w-4" />
+                                  获取AI创作方案
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              onClick={() => {
+                                setIsFreeCreationMode(false);
+                                setManualFocusName('');
+                                setManualFocusDescription('');
+                              }}
+                              variant="outline"
+                              disabled={isProposing}
+                            >
+                              取消
+                            </Button>
+                          </div>
+                          {isProposing && (
+                            <p className="text-sm text-muted-foreground text-center">
+                              AI正在分析并生成创作方案，预计需要30-60秒...
+                            </p>
+                          )}
+                        </div>
+                      </div>
                     );
                   }
 

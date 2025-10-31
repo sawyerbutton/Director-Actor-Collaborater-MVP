@@ -1279,11 +1279,12 @@ For future development, refer to:
 
 ---
 
-**Last Updated**: 2025-10-10
-**Architecture Version**: V1 API (Epic 004-007 Complete)
+**Last Updated**: 2025-10-11
+**Architecture Version**: V1 API (Epic 004-007 Complete) + Free Creation Mode ✨
 **System Status**: Production Ready ✅
 **Test Coverage**: 97.5% (77/79 tests passing)
-**Product Positioning**: Plan B - Differentiated Value (ACT1=Logic Repair, ACT2-5=Creative Enhancement) ✨ **NEW**
+**Product Positioning**: Plan B - Differentiated Value (ACT1=Logic Repair, ACT2-5=Creative Enhancement)
+**Latest Fix**: Product-Implementation Alignment (removed progressive unlock, added free creation mode)
 
 ## Product Positioning Update (2025-10-10) ✨
 
@@ -1329,30 +1330,42 @@ Implemented **differentiated positioning** strategy:
 - `lib/agents/prompts/thematic-polisher-prompts.ts`
 - `CLAUDE.md`
 
-## Recent Critical Fixes (2025-10-10)
+## Recent Critical Fixes (2025-10-11)
 
 **Quick Summary** - Full details in `docs/fixes/`:
 
-1. **ACT2-5 Async Queue** - Refactored propose endpoint to async job pattern to avoid 10s Vercel timeout
+1. **Product-Implementation Mismatch Fix (2025-10-11)** - Fixed fundamental business logic inconsistency
+   - **Problem**: Product positioning (Plan B) promised independent Acts 2-5, but implementation required ACT1 findings dependency
+   - **Root Cause**: 2025-10-10 product repositioning didn't update Epic 005/006 technical architecture
+   - **P0 Fixes**:
+     - Removed progressive unlock mechanism - all Acts 2-5 now unlocked after ACT1 completion
+     - Added Free Creation Mode - manual focus input when no ACT1 findings available
+   - **P1 Fixes**:
+     - Corrected Analysis page misleading copy ("directly enter Acts 2-5" → clear A/B choice)
+     - Added workflow guidance for first-time iteration page visitors
+   - **Impact**: Resolves user deadlock when ACT1 finds no character issues (ACT2 blocked)
+   - **Files Modified**: `app/iteration/[projectId]/page.tsx`, `app/analysis/[id]/page.tsx`
+
+2. **ACT2-5 Async Queue** - Refactored propose endpoint to async job pattern to avoid 10s Vercel timeout
    - See: `docs/fixes/ACT2_ASYNC_QUEUE_IMPLEMENTATION.md`
 
-2. **Act Filtering** - Each Act now only shows relevant finding types (ACT2=character, ACT3=scene/plot, etc.)
+3. **Act Filtering** - Each Act now only shows relevant finding types (ACT2=character, ACT3=scene/plot, etc.)
    - See: `docs/fixes/ACT_FILTERING_FIX.md`
 
-3. **ACT1 Repair API** - Fixed 500 errors returning HTML instead of JSON in Serverless
+4. **ACT1 Repair API** - Fixed 500 errors returning HTML instead of JSON in Serverless
    - Pattern: Always return `NextResponse.json()`, never throw in API handlers
    - See: `docs/fixes/ACT1_REPAIR_API_DEBUGGING.md`
 
-4. **Serverless Job Processing** - Implemented dual-mode WorkflowQueue with manual trigger endpoint
+5. **Serverless Job Processing** - Implemented dual-mode WorkflowQueue with manual trigger endpoint
    - Traditional: `setInterval()` background processing
    - Serverless: Manual `POST /api/v1/analyze/process` trigger from frontend
    - See: "Serverless Compatibility Architecture" section below
 
-5. **Script Versioning** - Each ACT2-5 decision now creates incremental versions (V1, V2, V3...)
+6. **Script Versioning** - Each ACT2-5 decision now creates incremental versions (V1, V2, V3...)
    - Execute API creates version after each decision
    - Propose API uses latest version as base
    - See: `docs/fixes/SCRIPT_VERSIONING_ITERATION_TASK.md`
 
-6. **Timeout Configuration** - Increased DeepSeek API timeout to 120s for large scripts
+7. **Timeout Configuration** - Increased DeepSeek API timeout to 120s for large scripts
    - Vercel endpoints: 60s timeout (requires Pro Plan)
    - See: `docs/fixes/VERCEL_504_TIMEOUT_FIX.md`
