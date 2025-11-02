@@ -2,6 +2,31 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 📚 Reference Documentation
+
+**Quick Links** - Comprehensive reference guides in `/ref` directory:
+
+- **[AI Agents Reference](ref/AI_AGENTS.md)** - Complete guide to all 6 AI agents (ConsistencyGuardian, CharacterArchitect, RulesAuditor, PacingStrategist, ThematicPolisher, RevisionExecutive)
+- **[API Reference](ref/API_REFERENCE.md)** - Complete V1 API documentation with all endpoints, request/response formats, error handling
+- **[Database Schema Reference](ref/DATABASE_SCHEMA.md)** - Prisma models, services, migrations, queries, and optimization tips
+- **[Frontend Components Reference](ref/FRONTEND_COMPONENTS.md)** - Pages, workspace components, UI library, API client, and state management
+- **[Testing Guide](ref/TESTING_GUIDE.md)** - Unit testing, integration testing, E2E testing patterns, and conventions
+- **[Deployment Guide](ref/DEPLOYMENT_GUIDE.md)** - Vercel deployment, Supabase setup, monitoring, troubleshooting, and scaling
+- **[Workflow Reference](ref/WORKFLOW_REFERENCE.md)** - Complete five-act workflow system with state machine, agents, and synthesis
+
+**When to Use Reference Docs:**
+- ✅ Learning the codebase for the first time → Start with Workflow Reference
+- ✅ Implementing new features → Check AI Agents + API Reference
+- ✅ Debugging issues → Check relevant reference guide
+- ✅ Writing tests → Follow Testing Guide patterns
+- ✅ Deploying to production → Follow Deployment Guide
+
+**This File (CLAUDE.md):**
+- Quick start guide and essential commands
+- Critical gotchas and conventions
+- Common development scenarios
+- Pointers to detailed documentation
+
 ## 🚀 Quick Start (5 Minutes)
 
 **First time in this codebase? Start here:**
@@ -1271,19 +1296,30 @@ Playwright E2E tests configured for WSL:
 
 ### 📚 Key Documentation
 
-For future development, refer to:
+**Reference Documentation** (in `/ref` directory):
+1. **[Workflow Reference](ref/WORKFLOW_REFERENCE.md)** - Complete five-act workflow system
+2. **[AI Agents Reference](ref/AI_AGENTS.md)** - All 6 AI agents with implementation details
+3. **[API Reference](ref/API_REFERENCE.md)** - Complete V1 API documentation
+4. **[Database Schema Reference](ref/DATABASE_SCHEMA.md)** - Prisma models and services
+5. **[Frontend Components Reference](ref/FRONTEND_COMPONENTS.md)** - Pages and components guide
+6. **[Testing Guide](ref/TESTING_GUIDE.md)** - Testing patterns and conventions
+7. **[Deployment Guide](ref/DEPLOYMENT_GUIDE.md)** - Production deployment guide
+
+**Project Documentation** (in `/docs` directory):
 1. **Main Workflow**: `docs/ai-analysis-repair-workflow.md` (v3.0.0)
 2. **Epic Guides**: `docs/epics/epic-*/README.md`
 3. **Phase Summaries**: `docs/ITERATION_PAGE_IMPLEMENTATION.md`, `docs/PHASE_2_COMPLETION_SUMMARY.md`
-4. **This File**: Always check CLAUDE.md first for architecture overview
+4. **Troubleshooting**: `docs/fixes/*.md` - Common issues and solutions
+5. **This File (CLAUDE.md)**: Always check first for architecture overview and quick reference
 
 ---
 
-**Last Updated**: 2025-10-10
-**Architecture Version**: V1 API (Epic 004-007 Complete)
+**Last Updated**: 2025-10-11
+**Architecture Version**: V1 API (Epic 004-007 Complete) + Free Creation Mode ✨
 **System Status**: Production Ready ✅
 **Test Coverage**: 97.5% (77/79 tests passing)
-**Product Positioning**: Plan B - Differentiated Value (ACT1=Logic Repair, ACT2-5=Creative Enhancement) ✨ **NEW**
+**Product Positioning**: Plan B - Differentiated Value (ACT1=Logic Repair, ACT2-5=Creative Enhancement)
+**Latest Fix**: Product-Implementation Alignment (removed progressive unlock, added free creation mode)
 
 ## Product Positioning Update (2025-10-10) ✨
 
@@ -1329,30 +1365,42 @@ Implemented **differentiated positioning** strategy:
 - `lib/agents/prompts/thematic-polisher-prompts.ts`
 - `CLAUDE.md`
 
-## Recent Critical Fixes (2025-10-10)
+## Recent Critical Fixes (2025-10-11)
 
 **Quick Summary** - Full details in `docs/fixes/`:
 
-1. **ACT2-5 Async Queue** - Refactored propose endpoint to async job pattern to avoid 10s Vercel timeout
+1. **Product-Implementation Mismatch Fix (2025-10-11)** - Fixed fundamental business logic inconsistency
+   - **Problem**: Product positioning (Plan B) promised independent Acts 2-5, but implementation required ACT1 findings dependency
+   - **Root Cause**: 2025-10-10 product repositioning didn't update Epic 005/006 technical architecture
+   - **P0 Fixes**:
+     - Removed progressive unlock mechanism - all Acts 2-5 now unlocked after ACT1 completion
+     - Added Free Creation Mode - manual focus input when no ACT1 findings available
+   - **P1 Fixes**:
+     - Corrected Analysis page misleading copy ("directly enter Acts 2-5" → clear A/B choice)
+     - Added workflow guidance for first-time iteration page visitors
+   - **Impact**: Resolves user deadlock when ACT1 finds no character issues (ACT2 blocked)
+   - **Files Modified**: `app/iteration/[projectId]/page.tsx`, `app/analysis/[id]/page.tsx`
+
+2. **ACT2-5 Async Queue** - Refactored propose endpoint to async job pattern to avoid 10s Vercel timeout
    - See: `docs/fixes/ACT2_ASYNC_QUEUE_IMPLEMENTATION.md`
 
-2. **Act Filtering** - Each Act now only shows relevant finding types (ACT2=character, ACT3=scene/plot, etc.)
+3. **Act Filtering** - Each Act now only shows relevant finding types (ACT2=character, ACT3=scene/plot, etc.)
    - See: `docs/fixes/ACT_FILTERING_FIX.md`
 
-3. **ACT1 Repair API** - Fixed 500 errors returning HTML instead of JSON in Serverless
+4. **ACT1 Repair API** - Fixed 500 errors returning HTML instead of JSON in Serverless
    - Pattern: Always return `NextResponse.json()`, never throw in API handlers
    - See: `docs/fixes/ACT1_REPAIR_API_DEBUGGING.md`
 
-4. **Serverless Job Processing** - Implemented dual-mode WorkflowQueue with manual trigger endpoint
+5. **Serverless Job Processing** - Implemented dual-mode WorkflowQueue with manual trigger endpoint
    - Traditional: `setInterval()` background processing
    - Serverless: Manual `POST /api/v1/analyze/process` trigger from frontend
    - See: "Serverless Compatibility Architecture" section below
 
-5. **Script Versioning** - Each ACT2-5 decision now creates incremental versions (V1, V2, V3...)
+6. **Script Versioning** - Each ACT2-5 decision now creates incremental versions (V1, V2, V3...)
    - Execute API creates version after each decision
    - Propose API uses latest version as base
    - See: `docs/fixes/SCRIPT_VERSIONING_ITERATION_TASK.md`
 
-6. **Timeout Configuration** - Increased DeepSeek API timeout to 120s for large scripts
+7. **Timeout Configuration** - Increased DeepSeek API timeout to 120s for large scripts
    - Vercel endpoints: 60s timeout (requires Pro Plan)
    - See: `docs/fixes/VERCEL_504_TIMEOUT_FIX.md`

@@ -440,20 +440,27 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
           </div>
         </div>
 
-        {/* Act 1 Complete - Next Steps */}
+        {/* Act 1 Complete - Next Steps (P1-1修正: 2025-10-11) */}
         {analysis && (
           <Alert className="mb-6 bg-blue-50 border-blue-200">
             <AlertCircle className="h-4 w-4 text-blue-600" />
             <AlertDescription className="flex items-center justify-between">
               <div className="text-blue-800">
-                <div className="font-medium">✓ Act 1 逻辑诊断已完成！</div>
-                <div className="text-sm mt-1">
-                  可选：使用下方"AI智能修复"快速修复逻辑错误，或直接进入 Acts 2-5 进行创作深化
+                <div className="font-medium">✓ Act 1 逻辑诊断已完成！您有两个选择：</div>
+                <div className="text-sm mt-2 space-y-1">
+                  <div className="flex items-start gap-2">
+                    <span className="font-medium min-w-[60px]">选项 A:</span>
+                    <span>使用下方"AI智能修复"快速修复逻辑错误（5-10分钟）</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="font-medium min-w-[60px]">选项 B:</span>
+                    <span>直接进入创作工作区，进行 Acts 2-5 创作深化（角色、世界观、节奏、主题）</span>
+                  </div>
                 </div>
               </div>
               <Button
                 onClick={() => router.push(`/iteration/${params.id}`)}
-                className="ml-4"
+                className="ml-4 shrink-0"
                 size="sm"
               >
                 进入创作工作区
@@ -679,8 +686,9 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
                   </Button>
                 </div>
                 <CardDescription>
-                  AI已修复剧本的逻辑错误，保证时间线一致性和角色前后一致性。
-                  保存后可继续 Acts 2-5 进行创作深化（角色弧光、世界观丰富、节奏优化、主题深化）。
+                  ✅ AI已修复剧本的逻辑错误（时间线、角色一致性等）
+                  <br />
+                  💡 保存后可进入创作工作区，使用 Acts 2-5 进行创作深化：角色弧线、世界观丰富、节奏优化、主题深化
                 </CardDescription>
               </CardHeader>
               <CardContent className="overflow-y-auto max-h-[60vh]">

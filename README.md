@@ -8,19 +8,24 @@
 
 ScriptAI is an advanced script analysis platform built with Next.js 14 that guides screenwriters through a comprehensive five-act workflow to improve script quality. The system uses multiple AI agents powered by DeepSeek API to detect errors, generate solutions, and synthesize final revisions while preserving the original script's style.
 
-**Current Version**: V1 API Architecture (Epic 004-007 Complete)
+**Product Positioning** (Plan B - Differentiated Value):
+- **ACT1**: Quick Logic Repair (修Bug) - Fix objective errors in 5-10 minutes
+- **ACT2-5**: Creative Enhancement (创作升级) - Deepen artistic quality beyond logical correctness
+
+**Current Version**: V1 API Architecture (Epic 004-007 Complete) + Free Creation Mode
 **Status**: ✅ Production Ready with Complete UI
 **Test Coverage**: 97.5% (77/79 tests passing)
 
 ## ✨ Key Features
 
 ### Five-Act Interactive Workflow
-- **Act 1 - Foundational Diagnosis**: AI analyzes script for 5 types of logical errors
-- **Act 2 - Character Arc**: Interactive iteration on character contradictions with AI proposals
-- **Act 3 - Worldbuilding**: Setting consistency audit with theme alignment
-- **Act 4 - Pacing**: Rhythm optimization and conflict redistribution strategies
-- **Act 5 - Theme**: Character depth enhancement and core emotional definition
-- **Synthesis**: Automatic merging of all decisions into final V2 script with conflict resolution
+- **Act 1 - Logic Repair**: AI analyzes script for 5 types of logical errors (timeline, character, plot, dialogue, scene)
+- **Act 2 - Character Depth Creation**: Transform flat characters into three-dimensional characters with growth arcs
+- **Act 3 - Worldbuilding Enrichment**: Enrich setting details and dramatic potential (NOT just fixing inconsistencies)
+- **Act 4 - Pacing Enhancement**: Optimize rhythm and dramatic tension (suspense, climax, emotional intensity)
+- **Act 5 - Spiritual Depth**: Enhance thematic resonance and emotional core (empathy hooks, character fears/beliefs)
+- **Synthesis**: Automatic merging of all decisions into final V2 script with conflict resolution and style preservation
+- **Free Creation Mode**: Manual focus input for ACT2-5 when no ACT1 findings available (NEW 2025-10-11)
 
 ### Advanced AI Capabilities
 - **6 Specialized AI Agents**: ConsistencyGuardian, CharacterArchitect, RulesAuditor, PacingStrategist, ThematicPolisher, SynthesisEngine
@@ -31,10 +36,11 @@ ScriptAI is an advanced script analysis platform built with Next.js 14 that guid
 
 ### Production Features
 - **Database Persistence**: PostgreSQL + Prisma ORM for reliable data storage
-- **Async Job Queue**: Background processing for long-running AI operations
-- **Real-time Polling**: 5-second status updates for job progress
-- **Version Control**: Compare V1 (original) vs V2 (synthesized) scripts
+- **Async Job Queue**: Background processing for ACT1 analysis, ACT2-5 proposals, and synthesis (Serverless compatible)
+- **Real-time Polling**: 5-second status updates with active processing triggers
+- **Version Control**: Compare V1 (original) vs V2 (synthesized) scripts with detailed diff
 - **Export System**: TXT and MD formats with metadata and change logs
+- **Serverless Architecture**: Vercel-compatible with manual job processing triggers
 
 ## 🚀 Quick Start
 
@@ -116,13 +122,15 @@ Visit `http://localhost:3000/dashboard` to start using the application!
 
 ### Step 3: Acts 2-5 - Interactive Iteration (Iteration Page)
 1. **Select Act** using progress bar (Act 2/3/4/5)
-2. **Choose Focus Problem** from Act 1 findings
-3. **Get AI Proposals** - System generates 2 solution options with pros/cons
+2. **Choose Focus** - Either:
+   - Select problem from Act 1 findings (act-specific filtering), OR
+   - Use **Free Creation Mode**: Enter manual focus (character, scene, theme) for independent creative enhancement
+3. **Get AI Proposals** - System generates proposals with pros/cons (async job, 30-60s processing)
 4. **Review & Select** - Compare proposals and choose the best one
-5. **Execute Transformation** - AI generates specific changes
+5. **Execute Transformation** - AI generates specific changes (< 5 seconds)
 6. **Repeat** for other problems or switch to different acts
 7. View all decisions in "决策历史" tab
-8. Click "生成最终剧本" when ready for synthesis
+8. Click "生成最终剧本 (N)" when ready for synthesis (N = decisions count)
 
 ### Step 4: Synthesis - Generate Final V2 Script (Synthesis Page)
 1. **Configure Options**:
@@ -281,8 +289,17 @@ Director-Actor-Collaborater-MVP/
 │   ├── unit/                     # Unit tests (47 tests)
 │   ├── integration/              # Integration tests (30 tests)
 │   └── e2e/                      # E2E tests (Playwright)
+├── ref/                           # Reference documentation (NEW)
+│   ├── AI_AGENTS.md              # Complete AI agents guide
+│   ├── API_REFERENCE.md          # V1 API documentation
+│   ├── DATABASE_SCHEMA.md        # Prisma models & services
+│   ├── FRONTEND_COMPONENTS.md   # Pages & components guide
+│   ├── TESTING_GUIDE.md          # Testing patterns
+│   ├── DEPLOYMENT_GUIDE.md       # Production deployment
+│   └── WORKFLOW_REFERENCE.md     # Five-act workflow system
 ├── docs/
 │   ├── epics/                    # Epic documentation
+│   ├── fixes/                    # Troubleshooting guides
 │   ├── references/               # Design references
 │   ├── config/                   # Configuration docs
 │   ├── guides/                   # User guides
@@ -310,40 +327,45 @@ See `docs/COMPREHENSIVE_TESTING_STRATEGY.md` for complete testing documentation.
 
 ## 🎨 AI Agents & Prompt Chains
 
-### Act 1: ConsistencyGuardian
-- **Purpose**: Detect 5 types of logical errors
-- **Output**: Diagnostic report with confidence scores
+### Act 1: ConsistencyGuardian (Logic Repair)
+- **Purpose**: Detect 5 types of logical errors (timeline, character, plot, dialogue, scene)
+- **Philosophy**: Quick objective error detection (5-10 minutes)
+- **Output**: Diagnostic report with confidence scores (30-100%)
 - **Prompts**: Error detection rules in `lib/agents/prompts/consistency-prompts.ts`
 
-### Act 2: CharacterArchitect
-- **Purpose**: Resolve character contradictions
+### Act 2: CharacterArchitect (Creative Enhancement)
+- **Purpose**: Transform flat characters → three-dimensional characters
+- **Philosophy**: Deepen artistic quality, NOT fix contradictions
 - **Prompt Chain**: P4 → P5 → P6
-  - P4: Analyze character context
-  - P5: Generate 2 proposals with pros/cons
-  - P6: "Show, Don't Tell" transformation
-- **Output**: Dramatic actions for character fixes
+  - P4: Analyze character **growth potential** (NOT contradictions)
+  - P5: Generate 2 creative development paths (渐进式 vs 戏剧性) with pros/cons
+  - P6: "Show, Don't Tell" transformation (dramatic actions)
+- **Output**: Dramatic actions with scene numbers, dialogue, emotional tone
 
-### Act 3: RulesAuditor
-- **Purpose**: Audit worldbuilding consistency
+### Act 3: RulesAuditor (Creative Enhancement)
+- **Purpose**: Transform reasonable worldbuilding → compelling worldbuilding
+- **Philosophy**: Enrich setting details and dramatic potential, NOT audit inconsistencies
 - **Prompt Chain**: P7 → P8 → P9
-  - P7: Detect setting logic errors
-  - P8: Analyze ripple effects
-  - P9: Ensure setting-theme alignment
-- **Output**: Worldbuilding solutions
+  - P7: Analyze worldbuilding **depth potential** (NOT detect errors)
+  - P8: Generate enrichment paths with dramatic ripple effects
+  - P9: Execute setting-theme integration
+- **Output**: Setting enhancements with thematic alignment
 
-### Act 4: PacingStrategist
-- **Purpose**: Optimize rhythm and pacing
+### Act 4: PacingStrategist (Creative Enhancement)
+- **Purpose**: Transform smooth pacing → riveting pacing
+- **Philosophy**: Enhance dramatic tension and suspense, NOT identify issues
 - **Prompt Chain**: P10 → P11
-  - P10: Analyze emotional space and rhythm
-  - P11: Generate restructure strategies
-- **Output**: Pacing optimization plan
+  - P10: Analyze pacing **enhancement opportunities** (NOT issues)
+  - P11: Generate pacing strategies (suspense, climax, emotional intensity)
+- **Output**: Pacing restructure strategies (directly applied)
 
-### Act 5: ThematicPolisher
-- **Purpose**: Enhance character depth
+### Act 5: ThematicPolisher (Creative Enhancement)
+- **Purpose**: Transform surface story → spiritual depth
+- **Philosophy**: Enhance thematic resonance and empathy hooks, NOT de-label traits
 - **Prompt Chain**: P12 → P13
-  - P12: Remove generic character labels
-  - P13: Define core fears and beliefs
-- **Output**: Enhanced character profile
+  - P12: Enhance character **spiritual depth** (NOT remove generic labels)
+  - P13: Define empathy core and thematic resonance (fears, beliefs, hooks)
+- **Output**: Character core definition with empathy hooks
 
 ### Synthesis: SynthesisEngine
 - **Purpose**: Merge all decisions into final V2 script
@@ -408,10 +430,22 @@ DISABLE_RATE_LIMIT=false  # Enable rate limiting in production
 
 ## 📚 Documentation
 
-- **[CLAUDE.md](./CLAUDE.md)** - Complete development guide for Claude Code
+### Reference Documentation (Quick Access)
+Comprehensive guides in `/ref` directory:
+- **[Workflow Reference](./ref/WORKFLOW_REFERENCE.md)** - Complete five-act workflow system with examples
+- **[AI Agents Reference](./ref/AI_AGENTS.md)** - All 6 agents with implementation details and prompt design
+- **[API Reference](./ref/API_REFERENCE.md)** - Complete V1 API documentation with all endpoints
+- **[Database Schema Reference](./ref/DATABASE_SCHEMA.md)** - Prisma models, services, and optimization tips
+- **[Frontend Components Reference](./ref/FRONTEND_COMPONENTS.md)** - Pages, components, and state management
+- **[Testing Guide](./ref/TESTING_GUIDE.md)** - Unit, integration, E2E testing patterns
+- **[Deployment Guide](./ref/DEPLOYMENT_GUIDE.md)** - Production deployment to Vercel + Supabase
+
+### Project Documentation
+- **[CLAUDE.md](./CLAUDE.md)** - Development guide for Claude Code with quick start
 - **[Workflow Guide](./docs/ai-analysis-repair-workflow.md)** - V1 API workflow documentation (v3.0.0)
 - **[Epic Documentation](./docs/epics/)** - Epic 004-007 implementation details
 - **[Testing Strategy](./docs/COMPREHENSIVE_TESTING_STRATEGY.md)** - Comprehensive testing guide
+- **[Troubleshooting](./docs/fixes/)** - Common issues and solutions
 - **[Configuration](./docs/config/)** - Project structure and security notices
 - **[References](./docs/references/)** - Prompt design and architecture references
 
@@ -435,16 +469,21 @@ See `docs/archive/` for historical bug fixes and solutions.
 
 ## 🎯 Development Roadmap
 
-### ✅ Completed (Epic 004-007)
+### ✅ Completed (Epic 004-007 + Recent Enhancements)
 - [x] V1 API architecture with database persistence
-- [x] Five-act interactive workflow
+- [x] Five-act interactive workflow (ACT1-5 + Synthesis)
 - [x] 6 AI agents with prompt chains (P4-P13)
 - [x] Complete UI for all acts + synthesis
-- [x] Conflict detection and auto-resolution
+- [x] Async job queue for ACT1, ACT2-5 proposals, and synthesis (Serverless compatible)
+- [x] Free Creation Mode for independent ACT2-5 use (2025-10-11)
+- [x] Plan B product positioning (Logic Repair vs Creative Enhancement)
+- [x] Act-specific findings filtering (ACT2=character, ACT3=scene/plot, etc.)
+- [x] Conflict detection and auto-resolution (98% auto-resolution rate)
 - [x] Style preservation (6-dimensional analysis)
-- [x] Version control and comparison
-- [x] Export system (TXT/MD)
-- [x] Production deployment
+- [x] Version control and comparison (V1 vs V2 diff)
+- [x] Export system (TXT/MD formats)
+- [x] Production deployment (Vercel + Supabase)
+- [x] Comprehensive reference documentation (/ref directory)
 
 ### 🚧 Future Enhancements
 - [ ] DOCX export format
@@ -485,9 +524,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Project Status**: 🚀 Production Ready (2025-10-02)
-**Architecture**: V1 API (Epic 004-007 Complete)
-**System Status**: Complete Five-Act Workflow with Full UI
+**Project Status**: 🚀 Production Ready (2025-10-11)
+**Architecture**: V1 API (Epic 004-007 Complete) + Free Creation Mode
+**Product Positioning**: Plan B - Differentiated Value (ACT1=Logic Repair, ACT2-5=Creative Enhancement)
+**System Status**: Complete Five-Act Workflow with Full UI and Async Job Queue
 **Test Coverage**: 97.5% (77/79 tests passing)
 
-*Built with a focus on AI-driven screenplay enhancement through interactive iteration and intelligent synthesis.*
+*Built with a focus on AI-driven screenplay enhancement through differentiated workflow: quick logic repair (ACT1) followed by creative enhancement (ACT2-5), enabling screenwriters to transform good scripts into great scripts.*
