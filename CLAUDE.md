@@ -2,6 +2,31 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 📚 Reference Documentation
+
+**Quick Links** - Comprehensive reference guides in `/ref` directory:
+
+- **[AI Agents Reference](ref/AI_AGENTS.md)** - Complete guide to all 6 AI agents (ConsistencyGuardian, CharacterArchitect, RulesAuditor, PacingStrategist, ThematicPolisher, RevisionExecutive)
+- **[API Reference](ref/API_REFERENCE.md)** - Complete V1 API documentation with all endpoints, request/response formats, error handling
+- **[Database Schema Reference](ref/DATABASE_SCHEMA.md)** - Prisma models, services, migrations, queries, and optimization tips
+- **[Frontend Components Reference](ref/FRONTEND_COMPONENTS.md)** - Pages, workspace components, UI library, API client, and state management
+- **[Testing Guide](ref/TESTING_GUIDE.md)** - Unit testing, integration testing, E2E testing patterns, and conventions
+- **[Deployment Guide](ref/DEPLOYMENT_GUIDE.md)** - Vercel deployment, Supabase setup, monitoring, troubleshooting, and scaling
+- **[Workflow Reference](ref/WORKFLOW_REFERENCE.md)** - Complete five-act workflow system with state machine, agents, and synthesis
+
+**When to Use Reference Docs:**
+- ✅ Learning the codebase for the first time → Start with Workflow Reference
+- ✅ Implementing new features → Check AI Agents + API Reference
+- ✅ Debugging issues → Check relevant reference guide
+- ✅ Writing tests → Follow Testing Guide patterns
+- ✅ Deploying to production → Follow Deployment Guide
+
+**This File (CLAUDE.md):**
+- Quick start guide and essential commands
+- Critical gotchas and conventions
+- Common development scenarios
+- Pointers to detailed documentation
+
 ## 🚀 Quick Start (5 Minutes)
 
 **First time in this codebase? Start here:**
@@ -1271,11 +1296,21 @@ Playwright E2E tests configured for WSL:
 
 ### 📚 Key Documentation
 
-For future development, refer to:
+**Reference Documentation** (in `/ref` directory):
+1. **[Workflow Reference](ref/WORKFLOW_REFERENCE.md)** - Complete five-act workflow system
+2. **[AI Agents Reference](ref/AI_AGENTS.md)** - All 6 AI agents with implementation details
+3. **[API Reference](ref/API_REFERENCE.md)** - Complete V1 API documentation
+4. **[Database Schema Reference](ref/DATABASE_SCHEMA.md)** - Prisma models and services
+5. **[Frontend Components Reference](ref/FRONTEND_COMPONENTS.md)** - Pages and components guide
+6. **[Testing Guide](ref/TESTING_GUIDE.md)** - Testing patterns and conventions
+7. **[Deployment Guide](ref/DEPLOYMENT_GUIDE.md)** - Production deployment guide
+
+**Project Documentation** (in `/docs` directory):
 1. **Main Workflow**: `docs/ai-analysis-repair-workflow.md` (v3.0.0)
 2. **Epic Guides**: `docs/epics/epic-*/README.md`
 3. **Phase Summaries**: `docs/ITERATION_PAGE_IMPLEMENTATION.md`, `docs/PHASE_2_COMPLETION_SUMMARY.md`
-4. **This File**: Always check CLAUDE.md first for architecture overview
+4. **Troubleshooting**: `docs/fixes/*.md` - Common issues and solutions
+5. **This File (CLAUDE.md)**: Always check first for architecture overview and quick reference
 
 ---
 
