@@ -5,15 +5,13 @@ Central router for all API endpoints
 """
 
 from fastapi import APIRouter
+from app.api import convert
 
 # Create main API router
 router = APIRouter()
 
-# Import and include sub-routers (will be added in next tasks)
-# from app.api import convert, status
-
-# router.include_router(convert.router, prefix="/convert", tags=["conversion"])
-# router.include_router(status.router, prefix="/status", tags=["status"])
+# Include sub-routers
+router.include_router(convert.router, prefix="/convert", tags=["conversion"])
 
 @router.get("/")
 async def api_root():
