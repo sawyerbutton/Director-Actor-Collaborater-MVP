@@ -1,0 +1,112 @@
+version: '3.8'
+
+# ===================================
+# Director-Actor-Collaborater-MVP
+# Multi-Service Docker Compose Configuration
+# ===================================
+
+services:
+  # ===================================
+  # PostgreSQL Database
+  # ===================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: director-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: director_user
+      POSTGRES_PASSWORD: director_pass_2024
+      POSTGRES_DB: director_actor_db
+    ports:
+      - "5433:5432"  # Use 5433 on host to avoid conflict with existing PostgreSQL
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U director_user -d director_actor_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app_network
+
+  # ===================================
+  # Python Script Converter Service
+  # ===================================
+  python-converter:
+    build:
+      context: ./services/python-converter
+      dockerfile: Dockerfile
+    container_name: python-converter
+    restart: unless-stopped
+    environment:
+      # Service Configuration
+      PORT: 8001
+      PYTHONUNBUFFERED: 1
+
+      # Logging
+      LOG_LEVEL: info
+
+      # CORS Settings - uses defaults from config.py
+      # To override, use JSON array format: CORS_ORIGINS='["http://localhost:3000"]'
+    ports:
+      - "8001:8001"
+    volumes:
+      # Mount app code for development (comment out in production)
+      - ./services/python-converter/app:/app/app:ro
+
+      # Mount logs directory
+      - ./services/python-converter/logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8001/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - app_network
+
+  # ===================================
+  # Next.js Application (Optional)
+  # ===================================
+  # Uncomment this section if you want to run Next.js in Docker
+  # Otherwise, run Next.js locally with `npm run dev`
+  #
+  # nextjs:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.nextjs
+  #   container_name: nextjs-app
+  #   restart: unless-stopped
+  #   environment:
+  #     - NODE_ENV=development
+  #     - DATABASE_URL=postgresql://director_user:director_pass_2024@postgres:5432/director_actor_db?schema=public
+  #     - PYTHON_CONVERTER_URL=http://python-converter:8001
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - .:/app
+  #     - /app/node_modules
+  #     - /app/.next
+  #   depends_on:
+  #     - postgres
+  #     - python-converter
+  #   networks:
+  #     - app_network
+
+# ===================================
+# Networks
+# ===================================
+networks:
+  app_network:
+    driver: bridge
+    name: director_network
+
+# ===================================
+# Volumes
+# ===================================
+volumes:
+  postgres_data:
+    name: director_postgres_data

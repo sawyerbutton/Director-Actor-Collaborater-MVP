@@ -1,0 +1,41 @@
+# ===================================
+# Development Override Configuration
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+# ===================================
+
+version: '3.8'
+
+services:
+  python-converter:
+    # Override build configuration for development
+    build:
+      context: ./services/python-converter
+      dockerfile: Dockerfile
+      target: builder  # Use builder stage for development tools
+
+    # Development environment variables
+    environment:
+      - LOG_LEVEL=debug
+      - RELOAD=true  # Enable hot reload for uvicorn
+
+    # Override command to enable hot reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload --log-level debug
+
+    # Mount source code for live updates
+    volumes:
+      - ./services/python-converter/app:/app/app
+      - ./services/python-converter/tests:/app/tests
+      - ./services/python-converter/logs:/app/logs
+
+  postgres:
+    # Expose additional ports for debugging
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust  # Allow passwordless access for development
+
+    # Persistent volume for development data
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_dev_data:
+    name: director_postgres_dev_data
