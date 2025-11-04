@@ -1,0 +1,564 @@
+# 开发进度跟踪 - 多剧本文件分析系统
+
+**文档版本**: v1.0
+**最后更新**: 2025-01-04
+**分支**: `feature/multi-script-analysis`
+**当前Sprint**: Sprint 1 - 多文件基础架构
+
+---
+
+## 📊 总体进度概览
+
+| Sprint | 状态 | 进度 | 完成任务 | 总任务 | 预计完成日期 |
+|--------|------|------|----------|--------|-------------|
+| Sprint 1 | 🟡 进行中 | 20% | 2/9 | 9 | Day 2.5 |
+| Sprint 2 | ⏳ 未开始 | 0% | 0/11 | 11 | Day 4 |
+| Sprint 3 | ⏳ 未开始 | 0% | 0/14 | 14 | Day 7 |
+| Sprint 4 | ⏳ 未开始 | 0% | 0/6 | 6 | Day 8 |
+| **总计** | **🟡 进行中** | **5%** | **2/40** | **40** | **Day 8** |
+
+**当前日期**: Day 1 (2025-01-04)
+**已用时间**: 0.5天
+**剩余时间**: 7.5天
+
+---
+
+## ✅ 已完成任务 (2/40)
+
+### T1.1: 创建ScriptFile Prisma模型 ✅
+
+**完成时间**: 2025-01-04
+**耗时**: 0.25天
+**负责人**: AI Assistant
+
+**完成内容**:
+- ✅ 在`prisma/schema.prisma`添加ScriptFile模型
+  - 12个字段：id, projectId, filename, episodeNumber, rawContent, jsonContent, contentHash, fileSize, conversionStatus, conversionError, createdAt, updatedAt
+  - 3个索引：projectId, [projectId, episodeNumber], [projectId, filename] (unique)
+  - 1个外键：projectId → Project.id (CASCADE delete)
+- ✅ 扩展Project模型：添加`scriptFiles ScriptFile[]`关联
+- ✅ 创建migration指南：`docs/migrations/ADD_SCRIPT_FILE_MODEL.md`
+  - SQL预览
+  - 测试步骤
+  - 回滚指令
+  - 性能分析
+
+**Git Commit**: `8cb11df`
+
+**关键文件**:
+```
+prisma/schema.prisma (line 47, 188-209)
+docs/migrations/ADD_SCRIPT_FILE_MODEL.md
+```
+
+**设计决策**:
+- contentHash字段保留（Beta版不用，但为V1.1预留）
+- Project.content保留（向后兼容单文件项目）
+- conversionStatus枚举：pending/processing/completed/failed
+- 复合索引`[projectId, episodeNumber]`优化排序查询
+
+---
+
+### T1.2: 执行migration到数据库 ✅
+
+**完成时间**: 2025-01-04
+**耗时**: 0.25天
+**负责人**: AI Assistant
+
+**完成内容**:
+- ✅ 启动PostgreSQL容器：`director-postgres` (postgres:16-alpine)
+  - Port: 5433 (避免与现有容器冲突)
+  - Database: director_actor_db
+  - User: director_user / Password: director_pass_2024
+- ✅ 更新.env配置：DATABASE_URL指向localhost:5433
+- ✅ 执行migration：`npx prisma migrate dev --name add_script_file_model`
+  - Migration ID: 20251104092521_add_script_file_model
+  - Prisma Client已重新生成
+- ✅ 验证数据库：
+  - 表已创建：ScriptFile
+  - 索引已创建：4个
+  - 外键已创建：projectId → Project (CASCADE)
+
+**Git Commit**: `53b5cbb`
+
+**关键命令**:
+```bash
+# 启动容器
+docker run -d --name director-postgres \
+  -e POSTGRES_USER=director_user \
+  -e POSTGRES_PASSWORD=director_pass_2024 \
+  -e POSTGRES_DB=director_actor_db \
+  -p 5433:5432 postgres:16-alpine
+
+# 执行migration
+npx prisma migrate dev --name add_script_file_model
+
+# 验证
+docker exec director-postgres psql -U director_user -d director_actor_db -c "\dt"
+docker exec director-postgres psql -U director_user -d director_actor_db -c "\d \"ScriptFile\""
+```
+
+**环境信息**:
+```
+Docker容器: director-postgres (Container ID: 8a6bad75d323)
+PostgreSQL版本: 16-alpine
+端口映射: 5433:5432
+数据库名: director_actor_db
+Schema: public
+```
+
+---
+
+## 🔄 进行中任务 (1)
+
+### T1.3: 实现ScriptFileService（CRUD操作）
+
+**开始时间**: 2025-01-04 (待开始)
+**预计耗时**: 1天
+**状态**: ⏳ 准备开始
+
+**任务目标**:
+创建`lib/db/services/script-file.service.ts`，实现完整的CRUD操作。
+
+**需要实现的功能**:
+```typescript
+// 核心方法
+1. createFile(data: CreateScriptFileInput): Promise<ScriptFile>
+   - 创建单个文件
+   - 自动计算contentHash (SHA256)
+   - 自动计算fileSize
+   - 尝试提取episodeNumber
+
+2. createFiles(files: CreateScriptFileInput[]): Promise<ScriptFile[]>
+   - 批量创建（用于多文件上传）
+   - 使用事务保证原子性
+   - 检查文件名唯一性
+
+3. getFilesByProjectId(projectId: string, options?: QueryOptions): Promise<ScriptFile[]>
+   - 获取项目所有文件
+   - 支持排序（按episodeNumber或createdAt）
+   - 支持分页
+
+4. getFileById(fileId: string): Promise<ScriptFile | null>
+   - 获取单个文件详情
+   - 包含关联的Project信息（可选）
+
+5. updateFile(fileId: string, data: UpdateScriptFileInput): Promise<ScriptFile>
+   - 更新文件（主要用于JSON转换后更新jsonContent）
+   - 更新conversionStatus
+   - 更新conversionError
+
+6. deleteFile(fileId: string): Promise<void>
+   - 删除单个文件
+   - 级联删除相关数据
+
+7. deleteFilesByProjectId(projectId: string): Promise<{ count: number }>
+   - 删除项目所有文件
+
+// 辅助方法
+8. extractEpisodeNumber(filename: string): number | null
+   - 从文件名提取集数
+   - 正则：/第(\d+)集/、/EP(\d+)/、/E(\d+)/等
+
+9. generateContentHash(content: string): string
+   - SHA256哈希生成
+   - 用于去重检测（V1.1）
+
+10. getFileByProjectAndFilename(projectId: string, filename: string): Promise<ScriptFile | null>
+    - 检查文件名是否已存在
+```
+
+**文件结构**:
+```typescript
+// lib/db/services/script-file.service.ts
+import { PrismaClient, ScriptFile, Prisma } from '@prisma/client';
+import { createHash } from 'crypto';
+
+export class ScriptFileService {
+  constructor(private prisma: PrismaClient) {}
+
+  // 实现所有方法...
+}
+
+// 单例导出
+export const scriptFileService = new ScriptFileService(prisma);
+```
+
+**类型定义**:
+```typescript
+// lib/db/services/types/script-file.types.ts
+export interface CreateScriptFileInput {
+  projectId: string;
+  filename: string;
+  rawContent: string;
+  episodeNumber?: number; // 可选，自动提取
+}
+
+export interface UpdateScriptFileInput {
+  jsonContent?: any;
+  conversionStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+  conversionError?: string | null;
+}
+
+export interface QueryOptions {
+  orderBy?: 'episodeNumber' | 'createdAt' | 'filename';
+  order?: 'asc' | 'desc';
+  skip?: number;
+  take?: number;
+}
+```
+
+**测试要点**:
+- [ ] createFile正确计算hash和size
+- [ ] episodeNumber自动提取（多种格式）
+- [ ] 文件名唯一性验证
+- [ ] 批量创建的事务完整性
+- [ ] 级联删除正常工作
+
+**依赖项**:
+- @prisma/client (已安装)
+- crypto (Node.js内置)
+
+**参考文件**:
+- 现有服务：`lib/db/services/revision-decision.service.ts`
+
+---
+
+## ⏳ 待办任务 (37)
+
+### Sprint 1 剩余任务 (7)
+
+| ID | 任务 | 预计耗时 | 依赖 | 优先级 |
+|----|------|---------|------|--------|
+| T1.4 | 文件上传API实现（单个+批量） | 1天 | T1.3 | P0 |
+| T1.5 | ~~文件Hash检测和去重逻辑~~ | ~~0.5天~~ | ~~T1.4~~ | ⏳ Beta后 |
+| T1.6 | 集数编号自动识别（正则提取） | 0.5天 | T1.4 | P0 |
+| T1.7 | MultiFileUploader组件开发 | 1天 | T1.4 | P0 |
+| T1.8 | 文件列表管理UI（增删改查） | 0.5天 | T1.7 | P0 |
+| T1.9 | 单元测试：Service层 | 0.5天 | T1.3 | P1 |
+
+**注**: T1.5在Beta版中删减，数据库字段保留但不实现前端提示。
+
+### Sprint 2 任务 (11)
+
+| ID | 任务 | 预计耗时 | 依赖 | 优先级 |
+|----|------|---------|------|--------|
+| T2.1 | 创建FastAPI项目结构 | 0.5天 | - | P0 |
+| T2.2 | 复用现有Python转换代码 | 0.5天 | T2.1 | P0 |
+| T2.3 | 实现/convert/script endpoint | 1天 | T2.2 | P0 |
+| T2.4 | 实现/convert/outline endpoint | 0.5天 | T2.3 | P0 |
+| T2.5 | DeepSeek API集成和错误处理 | 0.5天 | T2.3 | P0 |
+| T2.6 | Docker镜像构建和测试 | 0.5天 | T2.5 | P0 |
+| T2.7 | 创建ConversionService客户端 | 0.5天 | T2.5 | P0 |
+| T2.8 | 转换API封装（Next.js） | 0.5天 | T2.7 | P0 |
+| T2.9 | 转换状态轮询逻辑 | 0.5天 | T2.8 | P0 |
+| T2.10 | ~~前端转换进度展示~~ | ~~0.5天~~ | ~~T2.9~~ | ⏳ Beta后 |
+| T2.11 | Docker Compose配置 | 0.5天 | T2.6 | P0 |
+
+**注**: T2.10在Beta版中简化为简单loading提示。
+
+### Sprint 3 任务 (14)
+
+| ID | 任务 | 预计耗时 | 依赖 | 优先级 |
+|----|------|---------|------|--------|
+| T3.1 | 扩展DiagnosticReport结构 | 0.5天 | Sprint 2 | P0 |
+| T3.2 | 单文件检查：批量调用逻辑 | 1天 | T3.1 | P0 |
+| T3.3 | 单文件检查：结果合并 | 0.5天 | T3.2 | P0 |
+| T3.4 | 创建CrossFileAnalyzer类 | 0.5天 | T3.3 | P0 |
+| T3.5 | 实现时间线跨文件检查 | 1天 | T3.4 | P0 |
+| T3.6 | 实现角色跨文件检查 | 1天 | T3.4 | P0 |
+| T3.7 | 实现情节跨文件检查 | 0.5天 | T3.4 | P0 |
+| T3.8 | 实现设定跨文件检查 | 0.5天 | T3.4 | P0 |
+| T3.9 | AI辅助决策Prompt设计 | 1天 | T3.5-T3.8 | P0 |
+| T3.10 | 跨文件检查结果存储 | 0.5天 | T3.9 | P0 |
+| T3.11 | 多文件分析API实现 | 1天 | T3.10 | P0 |
+| T3.12 | 诊断报告UI重构（分组展示） | 1天 | T3.11 | P0 |
+| T3.13 | ~~跨文件问题关联高亮~~ | ~~1天~~ | ~~T3.12~~ | ⏳ Beta后 |
+| T3.14 | 单元测试：CrossFileAnalyzer | 0.5天 | T3.10 | P1 |
+
+**注**: T3.13在Beta版中使用颜色编码替代复杂高亮。
+
+### Sprint 4 任务 (6)
+
+| ID | 任务 | 预计耗时 | 依赖 | 优先级 |
+|----|------|---------|------|--------|
+| T4.1 | 端到端功能测试 | 0.5天 | Sprint 3 | P0 |
+| T4.2 | 性能测试（大文件场景） | 0.5天 | T4.1 | P0 |
+| T4.3 | 错误边界测试 | 0.5天 | T4.1 | P0 |
+| T4.4 | 文档完善（API文档） | 0.5天 | T4.3 | P1 |
+| T4.5 | Docker部署验证 | 0.5天 | T4.3 | P0 |
+| T4.6 | 生产环境配置 | 0.5天 | T4.5 | P0 |
+
+---
+
+## 🔑 关键决策记录
+
+### 决策1: Beta版工时削减（已批准）
+
+**日期**: 2025-01-03
+**决策**: 从10天减少到8天
+**原因**: 业务方要求快速验证核心功能
+
+**削减内容**:
+- T1.5: 文件去重UI（-0.5天）
+- T2.10: 转换进度条（-0.5天）
+- T3.13: 跨文件高亮（-1天）
+
+**保留功能**: 所有P0核心功能（JSON转换、跨文件检查、诊断报告）
+
+**风险缓解**:
+- 数据库字段保留（contentHash），V1.1快速补回
+- 使用简化UI替代（loading文本、颜色编码）
+
+---
+
+### 决策2: PostgreSQL端口配置
+
+**日期**: 2025-01-04
+**决策**: 使用端口5433而非5432
+**原因**: 端口5432已被其他项目占用（tenisinfinite-postgres-dev）
+
+**配置**:
+```bash
+DATABASE_URL="postgresql://director_user:director_pass_2024@localhost:5433/director_actor_db?schema=public"
+```
+
+**影响**: 需要确保生产环境配置正确映射。
+
+---
+
+### 决策3: JSON转换技术栈
+
+**日期**: 2025-01-03
+**决策**: 使用Python FastAPI微服务
+**原因**: 复用现有Python转换代码（~1500行），快速集成
+
+**替代方案**: TypeScript重写（需2-3天）
+**评估**: 微服务方案节省开发时间，架构清晰
+
+---
+
+## 📁 重要文件索引
+
+### 需求文档
+
+| 文件 | 描述 | 最后更新 |
+|------|------|---------|
+| `MULTI_SCRIPT_ANALYSIS_REQUIREMENTS.md` | 完整需求和8天实施计划 | 2025-01-03 |
+| `BUSINESS_REQUIREMENTS_DISCUSSION.md` | 业务需求技术评估 | 2025-01-03 |
+| `PENDING_DISCUSSIONS.md` | 待业务部门确认的3个议题 | 2025-01-03 |
+
+### 代码文件
+
+| 文件 | 描述 | 状态 |
+|------|------|------|
+| `prisma/schema.prisma` | 数据库Schema（ScriptFile模型） | ✅ 已更新 |
+| `prisma/migrations/20251104092521_add_script_file_model/` | Migration文件 | ✅ 已应用 |
+| `lib/db/services/script-file.service.ts` | ScriptFile CRUD服务 | ⏳ 待创建 |
+| `app/api/v1/projects/[id]/files/route.ts` | 文件上传API | ⏳ 待创建 |
+
+### 文档文件
+
+| 文件 | 描述 | 状态 |
+|------|------|------|
+| `docs/migrations/ADD_SCRIPT_FILE_MODEL.md` | Migration指南 | ✅ 已创建 |
+| `DEVELOPMENT_PROGRESS.md` | **本文档** - 开发进度跟踪 | 🔄 持续更新 |
+
+---
+
+## 🌍 环境配置
+
+### 开发环境
+
+```bash
+# Node.js & npm
+Node版本: v18+ (推荐)
+npm版本: 9+
+
+# PostgreSQL
+容器名: director-postgres
+镜像: postgres:16-alpine
+端口: 5433 (host) → 5432 (container)
+数据库: director_actor_db
+用户: director_user
+密码: director_pass_2024
+
+# Docker
+Docker Desktop: 已安装
+WSL2: 支持
+
+# 环境变量 (.env)
+DATABASE_URL="postgresql://director_user:director_pass_2024@localhost:5433/director_actor_db?schema=public"
+DIRECT_URL="postgresql://director_user:director_pass_2024@localhost:5433/director_actor_db?schema=public"
+DEEPSEEK_API_KEY=sk-5883c69dce7045fba8585a60e95b98b9
+DEEPSEEK_API_URL=https://api.deepseek.com
+```
+
+### 常用命令
+
+```bash
+# 启动PostgreSQL
+docker start director-postgres
+# 或首次运行
+docker run -d --name director-postgres \
+  -e POSTGRES_USER=director_user \
+  -e POSTGRES_PASSWORD=director_pass_2024 \
+  -e POSTGRES_DB=director_actor_db \
+  -p 5433:5432 postgres:16-alpine
+
+# 检查容器状态
+docker ps --filter "name=director-postgres"
+
+# Prisma相关
+npx prisma studio           # 打开数据库GUI
+npx prisma migrate dev      # 创建并应用migration
+npx prisma migrate status   # 查看migration状态
+npx prisma generate         # 重新生成Prisma Client
+
+# 数据库直连
+docker exec -it director-postgres psql -U director_user -d director_actor_db
+
+# 开发服务器
+npm run dev                 # 启动Next.js开发服务器
+```
+
+---
+
+## ⚠️ 已知问题与解决方案
+
+### 问题1: Docker端口冲突
+
+**问题**: 默认端口5432被占用
+**解决**: 使用端口5433
+**影响**: .env需要配置localhost:5433
+**状态**: ✅ 已解决
+
+---
+
+### 问题2: Prisma配置废弃警告
+
+**问题**: `package.json#prisma`配置在Prisma 7将被移除
+**警告信息**:
+```
+warn The configuration property `package.json#prisma` is deprecated
+```
+**解决**: 暂时忽略，Prisma 7升级时迁移到`prisma.config.ts`
+**状态**: ⏳ 计划后续处理
+
+---
+
+## 📊 性能指标目标
+
+### 响应时间目标
+
+| 操作 | 目标 | 实际 | 状态 |
+|------|------|------|------|
+| 单文件上传 | < 2秒 | - | ⏳ 未测试 |
+| JSON转换（1000行） | < 30秒 | - | ⏳ 未测试 |
+| 多文件检查（5个文件） | < 5分钟 | - | ⏳ 未测试 |
+| 诊断报告加载 | < 1秒 | - | ⏳ 未测试 |
+
+### 存储估算
+
+- 小剧本（1000行）: ~150KB per file
+- 中剧本（3000行）: ~450KB per file
+- 大剧本（10000行）: ~1.5MB per file
+- 5个中等剧本项目: ~2.25MB
+
+---
+
+## 🚀 下一步行动计划
+
+### 立即执行（当前会话）
+
+1. **创建ScriptFileService** (T1.3)
+   - 文件：`lib/db/services/script-file.service.ts`
+   - 类型：`lib/db/services/types/script-file.types.ts`
+   - 预计时间：2-3小时
+
+2. **单元测试ScriptFileService**
+   - 测试文件：`tests/unit/script-file.service.test.ts`
+   - 覆盖率目标：> 80%
+   - 预计时间：1-2小时
+
+### 后续会话
+
+3. **文件上传API** (T1.4)
+   - 单文件上传：`POST /api/v1/projects/:id/files`
+   - 批量上传：`POST /api/v1/projects/:id/files/batch`
+   - 预计时间：1天
+
+4. **前端多文件上传组件** (T1.7)
+   - 组件：`components/upload/multi-file-uploader.tsx`
+   - 功能：拖拽、预览、进度
+   - 预计时间：1天
+
+---
+
+## 📝 待讨论事项（不阻塞开发）
+
+### Sprint 5 智能修改功能
+
+**状态**: ⏳ 等待业务部门确认
+**文档**: `PENDING_DISCUSSIONS.md`
+**优先级**: 中（不影响Beta版）
+
+**待确认问题**:
+1. 功能定位：替换/增强/独立？
+2. 工时预算：2天/6-7天/2+3天？
+3. P0问题定义
+4. 与ACT2-5集成方式
+
+**讨论时间建议**: Sprint 1-2期间（Day 1-4）
+
+---
+
+## 🔄 更新日志
+
+| 日期 | 版本 | 更新内容 | 更新人 |
+|------|------|---------|--------|
+| 2025-01-04 | v1.0 | 初始版本，记录T1.1-T1.2完成情况 | AI Assistant |
+
+---
+
+## 📞 快速参考
+
+### Git Commits
+
+```bash
+# 查看最近提交
+git log --oneline -5
+
+# 最近的commits:
+# 53b5cbb - chore(database): apply add_script_file_model migration
+# 8cb11df - feat(database): add ScriptFile model for multi-file script analysis
+# 1bc6b02 - docs: update requirements to 8-day Beta plan
+# f82894b - docs: add multi-script analysis requirements
+```
+
+### 关键链接
+
+- **需求文档**: `MULTI_SCRIPT_ANALYSIS_REQUIREMENTS.md`
+- **待讨论事项**: `PENDING_DISCUSSIONS.md`
+- **Migration指南**: `docs/migrations/ADD_SCRIPT_FILE_MODEL.md`
+- **Prisma Schema**: `prisma/schema.prisma` (line 188-209)
+
+---
+
+**文档状态**: 🟢 当前最新
+**下次更新**: T1.3完成后
+**维护者**: AI Assistant + 开发团队
+
+---
+
+## 🎯 成功标准（Sprint 1）
+
+- [x] ScriptFile模型创建并应用到数据库
+- [ ] ScriptFileService完整实现（10个方法）
+- [ ] 文件上传API正常工作（单个+批量）
+- [ ] 前端可以上传和管理多个文件
+- [ ] 集数识别准确率 > 90%
+- [ ] 单元测试覆盖率 > 80%
+- [ ] 端到端测试：上传5个文件成功
+
+**当前进度**: 2/7 里程碑 ✅
