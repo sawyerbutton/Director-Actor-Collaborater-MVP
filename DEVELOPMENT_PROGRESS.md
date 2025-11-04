@@ -1,7 +1,7 @@
 # 开发进度跟踪 - 多剧本文件分析系统
 
-**文档版本**: v1.0
-**最后更新**: 2025-01-04
+**文档版本**: v1.1
+**最后更新**: 2025-01-04 (Day 1 - 晚)
 **分支**: `feature/multi-script-analysis`
 **当前Sprint**: Sprint 1 - 多文件基础架构
 
@@ -11,19 +11,19 @@
 
 | Sprint | 状态 | 进度 | 完成任务 | 总任务 | 预计完成日期 |
 |--------|------|------|----------|--------|-------------|
-| Sprint 1 | 🟡 进行中 | 20% | 2/9 | 9 | Day 2.5 |
+| Sprint 1 | 🟢 超前 | 56% | 5/9 | 9 | Day 2.5 |
 | Sprint 2 | ⏳ 未开始 | 0% | 0/11 | 11 | Day 4 |
 | Sprint 3 | ⏳ 未开始 | 0% | 0/14 | 14 | Day 7 |
 | Sprint 4 | ⏳ 未开始 | 0% | 0/6 | 6 | Day 8 |
-| **总计** | **🟡 进行中** | **5%** | **2/40** | **40** | **Day 8** |
+| **总计** | **🟢 进行中** | **13%** | **5/40** | **40** | **Day 8** |
 
 **当前日期**: Day 1 (2025-01-04)
-**已用时间**: 0.5天
-**剩余时间**: 7.5天
+**已用时间**: 1天
+**剩余时间**: 7天
 
 ---
 
-## ✅ 已完成任务 (2/40)
+## ✅ 已完成任务 (5/40)
 
 ### T1.1: 创建ScriptFile Prisma模型 ✅
 
@@ -109,9 +109,141 @@ Schema: public
 
 ---
 
+### T1.3: 实现ScriptFileService（CRUD操作） ✅
+
+**完成时间**: 2025-01-04
+**耗时**: 0.5天
+**负责人**: AI Assistant
+
+**完成内容**:
+- ✅ 创建`lib/db/services/types/script-file.types.ts`
+  - CreateScriptFileInput接口
+  - UpdateScriptFileInput接口
+  - QueryOptions接口（排序、分页）
+  - BatchOperationResult接口
+  - ProjectFilesStats接口
+- ✅ 创建`lib/db/services/script-file.service.ts`（10个方法）
+  - createFile(): 单个文件创建，自动hash/size/episodeNumber
+  - createFiles(): 批量创建（事务+重复检查）
+  - getFilesByProjectId(): 查询项目文件（灵活排序）
+  - getFileById(): 单文件查询
+  - getFileByProjectAndFilename(): 文件名唯一性检查
+  - updateFile(): 更新JSON转换结果
+  - deleteFile(): 单文件删除
+  - deleteFilesByProjectId(): 批量删除
+  - getProjectFilesStats(): 统计信息
+  - extractEpisodeNumber(): 6种模式识别（第N集/EPN/EN/episode_N/NN-/any）
+  - generateContentHash(): SHA256哈希
+
+**Git Commit**: `4389481`
+
+**关键文件**:
+```
+lib/db/services/script-file.service.ts (411 lines)
+lib/db/services/types/script-file.types.ts (72 lines)
+```
+
+**设计亮点**:
+- 继承BaseService，复用错误处理
+- 事务支持（批量操作原子性）
+- 灵活排序（episodeNumber null值处理：nulls last）
+- 集数提取支持中英文多种格式
+- SHA256去重预留（V1.1启用）
+
+---
+
+### T1.4: 文件上传API实现（单个+批量） ✅
+
+**完成时间**: 2025-01-04
+**耗时**: 0.5天
+**负责人**: AI Assistant
+
+**完成内容**:
+- ✅ `app/api/v1/projects/[id]/files/route.ts`
+  - POST: 单文件上传（Zod验证、XSS防护、重复检查）
+  - GET: 文件列表查询（排序、分页、includeProject）
+- ✅ `app/api/v1/projects/[id]/files/batch/route.ts`
+  - POST: 批量上传（最多50文件、事务、错误收集）
+  - 返回: 成功数量+错误列表（部分失败支持）
+- ✅ `app/api/v1/projects/[id]/files/[fileId]/route.ts`
+  - GET: 单文件详情（includeContent可选）
+  - DELETE: 删除文件（项目归属验证）
+- ✅ `app/api/v1/projects/[id]/files/stats/route.ts`
+  - GET: 项目文件统计（总数/转换状态/集数范围）
+
+**Git Commit**: `9b5fd62`
+
+**API设计**:
+```typescript
+// 单文件上传
+POST /api/v1/projects/:id/files
+Body: { filename, rawContent, episodeNumber? }
+Response: 201 Created + ScriptFile
+
+// 批量上传
+POST /api/v1/projects/:id/files/batch
+Body: { files: [{ filename, rawContent, episodeNumber? }] }
+Response: 201 (部分成功) / 400 (全部失败)
+
+// 文件列表
+GET /api/v1/projects/:id/files
+Query: orderBy, order, skip, take, includeProject
+Response: { items: ScriptFile[], count }
+
+// 单文件操作
+GET /api/v1/projects/:id/files/:fileId
+DELETE /api/v1/projects/:id/files/:fileId
+
+// 统计信息
+GET /api/v1/projects/:id/files/stats
+Response: { totalFiles, totalSize, convertedFiles, pendingFiles, failedFiles, episodeRange }
+```
+
+**安全特性**:
+- withMiddleware（Rate Limit/CORS/Auth）
+- Zod Schema验证
+- Request Size检查（10MB）
+- XSS内容清理
+- 项目归属验证
+
+---
+
+### T1.6: 集数编号自动识别 ✅
+
+**完成时间**: 2025-01-04
+**耗时**: 0天（已在T1.3实现）
+**负责人**: AI Assistant
+
+**完成内容**:
+- ✅ `ScriptFileService.extractEpisodeNumber()`方法已实现
+- ✅ 支持6种文件名模式：
+  1. 中文格式："第1集.md" → 1
+  2. EP格式："EP01.txt" → 1
+  3. E格式："E1.md" → 1
+  4. episode格式："episode_01.md" → 1
+  5. 前导数字："01-pilot.md" → 1
+  6. 任意数字："script_file_10.txt" → 10
+- ✅ API集成：createFile()自动调用提取
+
+**Git Commit**: `4389481` (包含在T1.3中)
+
+**实现逻辑**:
+```typescript
+extractEpisodeNumber(filename: string): number | null {
+  // 1. 第N集 → Chinese match
+  // 2. EPN/EN → Episode prefix match
+  // 3. episode_N → Keyword match
+  // 4. NN- → Leading number
+  // 5. \d+ → Fallback to any number
+  return parseInt(match[1], 10) || null;
+}
+```
+
+---
+
 ## 🔄 进行中任务 (1)
 
-### T1.3: 实现ScriptFileService（CRUD操作）
+### T1.7: 开发MultiFileUploader前端组件
 
 **开始时间**: 2025-01-04 (待开始)
 **预计耗时**: 1天
@@ -224,20 +356,18 @@ export interface QueryOptions {
 
 ---
 
-## ⏳ 待办任务 (37)
+## ⏳ 待办任务 (33)
 
-### Sprint 1 剩余任务 (7)
+### Sprint 1 剩余任务 (4)
 
-| ID | 任务 | 预计耗时 | 依赖 | 优先级 |
-|----|------|---------|------|--------|
-| T1.4 | 文件上传API实现（单个+批量） | 1天 | T1.3 | P0 |
-| T1.5 | ~~文件Hash检测和去重逻辑~~ | ~~0.5天~~ | ~~T1.4~~ | ⏳ Beta后 |
-| T1.6 | 集数编号自动识别（正则提取） | 0.5天 | T1.4 | P0 |
-| T1.7 | MultiFileUploader组件开发 | 1天 | T1.4 | P0 |
-| T1.8 | 文件列表管理UI（增删改查） | 0.5天 | T1.7 | P0 |
-| T1.9 | 单元测试：Service层 | 0.5天 | T1.3 | P1 |
+| ID | 任务 | 预计耗时 | 依赖 | 优先级 | 状态 |
+|----|------|---------|------|--------|------|
+| T1.7 | MultiFileUploader组件开发 | 1天 | T1.4✅ | P0 | 🔄 进行中 |
+| T1.8 | 文件列表管理UI（增删改查） | 0.5天 | T1.7 | P0 | ⏳ 待开始 |
+| T1.9 | 单元测试：Service层 | 0.5天 | T1.3✅ | P1 | ⏳ 待开始 |
 
-**注**: T1.5在Beta版中删减，数据库字段保留但不实现前端提示。
+**已完成**: T1.1✅, T1.2✅, T1.3✅, T1.4✅, T1.6✅
+**已削减**: T1.5 (Beta版削减，V1.1补充)
 
 ### Sprint 2 任务 (11)
 
