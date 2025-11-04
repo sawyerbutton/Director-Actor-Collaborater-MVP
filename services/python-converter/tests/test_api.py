@@ -280,9 +280,186 @@ class TestScriptConversionEndpoint:
 
 
 class TestOutlineConversionEndpoint:
-    """Test outline conversion endpoint (placeholder)"""
+    """Test outline (batch) conversion endpoint"""
 
-    @pytest.mark.skip(reason="Endpoint not yet implemented (T2.4)")
-    def test_convert_outline_endpoint_exists(self, client):
-        """Outline endpoint should exist"""
-        pass
+    def test_convert_outline_success(self, client, sample_outline_request):
+        """Should successfully convert multiple files"""
+        response = client.post("/api/v1/convert/outline", json=sample_outline_request)
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+
+        # Check response structure
+        assert "project_id" in data
+        assert "total_files" in data
+        assert "successful" in data
+        assert "failed" in data
+        assert "results" in data
+        assert "total_processing_time_ms" in data
+
+        # Verify counts
+        assert data["project_id"] == sample_outline_request["project_id"]
+        assert data["total_files"] == 3
+        assert data["successful"] == 2  # file_1 and file_2
+        assert data["failed"] == 1  # file_3 (empty content)
+
+        # Verify results array
+        results = data["results"]
+        assert len(results) == 3
+
+        # Check successful conversions
+        assert results[0]["success"] is True
+        assert results[0]["file_id"] == "file_1"
+        assert results[0]["json_content"] is not None
+
+        assert results[1]["success"] is True
+        assert results[1]["file_id"] == "file_2"
+        assert results[1]["json_content"] is not None
+
+        # Check failed conversion
+        assert results[2]["success"] is False
+        assert results[2]["file_id"] == "file_3"
+        assert results[2]["json_content"] is None
+        assert results[2]["error"] is not None
+        assert results[2]["error"]["code"] == "VALIDATION_ERROR"
+
+    def test_convert_outline_all_successful(self, client, sample_script_content):
+        """Should successfully convert all files when all valid"""
+        request_data = {
+            "project_id": "test_project_all_good",
+            "files": [
+                {
+                    "file_id": "file_a",
+                    "raw_content": sample_script_content,
+                    "filename": "scriptA.txt",
+                    "episode_number": 1
+                },
+                {
+                    "file_id": "file_b",
+                    "raw_content": sample_script_content,
+                    "filename": "scriptB.txt",
+                    "episode_number": 2
+                }
+            ]
+        }
+
+        response = client.post("/api/v1/convert/outline", json=request_data)
+        assert response.status_code == status.HTTP_200_OK
+
+        data = response.json()
+        assert data["total_files"] == 2
+        assert data["successful"] == 2
+        assert data["failed"] == 0
+
+        # All results should be successful
+        for result in data["results"]:
+            assert result["success"] is True
+            assert result["json_content"] is not None
+
+    def test_convert_outline_all_failed(self, client):
+        """Should handle all files failing gracefully"""
+        request_data = {
+            "project_id": "test_project_all_bad",
+            "files": [
+                {
+                    "file_id": "bad_1",
+                    "raw_content": "",
+                    "filename": "empty1.txt"
+                },
+                {
+                    "file_id": "bad_2",
+                    "raw_content": "   \n\n   ",
+                    "filename": "empty2.txt"
+                }
+            ]
+        }
+
+        response = client.post("/api/v1/convert/outline", json=request_data)
+        assert response.status_code == status.HTTP_200_OK
+
+        data = response.json()
+        assert data["total_files"] == 2
+        assert data["successful"] == 0
+        assert data["failed"] == 2
+
+        # All results should have errors
+        for result in data["results"]:
+            assert result["success"] is False
+            assert result["error"] is not None
+            assert result["error"]["code"] == "VALIDATION_ERROR"
+
+    def test_convert_outline_empty_files_list(self, client):
+        """Should return 422 for empty files list"""
+        request_data = {
+            "project_id": "test_empty_list",
+            "files": []
+        }
+
+        response = client.post("/api/v1/convert/outline", json=request_data)
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_convert_outline_missing_required_fields(self, client):
+        """Should return 422 for missing required fields"""
+        request_data = {
+            "project_id": "test_missing_fields"
+            # Missing 'files' field
+        }
+
+        response = client.post("/api/v1/convert/outline", json=request_data)
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    def test_convert_outline_preserves_episode_numbers(self, client, sample_script_content):
+        """Should preserve episode numbers in results"""
+        request_data = {
+            "project_id": "test_episode_preservation",
+            "files": [
+                {
+                    "file_id": "ep5",
+                    "raw_content": sample_script_content,
+                    "filename": "第5集.txt",
+                    "episode_number": 5
+                },
+                {
+                    "file_id": "ep10",
+                    "raw_content": sample_script_content,
+                    "filename": "第10集.txt",
+                    "episode_number": 10
+                }
+            ]
+        }
+
+        response = client.post("/api/v1/convert/outline", json=request_data)
+        assert response.status_code == status.HTTP_200_OK
+
+        data = response.json()
+        results = data["results"]
+
+        assert results[0]["metadata"]["episode_number"] == 5
+        assert results[1]["metadata"]["episode_number"] == 10
+
+    def test_convert_outline_performance_tracking(self, client, sample_script_content):
+        """Should track processing time for each file and total"""
+        request_data = {
+            "project_id": "test_performance",
+            "files": [
+                {
+                    "file_id": "perf_1",
+                    "raw_content": sample_script_content,
+                    "filename": "perf1.txt"
+                }
+            ]
+        }
+
+        response = client.post("/api/v1/convert/outline", json=request_data)
+        assert response.status_code == status.HTTP_200_OK
+
+        data = response.json()
+
+        # Check total processing time exists (>= 0 because simple scripts may process in < 1ms)
+        assert "total_processing_time_ms" in data
+        assert data["total_processing_time_ms"] >= 0
+
+        # Check individual file processing times
+        for result in data["results"]:
+            assert "processing_time_ms" in result
+            assert result["processing_time_ms"] >= 0

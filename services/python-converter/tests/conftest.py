@@ -49,9 +49,33 @@ def sample_conversion_request(sample_script_content):
 
 
 @pytest.fixture
-def sample_outline_request():
+def sample_outline_request(sample_script_content):
     """Sample outline conversion request data"""
     return {
         "project_id": "test_project_123",
-        "file_ids": ["file_1", "file_2", "file_3"]
+        "files": [
+            {
+                "file_id": "file_1",
+                "raw_content": sample_script_content,
+                "filename": "第1集.txt",
+                "episode_number": 1
+            },
+            {
+                "file_id": "file_2",
+                "raw_content": """场景1：办公室-白天
+
+经理在办公桌前工作。
+
+经理：今天有什么安排？
+""",
+                "filename": "第2集.txt",
+                "episode_number": 2
+            },
+            {
+                "file_id": "file_3",
+                "raw_content": "",  # Empty content for error testing
+                "filename": "第3集.txt",
+                "episode_number": 3
+            }
+        ]
     }
