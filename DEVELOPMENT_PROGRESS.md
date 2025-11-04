@@ -1,9 +1,9 @@
 # 开发进度跟踪 - 多剧本文件分析系统
 
-**文档版本**: v1.5
-**最后更新**: 2025-11-04 (Day 1 继续 - Sprint 2进行中)
+**文档版本**: v1.6
+**最后更新**: 2025-11-04 21:50 (Day 1 继续 - Sprint 2进行中)
 **分支**: `feature/multi-script-analysis`
-**当前Sprint**: Sprint 2 - Python FastAPI微服务 (进行中 - 6/11完成)
+**当前Sprint**: Sprint 2 - Python FastAPI微服务 (进行中 - 8/11完成)
 
 ---
 
@@ -12,10 +12,10 @@
 | Sprint | 状态 | 进度 | 完成任务 | 总任务 | 预计完成日期 |
 |--------|------|------|----------|--------|-------------|
 | Sprint 1 | ✅ **完成** | **100%** | **9/9** | 9 | Day 1 ✅ |
-| Sprint 2 | 🔄 **进行中** | **55%** | **6/11** | 11 | Day 2.5 |
+| Sprint 2 | 🔄 **进行中** | **73%** | **8/11** | 11 | Day 2.5 |
 | Sprint 3 | ⏳ 未开始 | 0% | 0/14 | 14 | Day 5.5 |
 | Sprint 4 | ⏳ 未开始 | 0% | 0/6 | 6 | Day 7 |
-| **总计** | **🟢 超前进行中** | **38%** | **15/40** | **40** | **Day 7** |
+| **总计** | **🟢 超前进行中** | **43%** | **17/40** | **40** | **Day 7** |
 
 **当前日期**: Day 1 (2025-11-04) - Sprint 2进行中
 **已用时间**: 1天
@@ -805,13 +805,13 @@ git log --oneline -5
 
 ---
 
-## 🔄 Sprint 2 - Python FastAPI微服务 (进行中 - 6/11完成)
+## 🔄 Sprint 2 - Python FastAPI微服务 (进行中 - 8/11完成)
 
 **开始日期**: 2025-11-04 (Day 1下半天)
 **预计耗时**: 2.5天
 **当前耗时**: 1天
-**完成进度**: 55% (6/11)
-**状态**: 🔄 **进行中**
+**完成进度**: 73% (8/11)
+**状态**: 🔄 **进行中** (接近完成)
 
 ### ✅ T2.1: 搭建Python FastAPI微服务框架 (完成)
 
@@ -917,14 +917,123 @@ Response: { success, file_id, json_content, error, processing_time_ms, metadata 
 
 ---
 
-### ⏳ 待完成任务 (5/11)
+### ✅ T2.7: Python转换服务客户端 (完成)
+
+**完成时间**: 2025-11-04
+**耗时**: 0.25天
+**负责人**: AI Assistant
+
+**完成内容**:
+- ✅ TypeScript客户端类 (lib/services/python-converter-client.ts - 236行)
+  - PythonConverterClient类：HTTP客户端封装
+  - 类型定义：ScriptConversionRequest, ConversionResponse, OutlineConversionRequest等
+  - 重试逻辑：最多3次，指数退避
+  - 超时处理：默认120秒
+- ✅ 核心方法
+  - getHealth() - 健康检查
+  - convertScript() - 单文件转换
+  - convertOutline() - 批量转换
+  - fetchWithRetry() - 自动重试机制
+- ✅ 错误处理
+  - ConversionServiceError自定义错误类
+  - 5xx服务器错误自动重试
+  - 超时错误友好提示
+
+**Git Commit**: `f3836f6`
+
+**环境变量**:
+```
+PYTHON_CONVERTER_URL=http://localhost:8001
+```
+
+---
+
+### ✅ T2.8: Next.js API路由封装 (完成)
+
+**完成时间**: 2025-11-04
+**耗时**: 0.25天
+**负责人**: AI Assistant
+
+**完成内容**:
+- ✅ 3个API端点 (329行代码)
+  - POST /api/conversion/convert - 单文件转换
+  - POST /api/conversion/batch - 批量转换
+  - GET /api/conversion/health - 健康检查
+- ✅ 数据库集成
+  - scriptFileService.getFileById() - 读取文件
+  - scriptFileService.updateFile() - 更新状态
+  - 自动状态管理：pending → processing → completed/failed
+- ✅ 技术特性
+  - Zod参数验证
+  - 统一错误处理 (createApiResponse/createErrorResponse)
+  - 详细日志记录
+  - withMiddleware包装器
+
+**Git Commit**: `4645407`
+
+**API端点**:
+```
+POST /api/conversion/convert
+Request: { fileId }
+Response: { success, fileId, filename, conversionResult, updatedAt }
+
+POST /api/conversion/batch
+Request: { projectId, fileIds[] }
+Response: { success, projectId, totalFiles, successful, failed, results[] }
+```
+
+---
+
+### ✅ T2.9: 转换状态轮询逻辑 (完成)
+
+**完成时间**: 2025-11-04
+**耗时**: 0.5天
+**负责人**: AI Assistant
+
+**完成内容**:
+- ✅ 状态查询API (app/api/conversion/status/[projectId]/route.ts - 117行)
+  - 查询项目所有文件转换状态
+  - 计算统计信息（completed/processing/pending/failed）
+  - 计算整体进度百分比（0-100）
+  - 判断整体状态（idle/processing/completed/failed/partial）
+  - 禁用缓存确保实时数据
+- ✅ 轮询React Hook (lib/hooks/useConversionPolling.ts - 271行)
+  - Exponential backoff：初始2秒，最大10秒
+  - Jitter：0-1000ms随机延迟
+  - 最大轮询60次（5-10分钟）
+  - 自动超时处理
+  - 生命周期管理（cleanup on unmount）
+  - 回调系统（onCompleted/onError）
+  - 手动控制（start/stop/reset）
+- ✅ 进度展示组件 (components/conversion/conversion-progress.tsx - 275行)
+  - 实时进度条
+  - 文件级别状态展示
+  - 统计面板（4个指标）
+  - 错误提示
+  - 控制按钮
+
+**Git Commit**: `a95f10e`
+
+**使用示例**:
+```tsx
+<ConversionProgress
+  projectId="project-123"
+  autoStart={true}
+  showFileDetails={true}
+  onComplete={() => console.log('Done!')}
+/>
+```
+
+---
+
+### ⏳ 待完成任务 (3/11)
 
 - ✅ T2.4: 实现/convert/outline端点 (完成 - 详见[T2.3总结](./docs/sprint-summaries/T2.3_API_ENDPOINT_SUMMARY.md))
 - ✅ T2.5: Dockerfile编写 (完成 - 详见[T2.5-T2.6总结](./docs/sprint-summaries/T2.5-T2.6_DOCKER_SUMMARY.md))
 - ✅ T2.6: Docker Compose配置 (完成 - 详见[T2.5-T2.6总结](./docs/sprint-summaries/T2.5-T2.6_DOCKER_SUMMARY.md))
-- ⏳ T2.7: Next.js与Python服务集成
-- ⏳ T2.8: 转换状态回调API
-- ⏳ T2.9: 错误处理和日志
-- ⏳ T2.10: 进度显示（简化版）
+- ✅ T2.7: Python转换服务客户端 (完成)
+- ✅ T2.8: Next.js API路由封装 (完成)
+- ✅ T2.9: 转换状态轮询逻辑 (完成)
+- ⏳ T2.10: 前端进度展示（已在T2.9中实现ConversionProgress组件）
 - ⏳ T2.11: Python Service单元测试
 
