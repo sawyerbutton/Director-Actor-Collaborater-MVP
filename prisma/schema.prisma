@@ -112,20 +112,27 @@ model AnalysisJob {
   @@index([type])
 }
 
-// DiagnosticReport模型 - Act 1诊断报告
+// DiagnosticReport模型 - Act 1诊断报告（支持多文件分析）
 model DiagnosticReport {
-  id          String   @id @default(cuid())
-  projectId   String   @unique
-  findings    Json     // 结构化的诊断结果
-  summary     String?  @db.Text // 报告摘要
-  confidence  Float?   // 诊断置信度 (0-1)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                    String   @id @default(cuid())
+  projectId             String   @unique
+  findings              Json     // 结构化的诊断结果 (DiagnosticFindings: {internalFindings, crossFileFindings, summary})
+  summary               String?  @db.Text // 报告摘要
+  confidence            Float?   // 诊断置信度 (0-1)
+  analyzedFileIds       String[] // 已分析的文件ID列表（用于增量更新）
+  checkType             String   @default("internal_only") // 检查类型: internal_only, cross_file, both
+  internalErrorCount    Int      @default(0) // 单文件错误数（冗余字段，优化查询）
+  crossFileErrorCount   Int      @default(0) // 跨文件错误数（冗余字段，优化查询）
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   // 关联关系
-  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project               Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
+  @@index([checkType])
+  @@index([internalErrorCount])
+  @@index([crossFileErrorCount])
 }
 
 // RevisionDecision模型 - 存储用户在迭代过程中的决策
