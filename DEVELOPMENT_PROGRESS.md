@@ -1,9 +1,9 @@
 # 开发进度跟踪 - 多剧本文件分析系统
 
-**文档版本**: v1.9
+**文档版本**: v1.10
 **最后更新**: 2025-11-05 (Day 1 继续 - Sprint 3进行中)
 **分支**: `feature/multi-script-analysis`
-**当前Sprint**: Sprint 3 - 分层检查系统 (进行中 - 4/14完成)
+**当前Sprint**: Sprint 3 - 分层检查系统 (进行中 - 5/14完成)
 
 ---
 
@@ -13,9 +13,9 @@
 |--------|------|------|----------|--------|-------------|
 | Sprint 1 | ✅ **完成** | **100%** | **9/9** | 9 | Day 1 ✅ |
 | Sprint 2 | ✅ **完成** | **100%** | **9/11** | 11 | Day 1 ✅ |
-| Sprint 3 | 🔄 **进行中** | **28%** | **4/14** | 14 | Day 3.5 |
+| Sprint 3 | 🔄 **进行中** | **35%** | **5/14** | 14 | Day 3.5 |
 | Sprint 4 | ⏳ 未开始 | 0% | 0/6 | 6 | Day 4.5 |
-| **总计** | **🟢 超前进行中** | **55%** | **22/40** | **40** | **Day 4.5** |
+| **总计** | **🟢 超前进行中** | **58%** | **23/40** | **40** | **Day 4.5** |
 
 **当前日期**: Day 1 (2025-11-04) - Sprint 3进行中
 **已用时间**: 1天
@@ -23,7 +23,7 @@
 
 ---
 
-## ✅ 已完成任务 (22/40) - Sprint 1-2完成 + Sprint 3进行中
+## ✅ 已完成任务 (23/40) - Sprint 1-2完成 + Sprint 3进行中
 
 ### 🎉 Sprint 1 - 多文件基础架构 (100% 完成)
 
@@ -1049,12 +1049,12 @@ Response: { success, projectId, totalFiles, successful, failed, results[] }
 
 ---
 
-## 🔄 Sprint 3 - 分层检查系统 (进行中 - 4/14完成)
+## 🔄 Sprint 3 - 分层检查系统 (进行中 - 5/14完成)
 
 **开始日期**: 2025-11-04 22:00 (Day 1下半天)
 **预计耗时**: 3天
 **当前耗时**: 1天
-**完成进度**: 28% (4/14)
+**完成进度**: 35% (5/14)
 **状态**: 🔄 **进行中**
 
 ### ✅ T3.1: 扩展DiagnosticReport结构 (完成)
@@ -1269,9 +1269,85 @@ export interface CrossFileAnalysisResult {
 
 ---
 
-### ⏳ 待完成任务 (10/14)
+### ✅ T3.5: 实现时间线跨文件检查 (完成)
 
-- ⏳ T3.5: 实现时间线跨文件检查
+**完成时间**: 2025-11-05
+**耗时**: 1天
+**负责人**: AI Assistant
+
+**完成内容**:
+- ✅ 实现checkTimeline()方法（DefaultCrossFileAnalyzer）
+  - lib/analysis/cross-file-analyzer.ts (修改，新增206行)
+  - 检测3种时间线冲突类型：
+    1. **跨集时间顺序冲突**（high严重度）：后一集开场时间早于前一集结尾
+    2. **集内时间线倒退**（medium严重度）：同一集内场景时间顺序错误
+    3. **可疑时间跨度**（low严重度）：相邻集数之间存在超过1年的时间间隔
+- ✅ 实现日期解析功能（parseDate）
+  - 支持ISO格式：YYYY-MM-DD
+  - 支持中文格式：YYYY年MM月DD日
+  - 支持年月格式：YYYY-MM, YYYY年MM月
+  - 自动填充缺失的日期部分（月份默认为1日）
+- ✅ 实现日期格式化（formatDate）
+  - 统一输出中文格式：YYYY年M月D日
+- ✅ 提取时间线事件（extractTimelineEvents）
+  - 从场景JSON提取timestamp和timeReference字段
+  - 关联场景ID和行号用于定位
+- ✅ 生成跨文件findings
+  - affectedFiles数组包含所有相关文件
+  - evidence数组提供具体场景引用
+  - confidence评分：跨集冲突0.85，集内倒退0.80，时间跨度0.60
+
+**技术特性**:
+- 顺序遍历：按episodeNumber排序后检查
+- 空值容错：跳过没有时间线数据的剧本
+- 灵活日期匹配：支持多种日期格式
+- 可配置限制：maxFindingsPerType控制输出数量
+- 诊断日志：console.log记录检查进度
+
+**检测逻辑**:
+```typescript
+// 跨集时间冲突检测
+if (lastDate && firstDate && firstDate < lastDate) {
+  // 后一集开场早于前一集结尾 → high severity
+}
+
+// 集内时间倒退检测
+if (currentDates[j + 1] < currentDates[j]) {
+  // 同一集内时间线向后倒退 → medium severity
+}
+
+// 时间跨度检测
+if (daysDiff > 365) {
+  // 超过1年的时间间隔 → low severity
+}
+```
+
+**示例Finding**:
+```json
+{
+  "type": "cross_file_timeline",
+  "severity": "high",
+  "affectedFiles": [
+    { "fileId": "...", "filename": "第1集.md", "episodeNumber": 1, "location": { "sceneId": "S10", "line": 450 } },
+    { "fileId": "...", "filename": "第2集.md", "episodeNumber": 2, "location": { "sceneId": "S01", "line": 15 } }
+  ],
+  "description": "第2集.md开场时间（2024年3月1日）早于第1集.md结尾（2024年3月5日）",
+  "suggestion": "将第2集.md开场时间调整为2024年3月5日之后",
+  "confidence": 0.85,
+  "evidence": [
+    "第1集.md最后时间点：2024-03-05",
+    "第2集.md开场时间点：2024-03-01"
+  ]
+}
+```
+
+**Git Commit**: `44e43e2`
+
+**测试结果**: TypeScript type check ✅ Passed
+
+---
+
+### ⏳ 待完成任务 (9/14)
 - ⏳ T3.6: 实现角色跨文件检查
 - ⏳ T3.7: 实现情节跨文件检查
 - ⏳ T3.8: 实现设定跨文件检查
