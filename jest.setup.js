@@ -3,8 +3,8 @@ import '@testing-library/jest-dom'
 
 // Mock environment variables for tests
 // Use the same database as development for integration tests
-process.env.DATABASE_URL = 'postgresql://director_user:director_pass_2024@localhost:5432/director_actor_db?schema=public'
-process.env.DIRECT_URL = 'postgresql://director_user:director_pass_2024@localhost:5432/director_actor_db?schema=public'
+process.env.DATABASE_URL = 'postgresql://director_user:director_pass_2024@localhost:5433/director_actor_db?schema=public'
+process.env.DIRECT_URL = 'postgresql://director_user:director_pass_2024@localhost:5433/director_actor_db?schema=public'
 process.env.DEEPSEEK_API_KEY = 'test-api-key'
 process.env.DEEPSEEK_API_URL = 'https://api.deepseek.com'
 process.env.NEXTAUTH_SECRET = 'test-secret-for-jest-testing-environment-minimum-32-chars'
