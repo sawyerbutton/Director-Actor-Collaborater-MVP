@@ -8,8 +8,10 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CheckCircle, XCircle, AlertTriangle, AlertCircle, FileText, Download, ArrowLeft, Loader2, Wand2, Eye, ArrowRight, Save } from 'lucide-react'
-import { v1ApiService, type DiagnosticReportData, type JobStatusData } from '@/lib/services/v1-api-service'
+import { v1ApiService, type DiagnosticReportData, type JobStatusData, type CrossFileFinding } from '@/lib/services/v1-api-service'
+import { CrossFileFindingsDisplay } from '@/components/analysis/cross-file-findings-display'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -42,6 +44,8 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
   const [shouldPoll, setShouldPoll] = useState(true)
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [crossFileFindings, setCrossFileFindings] = useState<CrossFileFinding[]>([])
+  const [activeTab, setActiveTab] = useState<'internal' | 'cross-file'>('internal')
 
   useEffect(() => {
     let isMounted = true
@@ -90,6 +94,18 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
               setAnalysis(report.report)
               setErrors(transformedErrors)
             }
+
+            // Fetch cross-file findings
+            try {
+              const crossFileData = await v1ApiService.getCrossFileFindings(params.id, false)
+              if (crossFileData && Array.isArray(crossFileData.findings)) {
+                setCrossFileFindings(crossFileData.findings)
+              }
+            } catch (error) {
+              console.error('Failed to fetch cross-file findings:', error)
+              // Don't fail if cross-file findings are not available
+            }
+
             setLoading(false)
             // Stop polling when completed
             setShouldPoll(false)
@@ -497,86 +513,109 @@ export default function AnalysisPage({ params }: { params: { id: string } }) {
           </CardContent>
         </Card>
 
-        {/* Errors List */}
-        <div className="space-y-4">
-          {errors.map((error) => (
-            <Card key={error.id} className={error.accepted === false ? 'opacity-50' : ''}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={getSeverityColor(error.severity) as any}>
-                        {getSeverityIcon(error.severity)}
-                        <span className="ml-1">{getSeverityLabel(error.severity)}</span>
-                      </Badge>
-                      <Badge variant="outline">{error.typeName}</Badge>
-                      <span className="text-sm text-gray-500">行 {error.line}</span>
-                      <span className="text-sm text-gray-500">置信度: {(error.confidence * 100).toFixed(0)}%</span>
+        {/* Findings Display with Tabs */}
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'internal' | 'cross-file')} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="internal">
+              内部问题
+              <Badge className="ml-2" variant="outline">
+                {errors.length}
+              </Badge>
+            </TabsTrigger>
+            <TabsTrigger value="cross-file">
+              跨文件问题
+              <Badge className="ml-2" variant="outline">
+                {crossFileFindings.length}
+              </Badge>
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Internal Findings Tab */}
+          <TabsContent value="internal" className="space-y-4 mt-0">
+            {errors.map((error) => (
+              <Card key={error.id} className={error.accepted === false ? 'opacity-50' : ''}>
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={getSeverityColor(error.severity) as any}>
+                          {getSeverityIcon(error.severity)}
+                          <span className="ml-1">{getSeverityLabel(error.severity)}</span>
+                        </Badge>
+                        <Badge variant="outline">{error.typeName}</Badge>
+                        <span className="text-sm text-gray-500">行 {error.line}</span>
+                        <span className="text-sm text-gray-500">置信度: {(error.confidence * 100).toFixed(0)}%</span>
+                      </div>
+                      <p className="font-medium">{error.description}</p>
                     </div>
-                    <p className="font-medium">{error.description}</p>
+                    <div className="flex gap-2">
+                      {error.accepted === true && (
+                        <Badge variant="default" className="bg-green-100 text-green-800">
+                          <CheckCircle className="mr-1 h-3 w-3" />
+                          已接受
+                        </Badge>
+                      )}
+                      {error.accepted === false && (
+                        <Badge variant="default" className="bg-red-100 text-red-800">
+                          <XCircle className="mr-1 h-3 w-3" />
+                          已拒绝
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    {error.accepted === true && (
-                      <Badge variant="default" className="bg-green-100 text-green-800">
-                        <CheckCircle className="mr-1 h-3 w-3" />
-                        已接受
-                      </Badge>
-                    )}
-                    {error.accepted === false && (
-                      <Badge variant="default" className="bg-red-100 text-red-800">
-                        <XCircle className="mr-1 h-3 w-3" />
-                        已拒绝
-                      </Badge>
-                    )}
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm font-medium mb-1">原文：</p>
+                    <div className="bg-red-50 p-3 rounded text-sm font-mono">
+                      {error.content}
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm font-medium mb-1">原文：</p>
-                  <div className="bg-red-50 p-3 rounded text-sm font-mono">
-                    {error.content}
+                  <div>
+                    <p className="text-sm font-medium mb-1">建议修改为：</p>
+                    <div className="bg-green-50 p-3 rounded text-sm font-mono">
+                      {error.suggestion}
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <p className="text-sm font-medium mb-1">建议修改为：</p>
-                  <div className="bg-green-50 p-3 rounded text-sm font-mono">
-                    {error.suggestion}
-                  </div>
-                </div>
-                {error.accepted === undefined && (
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => handleAccept(error.id)}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      <CheckCircle className="mr-2 h-4 w-4" />
-                      接受修改
-                    </Button>
+                  {error.accepted === undefined && (
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => handleAccept(error.id)}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        接受修改
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => handleReject(error.id)}
+                      >
+                        <XCircle className="mr-2 h-4 w-4" />
+                        拒绝修改
+                      </Button>
+                    </div>
+                  )}
+                  {error.accepted !== undefined && (
                     <Button
                       variant="outline"
-                      onClick={() => handleReject(error.id)}
+                      size="sm"
+                      onClick={() => setErrors(prev => prev.map(e =>
+                        e.id === error.id ? { ...e, accepted: undefined } : e
+                      ))}
                     >
-                      <XCircle className="mr-2 h-4 w-4" />
-                      拒绝修改
+                      撤销决定
                     </Button>
-                  </div>
-                )}
-                {error.accepted !== undefined && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setErrors(prev => prev.map(e =>
-                      e.id === error.id ? { ...e, accepted: undefined } : e
-                    ))}
-                  >
-                    撤销决定
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </TabsContent>
+
+          {/* Cross-File Findings Tab */}
+          <TabsContent value="cross-file" className="mt-0">
+            <CrossFileFindingsDisplay findings={crossFileFindings} />
+          </TabsContent>
+        </Tabs>
 
         {/* Smart Repair Section */}
         <Card className="mt-8">

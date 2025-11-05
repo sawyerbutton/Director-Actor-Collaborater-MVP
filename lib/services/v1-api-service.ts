@@ -62,6 +62,32 @@ export interface DiagnosticReportData {
   } | null;
 }
 
+export interface CrossFileFinding {
+  id: string;
+  type: 'cross_file_timeline' | 'cross_file_character' | 'cross_file_plot' | 'cross_file_setting';
+  severity: 'high' | 'medium' | 'low';
+  affectedFiles: Array<{
+    fileId: string;
+    filename: string;
+    episodeNumber: number | null;
+    location?: {
+      sceneId?: string;
+      line?: number;
+    };
+  }>;
+  description: string;
+  suggestion: string;
+  confidence: number;
+  evidence: string[];
+}
+
+export interface CrossFileFindingsData {
+  projectId: string;
+  grouped?: boolean;
+  findings: CrossFileFinding[] | Record<string, CrossFileFinding[]>;
+  totalCount: number;
+}
+
 export interface WorkflowStatusData {
   projectId: string;
   workflowStatus: string;
@@ -394,6 +420,42 @@ class V1ApiService {
       }
       const error = await response.text();
       throw new Error(error || 'Failed to get diagnostic report');
+    }
+
+    const data = await response.json();
+    return data.data;
+  }
+
+  /**
+   * Get cross-file findings for a project
+   */
+  async getCrossFileFindings(
+    projectId: string,
+    grouped: boolean = false
+  ): Promise<CrossFileFindingsData> {
+    const queryParam = grouped ? '?grouped=true' : '';
+    const response = await this.fetchWithTimeout(
+      `${API_BASE_URL}/projects/${projectId}/cross-file-findings${queryParam}`,
+      {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        // No cross-file findings available yet
+        return {
+          projectId,
+          grouped,
+          findings: grouped ? {} : [],
+          totalCount: 0
+        };
+      }
+      const error = await response.text();
+      throw new Error(error || 'Failed to get cross-file findings');
     }
 
     const data = await response.json();
