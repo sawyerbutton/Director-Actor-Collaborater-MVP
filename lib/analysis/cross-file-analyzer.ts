@@ -828,6 +828,245 @@ export class DefaultCrossFileAnalyzer extends CrossFileAnalyzer {
 
     return matches / maxLen;
   }
+
+  /**
+   * Check plot consistency across scripts
+   * Detects plot thread issues and narrative inconsistencies
+   */
+  protected async checkPlot(
+    scripts: ParsedScriptContent[]
+  ): Promise<CrossFileFinding[]> {
+    const findings: CrossFileFinding[] = [];
+
+    console.log(`[CrossFileAnalyzer] Starting plot check: ${scripts.length} scripts`);
+
+    // Extract plot points from all scripts
+    const allPlotPoints = scripts.map((script) => ({
+      script,
+      plotPoints: this.extractPlotPoints(script),
+    }));
+
+    // Check for unresolved plot threads
+    // A plot thread is considered unresolved if it's mentioned in early episodes
+    // but not referenced in later episodes
+    for (let i = 0; i < allPlotPoints.length - 1; i++) {
+      const current = allPlotPoints[i];
+
+      for (const plotPoint of current.plotPoints) {
+        // Check if this plot point is referenced in subsequent episodes
+        const mentionedLater = allPlotPoints
+          .slice(i + 1)
+          .some(({ plotPoints }) =>
+            plotPoints.some((p) => this.plotsAreSimilar(plotPoint.description, p.description))
+          );
+
+        // If plot point mentions keywords suggesting it needs resolution
+        // but is not mentioned in later episodes, flag it
+        const needsResolution = this.plotNeedsResolution(plotPoint.description);
+
+        if (needsResolution && !mentionedLater && i < allPlotPoints.length - 2) {
+          // Only flag if there are at least 2 more episodes after this one
+          findings.push(
+            this.createFinding(
+              'cross_file_plot',
+              'medium',
+              [
+                this.createAffectedFile(
+                  current.script.fileId,
+                  current.script.filename,
+                  current.script.episodeNumber,
+                  plotPoint.sceneId,
+                  plotPoint.line
+                ),
+              ],
+              `${current.script.filename}中提出的情节线索可能未在后续集数中解决："${plotPoint.description.substring(0, 50)}..."`,
+              `在后续集数中添加该情节线索的发展或解决`,
+              [`${current.script.filename} 场景${plotPoint.sceneId}：${plotPoint.description}`],
+              0.65
+            )
+          );
+        }
+      }
+    }
+
+    // Check for plot contradictions between episodes
+    for (let i = 0; i < allPlotPoints.length; i++) {
+      for (let j = i + 1; j < allPlotPoints.length; j++) {
+        const script1 = allPlotPoints[i];
+        const script2 = allPlotPoints[j];
+
+        for (const plot1 of script1.plotPoints) {
+          for (const plot2 of script2.plotPoints) {
+            // Check if plots are about the same subject but contradict each other
+            const areSimilar = this.plotsAreSimilar(plot1.description, plot2.description);
+            const areContradictory = this.plotsAreContradictory(plot1.description, plot2.description);
+
+            if (areSimilar && areContradictory) {
+              findings.push(
+                this.createFinding(
+                  'cross_file_plot',
+                  'high',
+                  [
+                    this.createAffectedFile(
+                      script1.script.fileId,
+                      script1.script.filename,
+                      script1.script.episodeNumber,
+                      plot1.sceneId,
+                      plot1.line
+                    ),
+                    this.createAffectedFile(
+                      script2.script.fileId,
+                      script2.script.filename,
+                      script2.script.episodeNumber,
+                      plot2.sceneId,
+                      plot2.line
+                    ),
+                  ],
+                  `${script1.script.filename}和${script2.script.filename}之间存在情节矛盾`,
+                  `统一情节叙述，或添加解释说明情节变化的原因`,
+                  [
+                    `${script1.script.filename} 场景${plot1.sceneId}：${plot1.description}`,
+                    `${script2.script.filename} 场景${plot2.sceneId}：${plot2.description}`,
+                  ],
+                  0.70
+                )
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Check for missing plot context (plot point without setup)
+    for (let i = 1; i < allPlotPoints.length; i++) {
+      const current = allPlotPoints[i];
+
+      for (const plotPoint of current.plotPoints) {
+        // Check if this plot point references something that should have been set up earlier
+        const needsSetup = this.plotNeedsSetup(plotPoint.description);
+
+        if (needsSetup) {
+          // Check if there's any relevant setup in previous episodes
+          const hasSetup = allPlotPoints
+            .slice(0, i)
+            .some(({ plotPoints }) =>
+              plotPoints.some((p) => this.plotsAreSimilar(plotPoint.description, p.description, 0.4))
+            );
+
+          if (!hasSetup) {
+            findings.push(
+              this.createFinding(
+                'cross_file_plot',
+                'medium',
+                [
+                  this.createAffectedFile(
+                    current.script.fileId,
+                    current.script.filename,
+                    current.script.episodeNumber,
+                    plotPoint.sceneId,
+                    plotPoint.line
+                  ),
+                ],
+                `${current.script.filename}中的情节可能缺少前置铺垫："${plotPoint.description.substring(0, 50)}..."`,
+                `在之前的集数中添加相关情节铺垫`,
+                [`${current.script.filename} 场景${plotPoint.sceneId}：${plotPoint.description}`],
+                0.60
+              )
+            );
+          }
+        }
+      }
+    }
+
+    console.log(`[CrossFileAnalyzer] Plot check completed: ${findings.length} findings`);
+
+    return findings.slice(0, this.config.maxFindingsPerType);
+  }
+
+  /**
+   * Check if two plot descriptions are about similar subjects
+   */
+  private plotsAreSimilar(plot1: string, plot2: string, threshold: number = 0.3): boolean {
+    const words1 = new Set(this.tokenizePlot(plot1));
+    const words2 = new Set(this.tokenizePlot(plot2));
+
+    const intersection = new Set([...words1].filter((w) => words2.has(w)));
+    const union = new Set([...words1, ...words2]);
+
+    const similarity = union.size > 0 ? intersection.size / union.size : 0;
+    return similarity >= threshold;
+  }
+
+  /**
+   * Check if two plots contradict each other
+   */
+  private plotsAreContradictory(plot1: string, plot2: string): boolean {
+    // Simple heuristic: check for contradictory keywords
+    const contradictionPatterns = [
+      { pattern: /成功|获得|达成|实现/, opposite: /失败|失去|未能|放弃/ },
+      { pattern: /同意|接受|答应/, opposite: /拒绝|反对|否决/ },
+      { pattern: /活着|存活|生还/, opposite: /死亡|去世|牺牲/ },
+      { pattern: /找到|发现|获取/, opposite: /丢失|失踪|遗失/ },
+      { pattern: /相信|信任/, opposite: /怀疑|背叛|欺骗/ },
+    ];
+
+    for (const { pattern, opposite } of contradictionPatterns) {
+      const plot1HasPattern = pattern.test(plot1);
+      const plot2HasOpposite = opposite.test(plot2);
+
+      const plot2HasPattern = pattern.test(plot2);
+      const plot1HasOpposite = opposite.test(plot1);
+
+      if ((plot1HasPattern && plot2HasOpposite) || (plot2HasPattern && plot1HasOpposite)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if plot needs resolution (contains keywords suggesting unfinished business)
+   */
+  private plotNeedsResolution(plot: string): boolean {
+    const keywords = [
+      /计划|打算|准备/,
+      /寻找|搜索|追踪/,
+      /等待|期待/,
+      /威胁|危险|危机/,
+      /秘密|隐瞒/,
+      /悬念|疑问/,
+      /未解决|未完成/,
+    ];
+
+    return keywords.some((keyword) => keyword.test(plot));
+  }
+
+  /**
+   * Check if plot needs setup (references something that should have been introduced earlier)
+   */
+  private plotNeedsSetup(plot: string): boolean {
+    const keywords = [
+      /之前|以前|曾经/,
+      /早就|一直|从来/,
+      /记得|回忆|想起/,
+      /终于|最终|结果/,
+      /继续|接着|然后/,
+    ];
+
+    return keywords.some((keyword) => keyword.test(plot));
+  }
+
+  /**
+   * Tokenize plot description for similarity comparison
+   */
+  private tokenizePlot(plot: string): string[] {
+    return plot
+      .toLowerCase()
+      .replace(/[^\u4e00-\u9fa5a-z0-9\s]/g, '')
+      .split(/\s+/)
+      .filter((w) => w.length > 1);
+  }
 }
 
 /**
