@@ -9,6 +9,7 @@ import { BaseService } from './base.service';
 import { scriptFileService } from './script-file.service';
 import { diagnosticReportService } from './diagnostic-report.service';
 import { BatchAnalyzer, BatchAnalysisResult, FileAnalysisResult } from '@/lib/analysis/batch-analyzer';
+import { FindingsMerger, MergedFinding, MergeStatistics } from '@/lib/analysis/findings-merger';
 import {
   DiagnosticFindings,
   InternalFinding,
@@ -308,7 +309,7 @@ export class MultiFileAnalysisService extends BaseService {
   }
 
   /**
-   * Aggregate internal findings from batch result
+   * Aggregate internal findings from batch result with intelligent merging
    */
   private aggregateInternalFindings(batchResult: BatchAnalysisResult): InternalFinding[] {
     const allFindings: InternalFinding[] = [];
@@ -319,7 +320,86 @@ export class MultiFileAnalysisService extends BaseService {
       }
     }
 
-    return allFindings;
+    // Use FindingsMerger to deduplicate and prioritize
+    const merger = new FindingsMerger({
+      similarityThreshold: 0.80,
+      deduplicate: true,
+      sortByPriority: true,
+    });
+
+    const merged = merger.merge(allFindings);
+
+    // Log merge statistics
+    const stats = merger.getStatistics(allFindings, merged);
+    console.log(`[MultiFileAnalysis] Merge statistics:`, {
+      input: stats.totalInput,
+      output: stats.totalOutput,
+      deduplicationRate: `${stats.deduplicationRate.toFixed(1)}%`,
+      averagePriority: stats.averagePriority.toFixed(1),
+    });
+
+    // Convert MergedFinding back to InternalFinding
+    // (strip merge metadata for storage)
+    return merged.map((mf) => {
+      const { duplicateCount, priorityScore, relatedFileIds, ...internalFinding } = mf;
+      return internalFinding as InternalFinding;
+    });
+  }
+
+  /**
+   * Get merged findings with metadata (for reporting/UI)
+   */
+  async getMergedFindings(projectId: string): Promise<{
+    findings: MergedFinding[];
+    statistics: MergeStatistics;
+  }> {
+    const report = await diagnosticReportService.getParsedExtendedReport(projectId);
+
+    if (!report) {
+      throw new Error('No diagnostic report found');
+    }
+
+    const internalFindings = report.parsedFindings.internalFindings;
+
+    const merger = new FindingsMerger({
+      similarityThreshold: 0.80,
+      deduplicate: true,
+      sortByPriority: true,
+    });
+
+    const merged = merger.merge(internalFindings);
+    const statistics = merger.getStatistics(internalFindings, merged);
+
+    return {
+      findings: merged,
+      statistics,
+    };
+  }
+
+  /**
+   * Get grouped findings for reporting
+   */
+  async getGroupedFindings(
+    projectId: string,
+    groupBy: 'type' | 'severity' | 'file' | 'episode'
+  ): Promise<Record<string, MergedFinding[]>> {
+    const { findings } = await this.getMergedFindings(projectId);
+
+    const merger = new FindingsMerger();
+    return merger.groupBy(findings, groupBy);
+  }
+
+  /**
+   * Get top priority findings
+   */
+  async getTopPriorityFindings(
+    projectId: string,
+    limit: number = 10
+  ): Promise<MergedFinding[]> {
+    const { findings } = await this.getMergedFindings(projectId);
+
+    const merger = new FindingsMerger();
+    return merger.getTopPriority(findings, limit);
   }
 
   /**
