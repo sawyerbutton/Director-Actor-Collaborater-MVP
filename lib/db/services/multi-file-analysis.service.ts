@@ -10,9 +10,11 @@ import { scriptFileService } from './script-file.service';
 import { diagnosticReportService } from './diagnostic-report.service';
 import { BatchAnalyzer, BatchAnalysisResult, FileAnalysisResult } from '@/lib/analysis/batch-analyzer';
 import { FindingsMerger, MergedFinding, MergeStatistics } from '@/lib/analysis/findings-merger';
+import { DefaultCrossFileAnalyzer, CrossFileCheckConfig } from '@/lib/analysis/cross-file-analyzer';
 import {
   DiagnosticFindings,
   InternalFinding,
+  CrossFileFinding,
   createEmptyFindings,
   calculateSummary,
 } from '@/types/diagnostic-report';
@@ -50,6 +52,17 @@ export interface MultiFileAnalysisOptions {
    * @default false
    */
   forceReAnalysis?: boolean;
+
+  /**
+   * Whether to run cross-file consistency checks
+   * @default false
+   */
+  runCrossFileChecks?: boolean;
+
+  /**
+   * Cross-file analyzer configuration
+   */
+  crossFileConfig?: CrossFileCheckConfig;
 }
 
 /**
@@ -144,6 +157,14 @@ export class MultiFileAnalysisService extends BaseService {
     // Convert batch results to DiagnosticFindings format
     const internalFindings = this.aggregateInternalFindings(batchResult);
 
+    // Run cross-file checks if requested
+    let crossFileFindings: CrossFileFinding[] = [];
+    if (options?.runCrossFileChecks) {
+      console.log(`[MultiFileAnalysis] Running cross-file consistency checks...`);
+      crossFileFindings = await this.runCrossFileAnalysis(files, options.crossFileConfig);
+      console.log(`[MultiFileAnalysis] Found ${crossFileFindings.length} cross-file issues`);
+    }
+
     // Merge with existing findings if incremental
     let finalFindings: DiagnosticFindings;
     if (!options?.forceReAnalysis && existingReport) {
@@ -153,14 +174,18 @@ export class MultiFileAnalysisService extends BaseService {
           ...(existingFindings.internalFindings || []),
           ...internalFindings,
         ],
-        crossFileFindings: existingFindings.crossFileFindings || [],
+        crossFileFindings: options?.runCrossFileChecks
+          ? crossFileFindings
+          : existingFindings.crossFileFindings || [],
         summary: calculateSummary(
           {
             internalFindings: [
               ...(existingFindings.internalFindings || []),
               ...internalFindings,
             ],
-            crossFileFindings: existingFindings.crossFileFindings || [],
+            crossFileFindings: options?.runCrossFileChecks
+              ? crossFileFindings
+              : existingFindings.crossFileFindings || [],
           },
           files.length
         ),
@@ -168,10 +193,15 @@ export class MultiFileAnalysisService extends BaseService {
     } else {
       finalFindings = {
         internalFindings,
-        crossFileFindings: [],
-        summary: calculateSummary({ internalFindings, crossFileFindings: [] }, files.length),
+        crossFileFindings,
+        summary: calculateSummary({ internalFindings, crossFileFindings }, files.length),
       };
     }
+
+    // Determine check type based on what was analyzed
+    const checkType = options?.runCrossFileChecks
+      ? (internalFindings.length > 0 ? 'both' : 'cross_file')
+      : 'internal_only';
 
     // Store diagnostic report
     const analyzedFileIds = [
@@ -179,12 +209,16 @@ export class MultiFileAnalysisService extends BaseService {
       ...filesToAnalyze.map((f) => f.id),
     ];
 
+    const summaryText = options?.runCrossFileChecks
+      ? `分析了 ${files.length} 个剧本文件，发现 ${finalFindings.summary.totalInternalErrors} 个内部问题，${finalFindings.summary.totalCrossFileErrors} 个跨文件问题`
+      : `分析了 ${files.length} 个剧本文件，发现 ${finalFindings.summary.totalInternalErrors} 个内部问题`;
+
     const report = await diagnosticReportService.upsertExtended(
       projectId,
       finalFindings,
       analyzedFileIds,
-      'internal_only', // Single-file check only
-      `分析了 ${files.length} 个剧本文件，发现 ${finalFindings.summary.totalInternalErrors} 个内部问题`,
+      checkType as any,
+      summaryText,
       batchResult.successCount / files.length // Confidence based on success rate
     );
 
@@ -400,6 +434,124 @@ export class MultiFileAnalysisService extends BaseService {
 
     const merger = new FindingsMerger();
     return merger.getTopPriority(findings, limit);
+  }
+
+  /**
+   * Run cross-file consistency analysis
+   */
+  async runCrossFileAnalysis(
+    files: any[],
+    config?: CrossFileCheckConfig
+  ): Promise<CrossFileFinding[]> {
+    if (files.length < 2) {
+      console.log(`[MultiFileAnalysis] Skipping cross-file analysis: less than 2 files`);
+      return [];
+    }
+
+    // Create cross-file analyzer
+    const analyzer = new DefaultCrossFileAnalyzer(config);
+
+    // Run all cross-file checks (analyzer handles parsing internally)
+    const result = await analyzer.analyze(files);
+
+    return result.findings;
+  }
+
+  /**
+   * Run only cross-file checks on existing project
+   */
+  async analyzeCrossFileIssues(
+    projectId: string,
+    config?: CrossFileCheckConfig
+  ): Promise<{
+    findings: CrossFileFinding[];
+    reportId: string;
+  }> {
+    const files = await scriptFileService.getFilesByProjectId(projectId);
+
+    if (files.length < 2) {
+      throw new Error('Cross-file analysis requires at least 2 script files');
+    }
+
+    console.log(`[MultiFileAnalysis] Running cross-file analysis for project ${projectId}: ${files.length} files`);
+
+    // Run cross-file analysis
+    const crossFileFindings = await this.runCrossFileAnalysis(files, config);
+
+    // Get existing report
+    const existingReport = await diagnosticReportService.getByProjectId(projectId);
+    const existingFindings = existingReport
+      ? (existingReport.findings as any as DiagnosticFindings)
+      : createEmptyFindings();
+
+    // Update findings with cross-file results
+    const updatedFindings: DiagnosticFindings = {
+      internalFindings: existingFindings.internalFindings || [],
+      crossFileFindings,
+      summary: calculateSummary(
+        {
+          internalFindings: existingFindings.internalFindings || [],
+          crossFileFindings,
+        },
+        files.length
+      ),
+    };
+
+    // Determine check type
+    const checkType =
+      existingFindings.internalFindings && existingFindings.internalFindings.length > 0
+        ? 'both'
+        : 'cross_file';
+
+    // Update report
+    const report = await diagnosticReportService.upsertExtended(
+      projectId,
+      updatedFindings,
+      files.map((f) => f.id),
+      checkType as any,
+      `跨文件一致性分析发现 ${crossFileFindings.length} 个问题`,
+      undefined
+    );
+
+    console.log(`[MultiFileAnalysis] Cross-file analysis completed: ${crossFileFindings.length} findings`);
+
+    return {
+      findings: crossFileFindings,
+      reportId: report.id,
+    };
+  }
+
+  /**
+   * Get cross-file findings for a project
+   */
+  async getCrossFileFindings(projectId: string): Promise<CrossFileFinding[]> {
+    const report = await diagnosticReportService.getParsedExtendedReport(projectId);
+
+    if (!report) {
+      return [];
+    }
+
+    return report.parsedFindings.crossFileFindings || [];
+  }
+
+  /**
+   * Get cross-file findings grouped by type
+   */
+  async getGroupedCrossFileFindings(
+    projectId: string
+  ): Promise<Record<string, CrossFileFinding[]>> {
+    const findings = await this.getCrossFileFindings(projectId);
+
+    const grouped: Record<string, CrossFileFinding[]> = {};
+
+    for (const finding of findings) {
+      if (!grouped[finding.type]) {
+        grouped[finding.type] = [];
+      }
+      grouped[finding.type].push(finding);
+    }
+
+    return grouped;
   }
 
   /**
