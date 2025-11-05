@@ -1,9 +1,9 @@
 # 开发进度跟踪 - 多剧本文件分析系统
 
-**文档版本**: v1.14
+**文档版本**: v1.15
 **最后更新**: 2025-11-05 (Day 1 继续 - Sprint 3进行中)
 **分支**: `feature/multi-script-analysis`
-**当前Sprint**: Sprint 3 - 分层检查系统 (进行中 - 10/14完成)
+**当前Sprint**: Sprint 3 - 分层检查系统 (进行中 - 11/14完成)
 
 ---
 
@@ -13,9 +13,9 @@
 |--------|------|------|----------|--------|-------------|
 | Sprint 1 | ✅ **完成** | **100%** | **9/9** | 9 | Day 1 ✅ |
 | Sprint 2 | ✅ **完成** | **100%** | **9/11** | 11 | Day 1 ✅ |
-| Sprint 3 | 🔄 **进行中** | **71%** | **10/14** | 14 | Day 3.5 |
+| Sprint 3 | 🔄 **进行中** | **78%** | **11/14** | 14 | Day 3.5 |
 | Sprint 4 | ⏳ 未开始 | 0% | 0/6 | 6 | Day 4.5 |
-| **总计** | **🟢 超前进行中** | **70%** | **28/40** | **40** | **Day 4.5** |
+| **总计** | **🟢 超前进行中** | **72%** | **29/40** | **40** | **Day 4.5** |
 
 **当前日期**: Day 1 (2025-11-04) - Sprint 3进行中
 **已用时间**: 1天
@@ -23,7 +23,7 @@
 
 ---
 
-## ✅ 已完成任务 (28/40) - Sprint 1-2完成 + Sprint 3进行中
+## ✅ 已完成任务 (29/40) - Sprint 1-2完成 + Sprint 3进行中
 
 ### 🎉 Sprint 1 - 多文件基础架构 (100% 完成)
 
@@ -1829,8 +1829,160 @@ const grouped = await multiFileAnalysisService.getGroupedCrossFileFindings(proje
 
 ---
 
-### ⏳ 待完成任务 (4/14)
-- ⏳ T3.11: 多文件分析API实现
+### ✅ T3.11: 多文件分析API实现 (完成)
+
+**完成时间**: 2025-11-05
+**耗时**: 1天
+**负责人**: AI Assistant
+
+**完成内容**:
+- ✅ 创建跨文件分析API端点
+  - app/api/v1/projects/[id]/analyze/cross-file/route.ts (新建，89行)
+  - POST /api/v1/projects/[id]/analyze/cross-file
+  - 支持配置化跨文件检查
+- ✅ 创建跨文件findings查询API
+  - app/api/v1/projects/[id]/cross-file-findings/route.ts (新建，76行)
+  - GET /api/v1/projects/[id]/cross-file-findings
+  - 支持grouped参数（按类型分组）
+- ✅ 导出multiFileAnalysisService
+  - lib/db/services/index.ts (修改，新增1行)
+  - 统一服务导出接口
+
+**API端点详情**:
+
+#### 1. POST /api/v1/projects/[id]/analyze/cross-file
+运行跨文件一致性分析
+
+**Request Body**:
+```typescript
+{
+  "config": {
+    "checkTypes": ["cross_file_timeline", "cross_file_character", "cross_file_plot", "cross_file_setting"],
+    "minConfidence": 0.75,
+    "maxFindingsPerType": 30,
+    "useAI": false
+  }
+}
+```
+
+**Response**:
+```typescript
+{
+  "success": true,
+  "data": {
+    "projectId": "project-123",
+    "reportId": "report-456",
+    "findingsCount": 8,
+    "findings": [
+      {
+        "id": "finding-001",
+        "type": "cross_file_timeline",
+        "severity": "high",
+        "affectedFiles": [...],
+        "description": "第2集.md开场时间早于第1集.md结尾",
+        "suggestion": "调整时间线顺序",
+        "confidence": 0.85,
+        "evidence": [...]
+      }
+    ],
+    "message": "发现 8 个跨文件一致性问题"
+  }
+}
+```
+
+#### 2. GET /api/v1/projects/[id]/cross-file-findings
+获取跨文件findings
+
+**Query Parameters**:
+- `grouped` (boolean, optional): 是否按类型分组返回
+
+**Response (grouped=false)**:
+```typescript
+{
+  "success": true,
+  "data": {
+    "projectId": "project-123",
+    "grouped": false,
+    "findings": [...],  // CrossFileFinding[]
+    "totalCount": 8
+  }
+}
+```
+
+**Response (grouped=true)**:
+```typescript
+{
+  "success": true,
+  "data": {
+    "projectId": "project-123",
+    "grouped": true,
+    "findings": {
+      "cross_file_timeline": [finding1, finding2],
+      "cross_file_character": [finding3, finding4],
+      "cross_file_plot": [finding5],
+      "cross_file_setting": [finding6, finding7, finding8]
+    },
+    "totalCount": 8
+  }
+}
+```
+
+**技术特性**:
+- Zod schema验证：严格的请求参数验证
+- 权限检查：验证用户是否有项目访问权限
+- 错误处理：使用handleApiError统一错误响应
+- 可选分组：支持按finding类型分组查询
+- RESTful设计：符合REST API最佳实践
+
+**集成示例**:
+```typescript
+// 客户端调用示例
+const runCrossFileAnalysis = async (projectId: string) => {
+  const response = await fetch(`/api/v1/projects/${projectId}/analyze/cross-file`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      config: {
+        checkTypes: ['cross_file_timeline', 'cross_file_character'],
+        minConfidence: 0.75,
+      },
+    }),
+  });
+
+  const { data } = await response.json();
+  console.log(`发现 ${data.findingsCount} 个问题`);
+  return data.findings;
+};
+
+// 获取分组findings
+const getGroupedFindings = async (projectId: string) => {
+  const response = await fetch(
+    `/api/v1/projects/${projectId}/cross-file-findings?grouped=true`
+  );
+
+  const { data } = await response.json();
+  return data.findings; // { cross_file_timeline: [...], ... }
+};
+```
+
+**错误处理**:
+- 404: Project not found
+- 403: Access forbidden (非项目所有者)
+- 400: Validation error (无效的config参数)
+- 500: Internal server error
+
+**后续集成**:
+- T3.12将实现前端UI调用这些API端点
+- UI将展示分组后的跨文件findings
+- 支持用户选择查看不同类型的问题
+
+**Git Commit**: `5de0230`
+
+**测试结果**: TypeScript type check ✅ Passed
+
+---
+
+### ⏳ 待完成任务 (3/14)
 - ⏳ T3.12: 诊断报告UI重构（分组展示）
 - ⏳ T3.13: 跨文件问题关联高亮（Beta后）
 - ⏳ T3.14: 单元测试：CrossFileAnalyzer
