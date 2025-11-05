@@ -617,6 +617,217 @@ export class DefaultCrossFileAnalyzer extends CrossFileAnalyzer {
   private formatDate(date: Date): string {
     return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
   }
+
+  /**
+   * Check character consistency across scripts
+   * Detects character introduction issues and name inconsistencies
+   */
+  protected async checkCharacter(
+    scripts: ParsedScriptContent[]
+  ): Promise<CrossFileFinding[]> {
+    const findings: CrossFileFinding[] = [];
+
+    console.log(`[CrossFileAnalyzer] Starting character check: ${scripts.length} scripts`);
+
+    // Extract characters from all scripts
+    const allCharacters = scripts.map((script) => ({
+      script,
+      characters: this.extractCharacters(script.jsonContent),
+    }));
+
+    // Track first appearance of each character
+    const characterFirstAppearance = new Map<string, { script: ParsedScriptContent; index: number }>();
+
+    for (let i = 0; i < allCharacters.length; i++) {
+      const { script, characters } = allCharacters[i];
+
+      for (const character of characters) {
+        const normalizedName = this.normalizeCharacterName(character);
+        if (!characterFirstAppearance.has(normalizedName)) {
+          characterFirstAppearance.set(normalizedName, { script, index: i });
+        }
+      }
+    }
+
+    // Check for characters appearing without introduction
+    for (let i = 1; i < allCharacters.length; i++) {
+      const { script, characters } = allCharacters[i];
+
+      for (const character of characters) {
+        const normalizedName = this.normalizeCharacterName(character);
+        const firstAppearance = characterFirstAppearance.get(normalizedName);
+
+        // Character appears in later episode without appearing in any earlier episode
+        if (firstAppearance && firstAppearance.index === i) {
+          // Check if this character should have been introduced earlier
+          // (Skip if this is the first episode, since all characters must be introduced somewhere)
+          if (i > 0) {
+            // This is a potential issue: character first appears in a later episode
+            const previousScripts = allCharacters.slice(0, i);
+            const mentionedBefore = previousScripts.some(({ characters: prevChars }) =>
+              prevChars.some(
+                (c) => this.calculateNameSimilarity(normalizedName, this.normalizeCharacterName(c)) > 0.7
+              )
+            );
+
+            if (!mentionedBefore) {
+              findings.push(
+                this.createFinding(
+                  'cross_file_character',
+                  'medium',
+                  [
+                    this.createAffectedFile(
+                      script.fileId,
+                      script.filename,
+                      script.episodeNumber,
+                      'first_appearance'
+                    ),
+                  ],
+                  `角色"${character}"在${script.filename}首次出现，但在之前的集数中未被引入`,
+                  `在更早的集数中引入该角色，或在当前集数开场添加角色介绍`,
+                  [`${script.filename}中出现的新角色：${character}`],
+                  0.70
+                )
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Check for similar but not identical character names (potential typos)
+    const allUniqueCharacters = Array.from(characterFirstAppearance.keys());
+
+    for (let i = 0; i < allUniqueCharacters.length; i++) {
+      for (let j = i + 1; j < allUniqueCharacters.length; j++) {
+        const name1 = allUniqueCharacters[i];
+        const name2 = allUniqueCharacters[j];
+
+        const similarity = this.calculateNameSimilarity(name1, name2);
+
+        // If names are very similar (60-95%), might be a typo or inconsistency
+        if (similarity > 0.6 && similarity < 0.95) {
+          const appearance1 = characterFirstAppearance.get(name1)!;
+          const appearance2 = characterFirstAppearance.get(name2)!;
+
+          findings.push(
+            this.createFinding(
+              'cross_file_character',
+              'high',
+              [
+                this.createAffectedFile(
+                  appearance1.script.fileId,
+                  appearance1.script.filename,
+                  appearance1.script.episodeNumber,
+                  'character_name'
+                ),
+                this.createAffectedFile(
+                  appearance2.script.fileId,
+                  appearance2.script.filename,
+                  appearance2.script.episodeNumber,
+                  'character_name'
+                ),
+              ],
+              `角色名称可能存在不一致："${name1}"和"${name2}"（相似度${(similarity * 100).toFixed(0)}%）`,
+              `确认是否为同一角色，如是则统一名称；如否则增加区分度`,
+              [
+                `${appearance1.script.filename}中：${name1}`,
+                `${appearance2.script.filename}中：${name2}`,
+              ],
+              0.75
+            )
+          );
+        }
+      }
+    }
+
+    // Check for character frequency anomalies
+    for (let i = 0; i < allCharacters.length; i++) {
+      const { script, characters } = allCharacters[i];
+
+      // Count character occurrences
+      const characterCounts = new Map<string, number>();
+      for (const character of characters) {
+        const normalized = this.normalizeCharacterName(character);
+        characterCounts.set(normalized, (characterCounts.get(normalized) || 0) + 1);
+      }
+
+      // Flag characters that appear only once (might be a typo or one-off character)
+      for (const [character, count] of characterCounts.entries()) {
+        if (count === 1) {
+          // Check if this character appears in other episodes
+          const appearsInOther = allCharacters
+            .filter((_, idx) => idx !== i)
+            .some(({ characters: otherChars }) =>
+              otherChars.some(
+                (c) => this.calculateNameSimilarity(character, this.normalizeCharacterName(c)) > 0.8
+              )
+            );
+
+          if (!appearsInOther) {
+            findings.push(
+              this.createFinding(
+                'cross_file_character',
+                'low',
+                [
+                  this.createAffectedFile(
+                    script.fileId,
+                    script.filename,
+                    script.episodeNumber,
+                    'single_mention'
+                  ),
+                ],
+                `角色"${character}"在${script.filename}中仅出现一次，且在其他集数中未出现`,
+                `确认该角色是否必要，或考虑增加其戏份/对话`,
+                [`${script.filename}中的一次性角色：${character}`],
+                0.50
+              )
+            );
+          }
+        }
+      }
+    }
+
+    console.log(`[CrossFileAnalyzer] Character check completed: ${findings.length} findings`);
+
+    return findings.slice(0, this.config.maxFindingsPerType);
+  }
+
+  /**
+   * Normalize character name for comparison
+   */
+  private normalizeCharacterName(name: string): string {
+    return name
+      .trim()
+      .replace(/\s+/g, '')
+      .replace(/[（(].*?[）)]/g, '') // Remove parenthetical notes
+      .toLowerCase();
+  }
+
+  /**
+   * Calculate similarity between two character names (0-1)
+   */
+  private calculateNameSimilarity(name1: string, name2: string): number {
+    const normalized1 = this.normalizeCharacterName(name1);
+    const normalized2 = this.normalizeCharacterName(name2);
+
+    if (normalized1 === normalized2) return 1.0;
+
+    // Simple Levenshtein-like similarity
+    const maxLen = Math.max(normalized1.length, normalized2.length);
+    if (maxLen === 0) return 1.0;
+
+    let matches = 0;
+    const minLen = Math.min(normalized1.length, normalized2.length);
+
+    for (let i = 0; i < minLen; i++) {
+      if (normalized1[i] === normalized2[i]) {
+        matches++;
+      }
+    }
+
+    return matches / maxLen;
+  }
 }
 
 /**
