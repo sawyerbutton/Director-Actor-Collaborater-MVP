@@ -1,9 +1,9 @@
 # 开发进度跟踪 - 多剧本文件分析系统
 
-**文档版本**: v1.13
+**文档版本**: v1.14
 **最后更新**: 2025-11-05 (Day 1 继续 - Sprint 3进行中)
 **分支**: `feature/multi-script-analysis`
-**当前Sprint**: Sprint 3 - 分层检查系统 (进行中 - 9/14完成)
+**当前Sprint**: Sprint 3 - 分层检查系统 (进行中 - 10/14完成)
 
 ---
 
@@ -13,9 +13,9 @@
 |--------|------|------|----------|--------|-------------|
 | Sprint 1 | ✅ **完成** | **100%** | **9/9** | 9 | Day 1 ✅ |
 | Sprint 2 | ✅ **完成** | **100%** | **9/11** | 11 | Day 1 ✅ |
-| Sprint 3 | 🔄 **进行中** | **64%** | **9/14** | 14 | Day 3.5 |
+| Sprint 3 | 🔄 **进行中** | **71%** | **10/14** | 14 | Day 3.5 |
 | Sprint 4 | ⏳ 未开始 | 0% | 0/6 | 6 | Day 4.5 |
-| **总计** | **🟢 超前进行中** | **68%** | **27/40** | **40** | **Day 4.5** |
+| **总计** | **🟢 超前进行中** | **70%** | **28/40** | **40** | **Day 4.5** |
 
 **当前日期**: Day 1 (2025-11-04) - Sprint 3进行中
 **已用时间**: 1天
@@ -23,7 +23,7 @@
 
 ---
 
-## ✅ 已完成任务 (27/40) - Sprint 1-2完成 + Sprint 3进行中
+## ✅ 已完成任务 (28/40) - Sprint 1-2完成 + Sprint 3进行中
 
 ### 🎉 Sprint 1 - 多文件基础架构 (100% 完成)
 
@@ -1728,8 +1728,108 @@ if (similarity > 0.7 && similarity < 0.95) {
 
 ---
 
-### ⏳ 待完成任务 (5/14)
-- ⏳ T3.10: 跨文件检查结果存储
+### ✅ T3.10: 跨文件检查结果存储 (完成)
+
+**完成时间**: 2025-11-05
+**耗时**: 0.5天
+**负责人**: AI Assistant
+
+**完成内容**:
+- ✅ 扩展MultiFileAnalysisService支持跨文件检查
+  - lib/db/services/multi-file-analysis.service.ts (修改，新增158行)
+  - 新增runCrossFileChecks选项
+  - 新增crossFileConfig配置参数
+- ✅ runCrossFileAnalysis()方法
+  - 调用DefaultCrossFileAnalyzer执行跨文件检查
+  - 返回CrossFileFinding[]数组
+  - 自动处理文件数量验证（至少2个文件）
+- ✅ analyzeCrossFileIssues()方法
+  - 为已存在的项目运行独立跨文件分析
+  - 与现有内部findings合并
+  - 更新DiagnosticReport的checkType为'both'或'cross_file'
+- ✅ 跨文件检查结果存储逻辑
+  - 在analyzeProject()中集成跨文件检查
+  - 根据runCrossFileChecks选项决定是否执行
+  - 自动合并内部findings和跨文件findings
+  - 更新summary统计（totalInternalErrors + totalCrossFileErrors）
+- ✅ getCrossFileFindings()方法
+  - 从DiagnosticReport提取crossFileFindings
+  - 返回CrossFileFinding[]数组
+- ✅ getGroupedCrossFileFindings()方法
+  - 按finding类型分组（cross_file_timeline, cross_file_character等）
+  - 返回Record<string, CrossFileFinding[]>
+
+**技术特性**:
+- 可选执行：通过runCrossFileChecks标志控制
+- 灵活配置：支持CrossFileCheckConfig传递给analyzer
+- 增量分析：与现有内部findings无缝合并
+- checkType动态设置：internal_only/cross_file/both
+- 统计信息完整：包含内部和跨文件问题计数
+- 独立运行支持：analyzeCrossFileIssues可独立执行
+
+**集成示例**:
+```typescript
+// 运行完整分析（内部+跨文件）
+const result = await multiFileAnalysisService.analyzeProject(projectId, {
+  runCrossFileChecks: true,
+  crossFileConfig: {
+    checkTypes: ['cross_file_timeline', 'cross_file_character'],
+    minConfidence: 0.75,
+    maxFindingsPerType: 30,
+  },
+});
+
+// 仅运行跨文件检查（已有内部分析）
+const crossFileResult = await multiFileAnalysisService.analyzeCrossFileIssues(
+  projectId,
+  { minConfidence: 0.7 }
+);
+
+// 获取跨文件findings（按类型分组）
+const grouped = await multiFileAnalysisService.getGroupedCrossFileFindings(projectId);
+// {
+//   'cross_file_timeline': [finding1, finding2],
+//   'cross_file_character': [finding3],
+//   ...
+// }
+```
+
+**数据库存储结构**:
+```typescript
+// DiagnosticReport.findings (JSON)
+{
+  "internalFindings": [
+    { type: "character", ... }  // 单文件内部问题
+  ],
+  "crossFileFindings": [
+    { type: "cross_file_timeline", ... }  // 跨文件问题
+  ],
+  "summary": {
+    "totalInternalErrors": 15,
+    "totalCrossFileErrors": 8,
+    "totalErrors": 23,
+    ...
+  }
+}
+
+// DiagnosticReport.checkType
+"both" | "internal_only" | "cross_file"
+
+// DiagnosticReport.summary
+"分析了 5 个剧本文件，发现 15 个内部问题，8 个跨文件问题"
+```
+
+**Git Commit**: `4cf4c33`
+
+**测试结果**: TypeScript type check ✅ Passed
+
+**后续集成**:
+- T3.11将创建API端点调用这些service方法
+- T3.12将实现UI展示跨文件findings的分组视图
+
+---
+
+### ⏳ 待完成任务 (4/14)
 - ⏳ T3.11: 多文件分析API实现
 - ⏳ T3.12: 诊断报告UI重构（分组展示）
 - ⏳ T3.13: 跨文件问题关联高亮（Beta后）
