@@ -1,9 +1,9 @@
 # 开发进度跟踪 - 多剧本文件分析系统
 
-**文档版本**: v1.15
+**文档版本**: v1.16
 **最后更新**: 2025-11-05 (Day 1 继续 - Sprint 3进行中)
 **分支**: `feature/multi-script-analysis`
-**当前Sprint**: Sprint 3 - 分层检查系统 (进行中 - 11/14完成)
+**当前Sprint**: Sprint 3 - 分层检查系统 (进行中 - 12/14完成)
 
 ---
 
@@ -13,9 +13,9 @@
 |--------|------|------|----------|--------|-------------|
 | Sprint 1 | ✅ **完成** | **100%** | **9/9** | 9 | Day 1 ✅ |
 | Sprint 2 | ✅ **完成** | **100%** | **9/11** | 11 | Day 1 ✅ |
-| Sprint 3 | 🔄 **进行中** | **78%** | **11/14** | 14 | Day 3.5 |
+| Sprint 3 | 🔄 **进行中** | **86%** | **12/14** | 14 | Day 3.5 |
 | Sprint 4 | ⏳ 未开始 | 0% | 0/6 | 6 | Day 4.5 |
-| **总计** | **🟢 超前进行中** | **72%** | **29/40** | **40** | **Day 4.5** |
+| **总计** | **🟢 超前进行中** | **75%** | **30/40** | **40** | **Day 4.5** |
 
 **当前日期**: Day 1 (2025-11-04) - Sprint 3进行中
 **已用时间**: 1天
@@ -23,7 +23,7 @@
 
 ---
 
-## ✅ 已完成任务 (29/40) - Sprint 1-2完成 + Sprint 3进行中
+## ✅ 已完成任务 (30/40) - Sprint 1-2完成 + Sprint 3进行中
 
 ### 🎉 Sprint 1 - 多文件基础架构 (100% 完成)
 
@@ -1982,8 +1982,128 @@ const getGroupedFindings = async (projectId: string) => {
 
 ---
 
-### ⏳ 待完成任务 (3/14)
-- ⏳ T3.12: 诊断报告UI重构（分组展示）
+### T3.12: 诊断报告UI重构（分组展示） ✅
+
+**完成时间**: 2025-11-05
+**耗时**: 1天
+**负责人**: AI Assistant
+
+**完成内容**:
+- ✅ 创建CrossFileFindingsDisplay组件 (244行)
+  - 支持grouped/all两种视图模式
+  - 按finding type分组显示 (timeline/character/plot/setting)
+  - 严重度标记 (high/medium/low) + 图标
+  - 显示涉及文件列表 (episode numbers + locations)
+  - 显示问题证据和修复建议
+- ✅ 扩展v1ApiService
+  - 新增CrossFileFinding和CrossFileFindingsData接口
+  - 实现getCrossFileFindings()方法
+  - 支持grouped/ungrouped查询参数
+- ✅ 更新分析页面 (app/analysis/[id]/page.tsx)
+  - 添加Tabs组件切换内部/跨文件问题
+  - 集成CrossFileFindingsDisplay组件
+  - 分析完成后自动获取跨文件findings
+  - 每个tab显示问题数量badge
+
+**技术实现**:
+
+1. **CrossFileFindingsDisplay组件** (`components/analysis/cross-file-findings-display.tsx`):
+```typescript
+export interface CrossFileFinding {
+  id: string;
+  type: 'cross_file_timeline' | 'cross_file_character' |
+        'cross_file_plot' | 'cross_file_setting';
+  severity: 'high' | 'medium' | 'low';
+  affectedFiles: Array<{
+    fileId: string;
+    filename: string;
+    episodeNumber: number | null;
+    location?: { sceneId?: string; line?: number; };
+  }>;
+  description: string;
+  suggestion: string;
+  confidence: number;
+  evidence: string[];
+}
+
+// 视图模式切换
+const [viewMode, setViewMode] = useState<'all' | 'grouped'>('all')
+
+// 分组逻辑
+const groupedFindings = findings.reduce((acc, finding) => {
+  const type = finding.type
+  if (!acc[type]) { acc[type] = [] }
+  acc[type].push(finding)
+  return acc
+}, {} as Record<string, CrossFileFinding[]>)
+```
+
+2. **API Service扩展** (`lib/services/v1-api-service.ts`):
+```typescript
+async getCrossFileFindings(
+  projectId: string,
+  grouped: boolean = false
+): Promise<CrossFileFindingsData> {
+  const queryParam = grouped ? '?grouped=true' : '';
+  const response = await this.fetchWithTimeout(
+    `${API_BASE_URL}/projects/${projectId}/cross-file-findings${queryParam}`,
+    { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+  );
+
+  if (!response.ok && response.status === 404) {
+    return { projectId, grouped, findings: grouped ? {} : [], totalCount: 0 };
+  }
+
+  return (await response.json()).data;
+}
+```
+
+3. **分析页面集成** (Analysis Page):
+```typescript
+// 获取跨文件findings
+const [crossFileFindings, setCrossFileFindings] = useState<CrossFileFinding[]>([])
+
+// 在分析完成后获取
+if (status.status === 'COMPLETED') {
+  const crossFileData = await v1ApiService.getCrossFileFindings(params.id, false)
+  if (crossFileData && Array.isArray(crossFileData.findings)) {
+    setCrossFileFindings(crossFileData.findings)
+  }
+}
+
+// Tabs切换
+<Tabs value={activeTab} onValueChange={setActiveTab}>
+  <TabsList>
+    <TabsTrigger value="internal">
+      内部问题 <Badge>{errors.length}</Badge>
+    </TabsTrigger>
+    <TabsTrigger value="cross-file">
+      跨文件问题 <Badge>{crossFileFindings.length}</Badge>
+    </TabsTrigger>
+  </TabsList>
+  <TabsContent value="internal">{/* Internal findings */}</TabsContent>
+  <TabsContent value="cross-file">
+    <CrossFileFindingsDisplay findings={crossFileFindings} />
+  </TabsContent>
+</Tabs>
+```
+
+**UI特性**:
+- 无缝的内部/跨文件问题切换
+- 与现有分析页面UI一致的设计风格
+- 每个tab显示问题数量
+- 跨文件findings不可用时优雅降级
+- 支持按类型分组查看（时间线/角色/情节/设定）
+
+**Git Commit**: `68bfd7c`
+
+**测试结果**: TypeScript type check ✅ Passed
+
+**Sprint 3进度**: 12/14 (86%)
+
+---
+
+### ⏳ 待完成任务 (2/14)
 - ⏳ T3.13: 跨文件问题关联高亮（Beta后）
 - ⏳ T3.14: 单元测试：CrossFileAnalyzer
 
