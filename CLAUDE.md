@@ -9,6 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **[AI Agents Reference](ref/AI_AGENTS.md)** - Complete guide to all 6 AI agents (ConsistencyGuardian, CharacterArchitect, RulesAuditor, PacingStrategist, ThematicPolisher, RevisionExecutive)
 - **[API Reference](ref/API_REFERENCE.md)** - Complete V1 API documentation with all endpoints, request/response formats, error handling
 - **[Database Schema Reference](ref/DATABASE_SCHEMA.md)** - Prisma models, services, migrations, queries, and optimization tips
+- **[Multi-File Analysis Reference](ref/MULTI_FILE_ANALYSIS.md)** - ✨ **NEW** - Cross-file consistency checking, AI-assisted decision making, batch analysis (Sprint 3)
 - **[Frontend Components Reference](ref/FRONTEND_COMPONENTS.md)** - Pages, workspace components, UI library, API client, and state management
 - **[Testing Guide](ref/TESTING_GUIDE.md)** - Unit testing, integration testing, E2E testing patterns, and conventions
 - **[Deployment Guide](ref/DEPLOYMENT_GUIDE.md)** - Vercel deployment, Supabase setup, monitoring, troubleshooting, and scaling
@@ -20,6 +21,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✅ Debugging issues → Check relevant reference guide
 - ✅ Writing tests → Follow Testing Guide patterns
 - ✅ Deploying to production → Follow Deployment Guide
+- ✅ Working with multi-file analysis → Check Multi-File Analysis Reference (Sprint 3)
 
 **This File (CLAUDE.md):**
 - Quick start guide and essential commands
@@ -196,13 +198,85 @@ The system implements a five-act interactive workflow for script analysis:
    - Generates contextual fixes for detected errors
    - Validates and sanitizes AI outputs
 
-7. **SynthesisEngine** (`lib/synthesis/synthesis-engine.ts`) - Epic 007
+7. **CrossFileAdvisor** (`lib/agents/cross-file-advisor.ts`) - Sprint 3 | **Multi-File Decision Support**
+   - AI-powered resolution strategy generator for cross-file issues
+   - Generates 2-3 actionable solutions per finding
+   - Provides impact analysis and difficulty ratings
+   - **Value**: Helps resolve timeline, character, plot, and setting inconsistencies across multiple script files
+   - Returns structured ResolutionAdvice with recommended solution index
+
+8. **SynthesisEngine** (`lib/synthesis/synthesis-engine.ts`) - Epic 007
    - Orchestrates complete synthesis workflow
    - Integrates decisions from all 5 acts
    - Detects and resolves conflicts automatically
    - Preserves original script style (6-dimensional analysis)
    - Supports chunking for long scripts (>6000 tokens)
    - Generates V2 script with confidence scoring
+
+### Multi-File Analysis System (Sprint 3) ✨ NEW
+
+**Purpose**: Extend single-file analysis to handle multiple script files (episodes), detecting **cross-file consistency issues** that span across different files.
+
+See **[Multi-File Analysis Reference](ref/MULTI_FILE_ANALYSIS.md)** for complete documentation.
+
+#### Key Components
+
+1. **CrossFileAnalyzer** (`lib/analysis/cross-file-analyzer.ts`)
+   - Base class for cross-file consistency checking
+   - **DefaultCrossFileAnalyzer**: Implements 4 check types
+     - `checkTimeline()`: Timeline inconsistencies across episodes
+     - `checkCharacter()`: Character introduction and naming issues
+     - `checkPlot()`: Plot thread continuity problems
+     - `checkSetting()`: Location description conflicts
+
+2. **CrossFileAdvisor** (`lib/agents/cross-file-advisor.ts`)
+   - AI-powered resolution strategy generator
+   - Generates 2-3 solutions per finding
+   - Provides impact analysis and difficulty ratings
+   - Type-specific prompts (timeline, character, plot, setting)
+
+3. **MultiFileAnalysisService** (`lib/db/services/multi-file-analysis.service.ts`)
+   - Service layer for multi-file analysis operations
+   - `analyzeProject()`: Full project analysis (internal + cross-file)
+   - `analyzeCrossFileIssues()`: Cross-file only analysis
+   - `getCrossFileFindings()`: Query cross-file findings
+   - `getGroupedCrossFileFindings()`: Query findings grouped by type
+
+#### API Endpoints (Sprint 3)
+
+- `POST /api/v1/projects/[id]/analyze/cross-file` - Run cross-file analysis
+- `GET /api/v1/projects/[id]/cross-file-findings?grouped=true` - Get findings
+
+#### Cross-File Finding Types
+
+```typescript
+type CrossFileFindingType =
+  | 'cross_file_timeline'    // Timeline inconsistencies
+  | 'cross_file_character'   // Character issues
+  | 'cross_file_plot'        // Plot continuity
+  | 'cross_file_setting';    // Location conflicts
+```
+
+#### Quick Example
+
+```typescript
+// Run cross-file analysis
+const { findings } = await multiFileAnalysisService.analyzeCrossFileIssues(
+  projectId,
+  {
+    checkTypes: ['cross_file_timeline', 'cross_file_character'],
+    minConfidence: 0.75,
+  }
+);
+
+// Generate AI resolution strategies
+const advisor = createCrossFileAdvisor(apiKey);
+const advice = await advisor.generateAdvice(findings[0], scriptContexts);
+
+console.log(`Analysis: ${advice.analysis}`);
+console.log(`Solutions: ${advice.solutions.length}`);
+console.log(`Recommended: ${advice.recommendedSolutionIndex}`);
+```
 
 ### API Architecture (V1 - Current Production System)
 

@@ -33,6 +33,15 @@ Prisma ORM and PostgreSQL documentation:
 - Query optimization tips
 - Connection pooling
 
+### [Multi-File Analysis Reference](MULTI_FILE_ANALYSIS.md) ✨ NEW
+Comprehensive multi-file script analysis system (Sprint 3):
+- Cross-file consistency checking (timeline, character, plot, setting)
+- AI-assisted decision making (CrossFileAdvisor)
+- Batch analysis and findings merging
+- Multi-file analysis API endpoints
+- Usage examples and best practices
+- Configuration and troubleshooting
+
 ### [Frontend Components Reference](FRONTEND_COMPONENTS.md)
 Complete frontend guide:
 - Page structure and routing
@@ -82,6 +91,7 @@ Complete five-act workflow system:
 3. Follow [API Reference](API_REFERENCE.md) for endpoint structure
 4. Check [Database Schema Reference](DATABASE_SCHEMA.md) for models
 5. Use [Frontend Components Reference](FRONTEND_COMPONENTS.md) for UI patterns
+6. For multi-file features, see [Multi-File Analysis Reference](MULTI_FILE_ANALYSIS.md)
 
 ### Debugging Issues
 1. Check relevant reference guide for the component you're debugging
