@@ -405,16 +405,218 @@ export abstract class CrossFileAnalyzer {
 }
 
 /**
- * Default implementation of CrossFileAnalyzer
- * (can be extended with AI-powered checks)
+ * Default implementation of CrossFileAnalyzer with rule-based checks
  */
 export class DefaultCrossFileAnalyzer extends CrossFileAnalyzer {
   constructor(config?: CrossFileCheckConfig) {
     super(config);
   }
 
-  // Subclasses can override checkTimeline, checkCharacter, etc.
-  // For now, this returns empty arrays (implemented in T3.5-T3.8)
+  /**
+   * Check timeline consistency across scripts
+   * Detects chronological conflicts between episodes
+   */
+  protected async checkTimeline(
+    scripts: ParsedScriptContent[]
+  ): Promise<CrossFileFinding[]> {
+    const findings: CrossFileFinding[] = [];
+
+    console.log(`[CrossFileAnalyzer] Starting timeline check: ${scripts.length} scripts`);
+
+    // Extract timeline events from all scripts
+    const allEvents = scripts.map((script) => ({
+      script,
+      events: this.extractTimelineEvents(script),
+    }));
+
+    // Check for chronological inconsistencies between consecutive episodes
+    for (let i = 0; i < allEvents.length - 1; i++) {
+      const current = allEvents[i];
+      const next = allEvents[i + 1];
+
+      // Skip if either script has no timeline events
+      if (current.events.length === 0 || next.events.length === 0) {
+        continue;
+      }
+
+      // Get last event of current script
+      const lastEvent = current.events[current.events.length - 1];
+      // Get first event of next script
+      const firstEvent = next.events[0];
+
+      // Check if dates are parseable
+      const lastDate = this.parseDate(lastEvent.timestamp || lastEvent.timeReference);
+      const firstDate = this.parseDate(firstEvent.timestamp || firstEvent.timeReference);
+
+      if (lastDate && firstDate && firstDate < lastDate) {
+        // Timeline conflict detected: next episode starts before current episode ends
+        findings.push(
+          this.createFinding(
+            'cross_file_timeline',
+            'high',
+            [
+              this.createAffectedFile(
+                current.script.fileId,
+                current.script.filename,
+                current.script.episodeNumber,
+                lastEvent.sceneId,
+                lastEvent.line
+              ),
+              this.createAffectedFile(
+                next.script.fileId,
+                next.script.filename,
+                next.script.episodeNumber,
+                firstEvent.sceneId,
+                firstEvent.line
+              ),
+            ],
+            `${next.script.filename}开场时间（${this.formatDate(firstDate)}）早于${current.script.filename}结尾（${this.formatDate(lastDate)}）`,
+            `将${next.script.filename}开场时间调整为${this.formatDate(lastDate)}之后`,
+            [
+              `${current.script.filename}最后时间点：${lastEvent.timeReference || lastEvent.timestamp}`,
+              `${next.script.filename}开场时间点：${firstEvent.timeReference || firstEvent.timestamp}`,
+            ],
+            0.85
+          )
+        );
+      }
+
+      // Check for duplicate dates within same episode
+      const currentDates = current.events
+        .map((e) => this.parseDate(e.timestamp || e.timeReference))
+        .filter((d): d is Date => d !== null);
+
+      for (let j = 0; j < currentDates.length - 1; j++) {
+        if (currentDates[j + 1] < currentDates[j]) {
+          // Timeline goes backwards within episode
+          const event1 = current.events[j];
+          const event2 = current.events[j + 1];
+
+          findings.push(
+            this.createFinding(
+              'cross_file_timeline',
+              'medium',
+              [
+                this.createAffectedFile(
+                  current.script.fileId,
+                  current.script.filename,
+                  current.script.episodeNumber,
+                  event1.sceneId,
+                  event1.line
+                ),
+                this.createAffectedFile(
+                  current.script.fileId,
+                  current.script.filename,
+                  current.script.episodeNumber,
+                  event2.sceneId,
+                  event2.line
+                ),
+              ],
+              `${current.script.filename}内部时间线倒退：场景${event2.sceneId}（${this.formatDate(currentDates[j + 1])}）早于场景${event1.sceneId}（${this.formatDate(currentDates[j])}）`,
+              `调整场景顺序或修正时间标记`,
+              [
+                `场景${event1.sceneId}：${event1.timeReference || event1.timestamp}`,
+                `场景${event2.sceneId}：${event2.timeReference || event2.timestamp}`,
+              ],
+              0.80
+            )
+          );
+        }
+      }
+    }
+
+    // Check for temporal gaps (optional: flag suspiciously large gaps)
+    for (let i = 0; i < allEvents.length - 1; i++) {
+      const current = allEvents[i];
+      const next = allEvents[i + 1];
+
+      if (current.events.length === 0 || next.events.length === 0) continue;
+
+      const lastEvent = current.events[current.events.length - 1];
+      const firstEvent = next.events[0];
+
+      const lastDate = this.parseDate(lastEvent.timestamp || lastEvent.timeReference);
+      const firstDate = this.parseDate(firstEvent.timestamp || firstEvent.timeReference);
+
+      if (lastDate && firstDate) {
+        const daysDiff = Math.floor((firstDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        // Flag if gap is more than 1 year
+        if (daysDiff > 365) {
+          findings.push(
+            this.createFinding(
+              'cross_file_timeline',
+              'low',
+              [
+                this.createAffectedFile(
+                  current.script.fileId,
+                  current.script.filename,
+                  current.script.episodeNumber,
+                  lastEvent.sceneId,
+                  lastEvent.line
+                ),
+                this.createAffectedFile(
+                  next.script.fileId,
+                  next.script.filename,
+                  next.script.episodeNumber,
+                  firstEvent.sceneId,
+                  firstEvent.line
+                ),
+              ],
+              `${current.script.filename}和${next.script.filename}之间存在较大时间跨度（约${Math.floor(daysDiff / 365)}年）`,
+              `确认时间跨度是否符合故事设定，如有必要添加过渡说明`,
+              [
+                `${current.script.filename}结尾：${this.formatDate(lastDate)}`,
+                `${next.script.filename}开场：${this.formatDate(firstDate)}`,
+              ],
+              0.60
+            )
+          );
+        }
+      }
+    }
+
+    console.log(`[CrossFileAnalyzer] Timeline check completed: ${findings.length} findings`);
+
+    return findings.slice(0, this.config.maxFindingsPerType);
+  }
+
+  /**
+   * Parse date from Chinese or English date string
+   */
+  private parseDate(dateStr: string | undefined): Date | null {
+    if (!dateStr) return null;
+
+    // Try ISO format first (YYYY-MM-DD)
+    const isoMatch = dateStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    }
+
+    // Try Chinese format (YYYY年MM月DD日)
+    const cnMatch = dateStr.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+    if (cnMatch) {
+      const [, year, month, day] = cnMatch;
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    }
+
+    // Try year-month only (YYYY-MM or YYYY年MM月)
+    const ymMatch = dateStr.match(/(\d{4})[-年](\d{1,2})[月]?/);
+    if (ymMatch) {
+      const [, year, month] = ymMatch;
+      return new Date(parseInt(year), parseInt(month) - 1, 1);
+    }
+
+    return null;
+  }
+
+  /**
+   * Format date for display
+   */
+  private formatDate(date: Date): string {
+    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+  }
 }
 
 /**
