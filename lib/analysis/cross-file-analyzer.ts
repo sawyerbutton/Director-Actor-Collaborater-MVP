@@ -1067,6 +1067,293 @@ export class DefaultCrossFileAnalyzer extends CrossFileAnalyzer {
       .split(/\s+/)
       .filter((w) => w.length > 1);
   }
+
+  /**
+   * Check setting consistency across scripts
+   * Detects location and setting inconsistencies
+   */
+  protected async checkSetting(
+    scripts: ParsedScriptContent[]
+  ): Promise<CrossFileFinding[]> {
+    const findings: CrossFileFinding[] = [];
+
+    console.log(`[CrossFileAnalyzer] Starting setting check: ${scripts.length} scripts`);
+
+    // Extract settings from all scripts
+    const allSettings = scripts.map((script) => ({
+      script,
+      settings: this.extractSettings(script),
+    }));
+
+    // Build location registry (track all mentions of each location)
+    const locationRegistry = new Map<
+      string,
+      Array<{
+        script: ParsedScriptContent;
+        setting: { location: string; description?: string; sceneId: string; line?: number };
+      }>
+    >();
+
+    for (const { script, settings } of allSettings) {
+      for (const setting of settings) {
+        const normalizedLocation = this.normalizeLocation(setting.location);
+        if (!locationRegistry.has(normalizedLocation)) {
+          locationRegistry.set(normalizedLocation, []);
+        }
+        locationRegistry.get(normalizedLocation)!.push({ script, setting });
+      }
+    }
+
+    // Check for contradictory location descriptions
+    for (const [location, mentions] of locationRegistry.entries()) {
+      if (mentions.length < 2) continue; // Need at least 2 mentions to compare
+
+      // Compare descriptions for contradictions
+      for (let i = 0; i < mentions.length; i++) {
+        for (let j = i + 1; j < mentions.length; j++) {
+          const mention1 = mentions[i];
+          const mention2 = mentions[j];
+
+          const desc1 = mention1.setting.description || '';
+          const desc2 = mention2.setting.description || '';
+
+          if (desc1 && desc2) {
+            const areContradictory = this.settingsAreContradictory(desc1, desc2);
+
+            if (areContradictory) {
+              findings.push(
+                this.createFinding(
+                  'cross_file_setting',
+                  'high',
+                  [
+                    this.createAffectedFile(
+                      mention1.script.fileId,
+                      mention1.script.filename,
+                      mention1.script.episodeNumber,
+                      mention1.setting.sceneId,
+                      mention1.setting.line
+                    ),
+                    this.createAffectedFile(
+                      mention2.script.fileId,
+                      mention2.script.filename,
+                      mention2.script.episodeNumber,
+                      mention2.setting.sceneId,
+                      mention2.setting.line
+                    ),
+                  ],
+                  `地点"${location}"在不同集数中存在矛盾描述`,
+                  `统一地点描述，或添加说明解释地点变化`,
+                  [
+                    `${mention1.script.filename} 场景${mention1.setting.sceneId}：${desc1}`,
+                    `${mention2.script.filename} 场景${mention2.setting.sceneId}：${desc2}`,
+                  ],
+                  0.75
+                )
+              );
+            }
+          }
+        }
+      }
+    }
+
+    // Check for sudden location appearances (location mentioned without introduction)
+    for (const [location, mentions] of locationRegistry.entries()) {
+      const firstMention = mentions[0];
+      const firstEpisodeIndex = scripts.findIndex((s) => s.fileId === firstMention.script.fileId);
+
+      // If location first appears after episode 1, check if it's introduced properly
+      if (firstEpisodeIndex > 0) {
+        const description = firstMention.setting.description || '';
+        const hasIntroduction = /新|初次|第一次|来到/.test(description);
+
+        if (!hasIntroduction) {
+          findings.push(
+            this.createFinding(
+              'cross_file_setting',
+              'low',
+              [
+                this.createAffectedFile(
+                  firstMention.script.fileId,
+                  firstMention.script.filename,
+                  firstMention.script.episodeNumber,
+                  firstMention.setting.sceneId,
+                  firstMention.setting.line
+                ),
+              ],
+              `地点"${location}"在${firstMention.script.filename}首次出现，但缺少场景介绍`,
+              `添加对该地点的介绍性描述`,
+              [`${firstMention.script.filename} 场景${firstMention.setting.sceneId}：${location}`],
+              0.55
+            )
+          );
+        }
+      }
+    }
+
+    // Check for inconsistent location usage patterns
+    // Flag if a major location (mentioned 3+ times) suddenly stops appearing
+    for (const [location, mentions] of locationRegistry.entries()) {
+      if (mentions.length < 3) continue; // Only check frequently used locations
+
+      // Find episodes where this location appears
+      const episodeIndices = mentions
+        .map((m) => scripts.findIndex((s) => s.fileId === m.script.fileId))
+        .sort((a, b) => a - b);
+
+      // Check for large gaps in usage
+      for (let i = 0; i < episodeIndices.length - 1; i++) {
+        const gap = episodeIndices[i + 1] - episodeIndices[i];
+
+        if (gap > 2) {
+          // Location not mentioned for 3+ episodes
+          const beforeScript = scripts[episodeIndices[i]];
+          const afterScript = scripts[episodeIndices[i + 1]];
+
+          findings.push(
+            this.createFinding(
+              'cross_file_setting',
+              'low',
+              [
+                this.createAffectedFile(
+                  beforeScript.fileId,
+                  beforeScript.filename,
+                  beforeScript.episodeNumber,
+                  'location_usage'
+                ),
+                this.createAffectedFile(
+                  afterScript.fileId,
+                  afterScript.filename,
+                  afterScript.episodeNumber,
+                  'location_usage'
+                ),
+              ],
+              `重要地点"${location}"在${beforeScript.filename}之后消失，在${afterScript.filename}重新出现（间隔${gap}集）`,
+              `考虑在中间集数添加对该地点的提及，或解释为何长时间未出现`,
+              [
+                `最后出现：${beforeScript.filename}`,
+                `再次出现：${afterScript.filename}`,
+              ],
+              0.50
+            )
+          );
+        }
+      }
+    }
+
+    // Check for similar but not identical location names (typos)
+    const allLocations = Array.from(locationRegistry.keys());
+
+    for (let i = 0; i < allLocations.length; i++) {
+      for (let j = i + 1; j < allLocations.length; j++) {
+        const loc1 = allLocations[i];
+        const loc2 = allLocations[j];
+
+        const similarity = this.calculateLocationSimilarity(loc1, loc2);
+
+        // If locations are very similar (70-95%), might be a typo
+        if (similarity > 0.7 && similarity < 0.95) {
+          const mentions1 = locationRegistry.get(loc1)!;
+          const mentions2 = locationRegistry.get(loc2)!;
+
+          findings.push(
+            this.createFinding(
+              'cross_file_setting',
+              'medium',
+              [
+                this.createAffectedFile(
+                  mentions1[0].script.fileId,
+                  mentions1[0].script.filename,
+                  mentions1[0].script.episodeNumber,
+                  mentions1[0].setting.sceneId
+                ),
+                this.createAffectedFile(
+                  mentions2[0].script.fileId,
+                  mentions2[0].script.filename,
+                  mentions2[0].script.episodeNumber,
+                  mentions2[0].setting.sceneId
+                ),
+              ],
+              `地点名称可能存在不一致："${loc1}"和"${loc2}"（相似度${(similarity * 100).toFixed(0)}%）`,
+              `确认是否为同一地点，如是则统一名称`,
+              [
+                `${mentions1[0].script.filename}中：${loc1}`,
+                `${mentions2[0].script.filename}中：${loc2}`,
+              ],
+              0.70
+            )
+          );
+        }
+      }
+    }
+
+    console.log(`[CrossFileAnalyzer] Setting check completed: ${findings.length} findings`);
+
+    return findings.slice(0, this.config.maxFindingsPerType);
+  }
+
+  /**
+   * Normalize location name for comparison
+   */
+  private normalizeLocation(location: string): string {
+    return location
+      .trim()
+      .replace(/\s+/g, '')
+      .replace(/[的、，,。.]/g, '')
+      .toLowerCase();
+  }
+
+  /**
+   * Calculate similarity between two location names
+   */
+  private calculateLocationSimilarity(loc1: string, loc2: string): number {
+    const normalized1 = this.normalizeLocation(loc1);
+    const normalized2 = this.normalizeLocation(loc2);
+
+    if (normalized1 === normalized2) return 1.0;
+
+    const maxLen = Math.max(normalized1.length, normalized2.length);
+    if (maxLen === 0) return 1.0;
+
+    let matches = 0;
+    const minLen = Math.min(normalized1.length, normalized2.length);
+
+    for (let i = 0; i < minLen; i++) {
+      if (normalized1[i] === normalized2[i]) {
+        matches++;
+      }
+    }
+
+    return matches / maxLen;
+  }
+
+  /**
+   * Check if two setting descriptions contradict each other
+   */
+  private settingsAreContradictory(desc1: string, desc2: string): boolean {
+    // Check for contradictory attributes
+    const contradictionPatterns = [
+      { pattern: /宽敞|开阔|广阔/, opposite: /狭窄|狭小|拥挤/ },
+      { pattern: /明亮|光亮|敞亮/, opposite: /昏暗|阴暗|黑暗/ },
+      { pattern: /干净|整洁|清洁/, opposite: /脏|杂乱|破旧/ },
+      { pattern: /现代|新式|时尚/, opposite: /古老|陈旧|传统/ },
+      { pattern: /安静|宁静|寂静/, opposite: /喧闹|嘈杂|吵闹/ },
+      { pattern: /豪华|奢华|高档/, opposite: /简陋|破败|廉价/ },
+    ];
+
+    for (const { pattern, opposite } of contradictionPatterns) {
+      const desc1HasPattern = pattern.test(desc1);
+      const desc2HasOpposite = opposite.test(desc2);
+
+      const desc2HasPattern = pattern.test(desc2);
+      const desc1HasOpposite = opposite.test(desc1);
+
+      if ((desc1HasPattern && desc2HasOpposite) || (desc2HasPattern && desc1HasOpposite)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
 }
 
 /**
