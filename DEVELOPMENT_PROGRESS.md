@@ -2160,3 +2160,95 @@ Time:        0.591 s
 ### ⏳ 待完成任务 (1/14)
 - ⏳ T3.13: 跨文件问题关联高亮（延期到Beta后）
 
+---
+
+## 🔄 Sprint 4 - 用户交互和反馈 (进行中 - 1/6完成)
+
+**开始日期**: 2025-11-05
+**预计耗时**: 3天
+**当前耗时**: 0.5天
+**完成进度**: 17% (1/6)
+**状态**: 🔄 **进行中** - T4.1部分完成
+
+### ✅ T4.1: 端到端功能测试 (70%完成)
+
+**完成时间**: 2025-11-05（部分）
+**耗时**: 0.5天
+**负责人**: AI Assistant
+
+**完成内容**:
+- ✅ 创建测试计划文档
+  - docs/testing/MULTI_FILE_ANALYSIS_TEST_PLAN.md (229行)
+  - 详细测试策略：Phase 2 API集成测试
+  - 识别已实现功能和未实现功能
+  - 测试数据集设计（4种cross-file issues）
+- ✅ 创建E2E测试框架
+  - tests/e2e/multi-file-analysis.spec.ts (704行)
+  - 10个测试用例（E2E-MULTIFILE-001到010）
+  - 覆盖：多文件上传、内部分析、跨文件分析、UI交互
+  - **状态**：需等待多文件上传UI实现
+- ✅ 创建API集成测试
+  - tests/integration/multi-file-api.test.ts (537行)
+  - 5个核心测试用例（TC-INT-001到005）
+  - 直接测试后端API，绕过UI限制
+  - 测试数据：时间线冲突、角色名称不一致、情节矛盾、设定冲突
+- ✅ 修复Jest配置
+  - 数据库端口：5432 → 5433
+  - User模型字段修正（name代替username）
+- ✅ 更新服务导出
+  - 添加scriptFileService到lib/db/services/index.ts
+
+**技术实现**:
+```typescript
+// API集成测试示例
+describe('Multi-File Analysis API Integration Tests', () => {
+  it('TC-INT-003: should execute cross-file analysis', async () => {
+    // Upload 3 files with intentional cross-file issues
+    const files = await uploadTestScripts(projectId);
+
+    // Run cross-file analysis
+    const analyzer = createCrossFileAnalyzer();
+    const result = await analyzer.analyze(files, config);
+
+    // Verify findings
+    expect(result.findings.length).toBeGreaterThan(0);
+    expect(result.processedFiles).toBe(3);
+
+    // Check timeline finding
+    const timelineFindings = result.findings.filter(
+      f => f.type === 'cross_file_timeline'
+    );
+    expect(timelineFindings.length).toBeGreaterThan(0);
+  });
+});
+```
+
+**测试覆盖**:
+- ✅ 项目创建和文件上传
+- ✅ 内部分析（单文件检查）
+- ✅ 跨文件分析（4种检查类型）
+- ✅ Findings检索和分组
+- ✅ 完整工作流验证
+
+**已知限制**:
+- ⚠️ 多文件上传UI未实现（影响E2E测试）
+- ✅ 使用API集成测试绕过UI限制
+- ⏳ API测试需修复方法调用（createFile vs createScriptFile）
+
+**Git Commit**: `9a23aac`
+
+**下一步**:
+- 修复API测试方法调用
+- 运行并验证测试通过
+- 更新测试结果文档
+
+---
+
+### ⏳ 待完成任务 (5/6)
+- ⏳ T4.1: 端到端功能测试（70%完成，剩余30%）
+- ⏳ T4.2: 性能测试（大文件场景）
+- ⏳ T4.3: 错误边界测试
+- ⏳ T4.4: 文档完善（API文档）
+- ⏳ T4.5: Docker部署验证
+- ⏳ T4.6: 生产环境配置
+

@@ -265,14 +265,17 @@ describe('Multi-File Analysis API Integration Tests', () => {
     const uploadedFiles = [];
 
     for (const script of Object.values(testScripts)) {
-      const file = await scriptFileService.createScriptFile({
+      // First create the file
+      const file = await scriptFileService.createFile({
         projectId: testProjectId,
         filename: script.filename,
         episodeNumber: script.episodeNumber,
         rawContent: script.content,
+      });
+
+      // Then update with JSON content (simulating conversion completion)
+      await scriptFileService.updateFile(file.id, {
         jsonContent: script.jsonContent,
-        contentHash: `hash-${script.filename}`,
-        fileSize: script.content.length,
         conversionStatus: 'completed',
       });
 
@@ -283,7 +286,7 @@ describe('Multi-File Analysis API Integration Tests', () => {
     expect(uploadedFiles.length).toBe(3);
 
     // Verify files are stored correctly
-    const storedFiles = await scriptFileService.getScriptFilesByProject(testProjectId);
+    const storedFiles = await scriptFileService.getFilesByProjectId(testProjectId);
     expect(storedFiles.length).toBe(3);
 
     // Verify episode ordering
@@ -306,14 +309,15 @@ describe('Multi-File Analysis API Integration Tests', () => {
   it('TC-INT-002: should execute internal analysis on all files', async () => {
     // Upload files
     for (const script of Object.values(testScripts)) {
-      await scriptFileService.createScriptFile({
+      const file = await scriptFileService.createFile({
         projectId: testProjectId,
         filename: script.filename,
         episodeNumber: script.episodeNumber,
         rawContent: script.content,
+      });
+
+      await scriptFileService.updateFile(file.id, {
         jsonContent: script.jsonContent,
-        contentHash: `hash-${script.filename}`,
-        fileSize: script.content.length,
         conversionStatus: 'completed',
       });
     }
@@ -322,7 +326,7 @@ describe('Multi-File Analysis API Integration Tests', () => {
     // For this integration test, we verify the project setup is correct
     // The actual AI analysis would require mock or real DeepSeek API calls
 
-    const files = await scriptFileService.getScriptFilesByProject(testProjectId);
+    const files = await scriptFileService.getFilesByProjectId(testProjectId);
     expect(files.length).toBe(3);
 
     // Verify each file has JSON content ready for analysis
@@ -339,20 +343,21 @@ describe('Multi-File Analysis API Integration Tests', () => {
   it('TC-INT-003: should execute cross-file analysis and detect inconsistencies', async () => {
     // Upload files
     for (const script of Object.values(testScripts)) {
-      await scriptFileService.createScriptFile({
+      const file = await scriptFileService.createFile({
         projectId: testProjectId,
         filename: script.filename,
         episodeNumber: script.episodeNumber,
         rawContent: script.content,
+      });
+
+      await scriptFileService.updateFile(file.id, {
         jsonContent: script.jsonContent,
-        contentHash: `hash-${script.filename}`,
-        fileSize: script.content.length,
         conversionStatus: 'completed',
       });
     }
 
     // Get files for cross-file analysis
-    const files = await scriptFileService.getScriptFilesByProject(testProjectId);
+    const files = await scriptFileService.getFilesByProjectId(testProjectId);
 
     // Create analyzer with all check types
     const analyzer = createCrossFileAnalyzer();
@@ -420,14 +425,15 @@ describe('Multi-File Analysis API Integration Tests', () => {
   it('TC-INT-004: should retrieve grouped cross-file findings', async () => {
     // Upload files
     for (const script of Object.values(testScripts)) {
-      await scriptFileService.createScriptFile({
+      const file = await scriptFileService.createFile({
         projectId: testProjectId,
         filename: script.filename,
         episodeNumber: script.episodeNumber,
         rawContent: script.content,
+      });
+
+      await scriptFileService.updateFile(file.id, {
         jsonContent: script.jsonContent,
-        contentHash: `hash-${script.filename}`,
-        fileSize: script.content.length,
         conversionStatus: 'completed',
       });
     }
@@ -476,20 +482,21 @@ describe('Multi-File Analysis API Integration Tests', () => {
 
     // Step 2: Upload multiple files
     for (const script of Object.values(testScripts)) {
-      await scriptFileService.createScriptFile({
+      const file = await scriptFileService.createFile({
         projectId: testProjectId,
         filename: script.filename,
         episodeNumber: script.episodeNumber,
         rawContent: script.content,
+      });
+
+      await scriptFileService.updateFile(file.id, {
         jsonContent: script.jsonContent,
-        contentHash: `hash-${script.filename}`,
-        fileSize: script.content.length,
         conversionStatus: 'completed',
       });
     }
 
     // Step 3: Verify file count
-    const files = await scriptFileService.getScriptFilesByProject(testProjectId);
+    const files = await scriptFileService.getFilesByProjectId(testProjectId);
     expect(files.length).toBe(3);
 
     // Step 4: Run cross-file analysis
