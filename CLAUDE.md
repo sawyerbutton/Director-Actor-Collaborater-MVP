@@ -6,22 +6,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Quick Links** - Comprehensive reference guides in `/ref` directory:
 
+- **[Architecture Overview](ref/ARCHITECTURE_OVERVIEW.md)** - ✨ **NEW** - High-level system architecture, tech stack, performance characteristics, and quick navigation
 - **[AI Agents Reference](ref/AI_AGENTS.md)** - Complete guide to all 6 AI agents (ConsistencyGuardian, CharacterArchitect, RulesAuditor, PacingStrategist, ThematicPolisher, RevisionExecutive)
 - **[API Reference](ref/API_REFERENCE.md)** - Complete V1 API documentation with all endpoints, request/response formats, error handling
 - **[Database Schema Reference](ref/DATABASE_SCHEMA.md)** - Prisma models, services, migrations, queries, and optimization tips
-- **[Multi-File Analysis Reference](ref/MULTI_FILE_ANALYSIS.md)** - ✨ **NEW** - Cross-file consistency checking, AI-assisted decision making, batch analysis (Sprint 3)
+- **[Multi-File Analysis Reference](ref/MULTI_FILE_ANALYSIS.md)** - Cross-file consistency checking, AI-assisted decision making, batch analysis (Sprint 3)
 - **[Frontend Components Reference](ref/FRONTEND_COMPONENTS.md)** - Pages, workspace components, UI library, API client, and state management
 - **[Testing Guide](ref/TESTING_GUIDE.md)** - Unit testing, integration testing, E2E testing patterns, and conventions
 - **[Deployment Guide](ref/DEPLOYMENT_GUIDE.md)** - Vercel deployment, Supabase setup, monitoring, troubleshooting, and scaling
 - **[Workflow Reference](ref/WORKFLOW_REFERENCE.md)** - Complete five-act workflow system with state machine, agents, and synthesis
 
+**Detailed Architecture (250+ pages)** - In-depth technical documentation in `/docs/architecture`:
+
+- **[Main Index](docs/architecture/SYSTEM_ARCHITECTURE_COMPLETE.md)** - Navigation hub for all architecture documentation
+- **[Business Flow](docs/architecture/01_BUSINESS_FLOW.md)** (70+ pages) - Product positioning, user journey, five-act workflow, decision points
+- **[Database Architecture](docs/architecture/02_DATABASE_ARCHITECTURE.md)** (40+ pages) - Schema design, indexes, query patterns, transactions, migrations
+- **[Frontend Architecture](docs/architecture/03_FRONTEND_ARCHITECTURE.md)** (40+ pages) - React components, state management, API communication, performance
+- **[Backend API Architecture](docs/architecture/04_BACKEND_API_ARCHITECTURE.md)** (45+ pages) - API routes, middleware, async jobs, error handling, Serverless patterns
+- **[LLM Integration](docs/architecture/05_LLM_INTEGRATION.md)** (40+ pages) - DeepSeek API, 6 AI agents, prompt chains (P4-P13), JSON validation
+- **[Deployment Architecture](docs/architecture/06_DEPLOYMENT_ARCHITECTURE.md)** (30+ pages) - Local setup, Vercel deployment, Supabase config, monitoring, troubleshooting
+
 **When to Use Reference Docs:**
-- ✅ Learning the codebase for the first time → Start with Workflow Reference
-- ✅ Implementing new features → Check AI Agents + API Reference
-- ✅ Debugging issues → Check relevant reference guide
-- ✅ Writing tests → Follow Testing Guide patterns
-- ✅ Deploying to production → Follow Deployment Guide
-- ✅ Working with multi-file analysis → Check Multi-File Analysis Reference (Sprint 3)
+- ✅ Learning the codebase for the first time → Start with **Architecture Overview** or **Workflow Reference**
+- ✅ Understanding system design → Read **Detailed Architecture** docs
+- ✅ Implementing new features → Check **AI Agents** + **API Reference** + relevant architecture doc
+- ✅ Debugging issues → Check relevant reference guide + **Deployment Architecture** troubleshooting
+- ✅ Writing tests → Follow **Testing Guide** patterns
+- ✅ Deploying to production → Follow **Deployment Guide** + **Deployment Architecture**
+- ✅ Working with multi-file analysis → Check **Multi-File Analysis Reference** (Sprint 3)
 
 **This File (CLAUDE.md):**
 - Quick start guide and essential commands
