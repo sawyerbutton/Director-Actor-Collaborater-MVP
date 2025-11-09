@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Upload, FileText, Play, AlertCircle } from 'lucide-react'
+import { Upload, FileText, Play, AlertCircle, Files, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { v1ApiService } from '@/lib/services/v1-api-service'
@@ -253,6 +253,47 @@ export default function DashboardPage() {
                     <p className="text-sm text-gray-500">昨天</p>
                   </Link>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Multi-File Analysis Card */}
+            <Card className="border-2 border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Files className="h-5 w-5 text-blue-600" />
+                  <CardTitle className="text-blue-900">多文件剧本分析</CardTitle>
+                </div>
+                <CardDescription className="text-blue-700">
+                  上传多集剧本文件，进行跨文件一致性检查
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2 text-sm text-gray-700">
+                  <div className="flex items-start gap-2">
+                    <div className="h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-blue-600 text-xs font-semibold">✓</span>
+                    </div>
+                    <p>支持上传最多50个剧本文件</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-blue-600 text-xs font-semibold">✓</span>
+                    </div>
+                    <p>检测时间线、角色、情节、设定矛盾</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <div className="h-5 w-5 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-blue-600 text-xs font-semibold">✓</span>
+                    </div>
+                    <p>AI辅助提供解决方案建议</p>
+                  </div>
+                </div>
+                <Link href="/multi-file">
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                    进入多文件分析
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
 

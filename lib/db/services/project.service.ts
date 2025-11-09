@@ -27,15 +27,23 @@ export class ProjectService extends BaseService {
     });
   }
 
-  async findByUser(userId: string, pagination?: PaginationOptions) {
+  async findByUser(userId: string, options?: PaginationOptions & { where?: any }) {
+    const { limit, offset, where: additionalWhere } = options || {};
+
     return await prisma.project.findMany({
-      where: { userId },
-      take: pagination?.limit || 20,
-      skip: pagination?.offset || 0,
+      where: {
+        userId,
+        ...additionalWhere,
+      },
+      take: limit || 20,
+      skip: offset || 0,
       orderBy: { createdAt: 'desc' },
       include: {
         _count: {
-          select: { analyses: true },
+          select: {
+            analyses: true,
+            scriptFiles: true,
+          },
         },
       },
     });

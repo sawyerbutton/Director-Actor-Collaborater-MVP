@@ -456,8 +456,8 @@ export class DiagnosticReportService extends BaseService {
    */
   async getStatistics(projectId: string): Promise<{
     total: number;
-    byType: Record<DiagnosticFinding['type'], number>;
-    bySeverity: Record<DiagnosticFinding['severity'], number>;
+    byType: Record<string, number>;
+    bySeverity: Record<string, number>;
     averageConfidence: number;
   } | null> {
     const report = await this.getParsedReport(projectId);
@@ -466,7 +466,23 @@ export class DiagnosticReportService extends BaseService {
       return null;
     }
 
-    const findings = report.parsedFindings;
+    const rawFindings = report.parsedFindings;
+
+    // Handle both legacy array format and new DiagnosticFindings object format
+    let findings: InternalFinding[] | DiagnosticFinding[];
+
+    if (Array.isArray(rawFindings)) {
+      // Legacy format: findings is directly an array
+      findings = rawFindings as DiagnosticFinding[];
+    } else if (rawFindings && typeof rawFindings === 'object') {
+      // New format: findings is a DiagnosticFindings object
+      const diagnosticFindings = rawFindings as unknown as DiagnosticFindings;
+      // Use internal findings from the new structure
+      findings = diagnosticFindings.internalFindings || [];
+    } else {
+      // Fallback: empty array
+      findings = [];
+    }
 
     const byType: Record<string, number> = {};
     const bySeverity: Record<string, number> = {};
@@ -485,8 +501,8 @@ export class DiagnosticReportService extends BaseService {
 
     return {
       total: findings.length,
-      byType: byType as Record<DiagnosticFinding['type'], number>,
-      bySeverity: bySeverity as Record<DiagnosticFinding['severity'], number>,
+      byType: byType,
+      bySeverity: bySeverity,
       averageConfidence: findings.length > 0 ? totalConfidence / findings.length : 0,
     };
   }

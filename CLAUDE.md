@@ -290,6 +290,49 @@ console.log(`Solutions: ${advice.solutions.length}`);
 console.log(`Recommended: ${advice.recommendedSolutionIndex}`);
 ```
 
+#### UI Integration (Sprint 3 - **NEW 2025-11-06**)
+
+Complete frontend workflow for multi-file projects:
+
+**Project Type Segregation**:
+- Database: `ProjectType` enum (SINGLE, MULTI_FILE) added to schema
+- API: GET /api/v1/projects supports `projectType` filter parameter
+- Dual business logic: Single-file (ACT1-5 + Synthesis) vs Multi-file (Cross-file checking only)
+
+**4-Page Workflow**:
+1. **`/multi-file`** - Project List
+   - Displays all MULTI_FILE projects with file count and status
+   - Badge system for workflow status
+   - Create new project button
+
+2. **`/multi-file/new`** - Create Project (3-Step Wizard)
+   - Step 1: Project info form (title, description)
+   - Step 2: File upload with MultiFileUploader component (max 50 files)
+   - Step 3: Success page with navigation
+
+3. **`/multi-file/[projectId]`** - Project Management
+   - Two-tab interface: "文件管理" + "分析操作"
+   - Integrates FileListManager for file CRUD
+   - Button to trigger cross-file analysis
+   - Shows file count and analysis requirements
+
+4. **`/multi-file/[projectId]/analysis`** - Analysis Results
+   - Dual-tab results: "跨文件分析" + "单文件内部"
+   - Summary cards: Total files, analyzed files, internal errors, cross-file errors
+   - Uses CrossFileFindingsDisplay component for rich findings visualization
+   - Refresh analysis button
+   - Empty states for no findings
+
+**Dashboard Integration**:
+- Gradient blue card in right sidebar promoting multi-file analysis
+- 3 feature highlights with checkmarks
+- Direct navigation to /multi-file
+
+**Technical Notes**:
+- Multi-file projects don't support ACT2-5 iteration or Synthesis
+- Content field optional for MULTI_FILE projects (empty string)
+- After schema changes, run `npx prisma generate` and restart dev server
+
 ### API Architecture (V1 - Current Production System)
 
 #### Async Job Queue System
@@ -1365,11 +1408,18 @@ Playwright E2E tests configured for WSL:
 - ✅ Version comparison (V1 vs V2)
 - ✅ Decision history tracking
 - ✅ Change log generation
+- ✅ Multi-file analysis UI (Sprint 3 - **NEW 2025-11-06**)
+  - Complete frontend integration for multi-file projects
+  - Dual project type support (SINGLE vs MULTI_FILE)
+  - 4-page workflow: List → Create → Manage → Analysis Results
+  - Cross-file consistency checking UI
+  - Dashboard integration with multi-file entry card
 
 **Testing**:
 - ✅ 61/61 unit tests passing
 - ✅ Integration tests verified
 - ✅ E2E framework ready
+- ✅ Multi-file API endpoints verified (Sprint 3)
 
 ### 📋 Next Steps (Optional Enhancements)
 
@@ -1400,12 +1450,12 @@ Playwright E2E tests configured for WSL:
 
 ---
 
-**Last Updated**: 2025-10-11
-**Architecture Version**: V1 API (Epic 004-007 Complete) + Free Creation Mode ✨
+**Last Updated**: 2025-11-06
+**Architecture Version**: V1 API (Epic 004-007 Complete) + Sprint 3 Multi-File UI ✨
 **System Status**: Production Ready ✅
 **Test Coverage**: 97.5% (77/79 tests passing)
 **Product Positioning**: Plan B - Differentiated Value (ACT1=Logic Repair, ACT2-5=Creative Enhancement)
-**Latest Fix**: Product-Implementation Alignment (removed progressive unlock, added free creation mode)
+**Latest Release**: Sprint 3 - Multi-File Analysis UI Integration Complete (4 pages, full workflow)
 
 ## Product Positioning Update (2025-10-10) ✨
 

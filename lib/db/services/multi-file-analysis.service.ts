@@ -11,6 +11,7 @@ import { diagnosticReportService } from './diagnostic-report.service';
 import { BatchAnalyzer, BatchAnalysisResult, FileAnalysisResult } from '@/lib/analysis/batch-analyzer';
 import { FindingsMerger, MergedFinding, MergeStatistics } from '@/lib/analysis/findings-merger';
 import { DefaultCrossFileAnalyzer, CrossFileCheckConfig } from '@/lib/analysis/cross-file-analyzer';
+import { createAICrossFileAnalyzer } from '@/lib/analysis/ai-cross-file-analyzer';
 import {
   DiagnosticFindings,
   InternalFinding,
@@ -448,13 +449,24 @@ export class MultiFileAnalysisService extends BaseService {
       return [];
     }
 
-    // Create cross-file analyzer
-    const analyzer = new DefaultCrossFileAnalyzer(config);
+    // Create AI-powered cross-file analyzer (falls back to rule-based if no API key or useAI=false)
+    const analyzer = createAICrossFileAnalyzer({
+      ...config,
+      useAI: config?.useAI !== false  // Default to true (AI-powered)
+    });
+
+    console.log(`[MultiFileAnalysis] Using ${analyzer.constructor.name} for cross-file analysis`);
 
     // Run all cross-file checks (analyzer handles parsing internally)
     const result = await analyzer.analyze(files);
 
-    return result.findings;
+    // Add unique IDs to findings if they don't have one
+    const findingsWithIds = result.findings.map((finding, index) => ({
+      ...finding,
+      id: finding.id || `cross-file-${Date.now()}-${index}`
+    }));
+
+    return findingsWithIds;
   }
 
   /**
@@ -469,14 +481,17 @@ export class MultiFileAnalysisService extends BaseService {
   }> {
     const files = await scriptFileService.getFilesByProjectId(projectId);
 
-    if (files.length < 2) {
-      throw new Error('Cross-file analysis requires at least 2 script files');
+    // Filter out files that haven't been converted to JSON yet
+    const convertedFiles = files.filter(f => f.jsonContent !== null);
+
+    if (convertedFiles.length < 2) {
+      throw new Error(`Cross-file analysis requires at least 2 converted files. Found ${convertedFiles.length} out of ${files.length} total files.`);
     }
 
-    console.log(`[MultiFileAnalysis] Running cross-file analysis for project ${projectId}: ${files.length} files`);
+    console.log(`[MultiFileAnalysis] Running cross-file analysis for project ${projectId}: ${convertedFiles.length} converted files (${files.length} total)`);
 
-    // Run cross-file analysis
-    const crossFileFindings = await this.runCrossFileAnalysis(files, config);
+    // Run cross-file analysis on converted files only
+    const crossFileFindings = await this.runCrossFileAnalysis(convertedFiles, config);
 
     // Get existing report
     const existingReport = await diagnosticReportService.getByProjectId(projectId);
@@ -493,7 +508,8 @@ export class MultiFileAnalysisService extends BaseService {
           internalFindings: existingFindings.internalFindings || [],
           crossFileFindings,
         },
-        files.length
+        files.length,
+        convertedFiles.length  // Pass the number of analyzed files
       ),
     };
 

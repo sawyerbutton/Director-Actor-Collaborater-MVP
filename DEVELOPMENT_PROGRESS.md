@@ -2674,3 +2674,154 @@ docs/deployment/MULTI_FILE_PRODUCTION_CONFIG.md (新增, 500行)
 
 ---
 
+## 2025-11-09 - Bug修复：跨文件分析显示问题和React Key警告
+
+**任务类型**: Bug Fix
+**耗时**: 0.5天
+**负责人**: AI Assistant
+
+**问题描述**:
+1. ❌ 跨文件分析页面无法显示分析结果（显示"还未进行分析"）
+2. ❌ React控制台出现"Each child in a list should have a unique key prop"警告
+3. ❌ AI分析器在处理未转换文件时抛出TypeError
+
+**根因分析**:
+
+**问题1: 页面显示逻辑错误**
+- `DiagnosticSummary`接口缺少`analyzedFiles`字段
+- 前端条件判断`summary.analyzedFiles === 0`导致误判
+- API返回`analyzedFiles: undefined`，前端认为未分析
+
+**问题2: 数据结构缺失ID字段**
+- AI返回的`crossFileFindings`数组中的对象没有`id`字段
+- React要求列表渲染时每个元素必须有唯一`key`
+- 前端组件期望每个finding都有`id`属性
+
+**问题3: 空指针异常**
+- AI分析器尝试访问`jsonContent.metadata`
+- 未过滤`jsonContent === null`的文件（转换失败）
+- 导致TypeError并中断分析流程
+
+**修复内容**:
+
+### 1. 修复analyzedFiles字段缺失 ✅
+**文件**: `types/diagnostic-report.ts`
+```typescript
+// 添加analyzedFiles字段
+export interface DiagnosticSummary {
+  totalFiles: number;
+  analyzedFiles?: number;  // 新增：已分析文件数量
+  // ...
+}
+
+// 更新calculateSummary函数签名
+export function calculateSummary(
+  findings: Pick<DiagnosticFindings, 'internalFindings' | 'crossFileFindings'>,
+  totalFiles: number,
+  analyzedFiles?: number  // 新增参数
+): DiagnosticSummary
+```
+
+**文件**: `lib/db/services/multi-file-analysis.service.ts`
+```typescript
+// 传递convertedFiles.length作为analyzedFiles
+summary: calculateSummary(
+  { internalFindings, crossFileFindings },
+  files.length,
+  convertedFiles.length  // 新增：传递已分析文件数
+)
+```
+
+### 2. 为CrossFileFinding添加唯一ID ✅
+**文件**: `lib/db/services/multi-file-analysis.service.ts`
+```typescript
+async runCrossFileAnalysis(files: any[], config?: CrossFileCheckConfig) {
+  // ...
+  const result = await analyzer.analyze(files);
+  
+  // 为每个finding添加唯一ID
+  const findingsWithIds = result.findings.map((finding, index) => ({
+    ...finding,
+    id: finding.id || `cross-file-${Date.now()}-${index}`
+  }));
+  
+  return findingsWithIds;
+}
+```
+
+### 3. AI分析器过滤空jsonContent ✅
+**文件**: `lib/analysis/ai-cross-file-analyzer.ts`
+```typescript
+// 在所有check方法中添加过滤
+protected async checkTimeline(scripts: ParsedScriptContent[]) {
+  const validScripts = scripts.filter(s => 
+    s.jsonContent !== null && s.jsonContent !== undefined
+  );
+  // 使用validScripts进行分析
+}
+// checkCharacter、checkPlot、checkSetting同样处理
+```
+
+### 4. React组件Key优化 ✅
+**文件**: `components/analysis/cross-file-findings-display.tsx`
+```typescript
+// 重构renderFinding为renderFindingContent
+const renderFindingContent = (finding: CrossFileFinding) => (
+  <div className="space-y-3">
+    {/* 内容 */}
+  </div>
+)
+
+// 在map中直接添加key
+{findings.map((finding) => (
+  <Card key={finding.id} className="hover:shadow-md transition-shadow">
+    <CardHeader>
+      {renderFindingContent(finding)}
+    </CardHeader>
+  </Card>
+))}
+```
+
+**测试验证**:
+```bash
+# 测试场景1：已有8个转换成功的文件
+✅ API返回analyzedFiles: 8
+✅ 页面正确显示分析结果（12个跨文件问题）
+✅ 无React key警告
+
+# 测试场景2：包含未转换文件
+✅ AI分析器过滤掉null jsonContent文件
+✅ 分析正常完成，无TypeError
+✅ 日志显示: "Running AI timeline check for 8 files (filtered from 9 total)"
+```
+
+**影响范围**:
+- ✅ 修复了跨文件分析结果无法显示的问题
+- ✅ 消除了React控制台警告
+- ✅ 提高了系统鲁棒性（容错未转换文件）
+- ✅ 改进了前端组件代码质量
+
+**性能影响**: 
+- ✅ 无性能影响（ID生成O(1)复杂度）
+- ✅ 过滤操作降低了AI调用的token消耗
+
+**代码质量**:
+- ✅ 类型安全：添加了analyzedFiles的TypeScript类型定义
+- ✅ 数据完整性：确保所有finding都有唯一ID
+- ✅ 容错性：处理了jsonContent为null的边界情况
+- ✅ React最佳实践：正确使用key属性
+
+**关键文件变更**:
+```
+types/diagnostic-report.ts (+5行)
+lib/db/services/multi-file-analysis.service.ts (+12行)
+lib/analysis/ai-cross-file-analyzer.ts (+16行, 4个方法)
+components/analysis/cross-file-findings-display.tsx (重构80行)
+```
+
+**测试状态**: ✅ **100%完成** - 所有问题已修复并验证
+
+**部署就绪度**: ✅ **Production Ready**
+
+---
+

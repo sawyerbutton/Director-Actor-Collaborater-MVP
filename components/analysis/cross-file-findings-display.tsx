@@ -91,80 +91,76 @@ export function CrossFileFindingsDisplay({ findings }: CrossFileFindingsDisplayP
     )
   }
 
-  const renderFinding = (finding: CrossFileFinding) => (
-    <Card key={finding.id} className="hover:shadow-md transition-shadow">
-      <CardHeader>
-        <div className="space-y-3">
-          {/* Header with badges */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant={getCrossFileSeverityColor(finding.severity) as any}>
-              {getCrossFileSeverityIcon(finding.severity)}
-              <span className="ml-1">{getCrossFileSeverityLabel(finding.severity)}</span>
-            </Badge>
-            <Badge variant="outline">{getCrossFileTypeLabel(finding.type)}</Badge>
-            <span className="text-sm text-gray-500">
-              置信度: {(finding.confidence * 100).toFixed(0)}%
-            </span>
-          </div>
+  const renderFindingContent = (finding: CrossFileFinding) => (
+    <div className="space-y-3">
+      {/* Header with badges */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Badge variant={getCrossFileSeverityColor(finding.severity) as any}>
+          {getCrossFileSeverityIcon(finding.severity)}
+          <span className="ml-1">{getCrossFileSeverityLabel(finding.severity)}</span>
+        </Badge>
+        <Badge variant="outline">{getCrossFileTypeLabel(finding.type)}</Badge>
+        <span className="text-sm text-gray-500">
+          置信度: {(finding.confidence * 100).toFixed(0)}%
+        </span>
+      </div>
 
-          {/* Description */}
-          <p className="font-medium text-base">{finding.description}</p>
+      {/* Description */}
+      <p className="font-medium text-base">{finding.description}</p>
 
-          {/* Affected Files */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-gray-700">涉及文件:</p>
-            <div className="flex flex-wrap gap-2">
-              {finding.affectedFiles.map((file, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-md border border-gray-200"
-                >
-                  <FileText className="h-3.5 w-3.5 text-gray-500" />
-                  <span className="text-sm">{file.filename}</span>
-                  {file.episodeNumber && (
-                    <Badge variant="outline" className="text-xs">
-                      第{file.episodeNumber}集
-                    </Badge>
-                  )}
-                  {file.location?.sceneId && (
-                    <span className="text-xs text-gray-500">
-                      {file.location.sceneId}
-                    </span>
-                  )}
-                  {file.location?.line && (
-                    <span className="text-xs text-gray-500">
-                      L{file.location.line}
-                    </span>
-                  )}
-                </div>
-              ))}
+      {/* Affected Files */}
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-gray-700">涉及文件:</p>
+        <div className="flex flex-wrap gap-2">
+          {finding.affectedFiles.map((file, idx) => (
+            <div
+              key={idx}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-md border border-gray-200"
+            >
+              <FileText className="h-3.5 w-3.5 text-gray-500" />
+              <span className="text-sm">{file.filename}</span>
+              {file.episodeNumber && (
+                <Badge variant="outline" className="text-xs">
+                  第{file.episodeNumber}集
+                </Badge>
+              )}
+              {file.location?.sceneId && (
+                <span className="text-xs text-gray-500">
+                  {file.location.sceneId}
+                </span>
+              )}
+              {file.location?.line && (
+                <span className="text-xs text-gray-500">
+                  L{file.location.line}
+                </span>
+              )}
             </div>
-          </div>
-
-          {/* Evidence */}
-          {finding.evidence && finding.evidence.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-gray-700">问题证据:</p>
-              <ul className="list-disc list-inside space-y-1">
-                {finding.evidence.map((item, idx) => (
-                  <li key={idx} className="text-sm text-gray-600">
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {/* Suggestion */}
-          {finding.suggestion && (
-            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
-              <p className="text-sm font-medium text-blue-900 mb-1">修复建议:</p>
-              <p className="text-sm text-blue-800">{finding.suggestion}</p>
-            </div>
-          )}
+          ))}
         </div>
-      </CardHeader>
-    </Card>
+      </div>
+
+      {/* Evidence */}
+      {finding.evidence && finding.evidence.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-gray-700">问题证据:</p>
+          <ul className="list-disc list-inside space-y-1">
+            {finding.evidence.map((item, idx) => (
+              <li key={idx} className="text-sm text-gray-600">
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Suggestion */}
+      {finding.suggestion && (
+        <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <p className="text-sm font-medium text-blue-900 mb-1">修复建议:</p>
+          <p className="text-sm text-blue-800">{finding.suggestion}</p>
+        </div>
+      )}
+    </div>
   )
 
   if (viewMode === 'grouped' && findingTypes.length > 1) {
@@ -191,7 +187,13 @@ export function CrossFileFindingsDisplay({ findings }: CrossFileFindingsDisplayP
           </TabsList>
           {findingTypes.map(type => (
             <TabsContent key={type} value={type} className="space-y-4 mt-4">
-              {groupedFindings[type].map(renderFinding)}
+              {groupedFindings[type].map((finding) => (
+                <Card key={finding.id} className="hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    {renderFindingContent(finding)}
+                  </CardHeader>
+                </Card>
+              ))}
             </TabsContent>
           ))}
         </Tabs>
@@ -211,7 +213,13 @@ export function CrossFileFindingsDisplay({ findings }: CrossFileFindingsDisplayP
           </button>
         </div>
       )}
-      {findings.map(renderFinding)}
+      {findings.map((finding) => (
+        <Card key={finding.id} className="hover:shadow-md transition-shadow">
+          <CardHeader>
+            {renderFindingContent(finding)}
+          </CardHeader>
+        </Card>
+      ))}
     </div>
   )
 }

@@ -4,6 +4,7 @@ import { createApiResponse } from '@/lib/api/response';
 import { handleApiError, NotFoundError } from '@/lib/api/errors';
 import { HTTP_STATUS } from '@/lib/config/constants';
 import { projectService } from '@/lib/db/services/project.service';
+import { prisma } from '@/lib/db/client';
 
 interface RouteParams {
   params: {
@@ -21,8 +22,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         throw new NotFoundError('Project ID is required');
       }
 
-      // Fetch project
-      const project = await projectService.findById(id);
+      // Fetch project with file count
+      const project = await prisma.project.findUnique({
+        where: { id },
+        include: {
+          _count: {
+            select: {
+              scriptFiles: true
+            }
+          }
+        }
+      });
 
       if (!project) {
         console.log(`[API] Project not found: ${id}`);
@@ -35,8 +45,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           id: project.id,
           title: project.title,
           description: project.description,
+          projectType: project.projectType,
           status: project.status,
           workflowStatus: project.workflowStatus,
+          fileCount: project._count.scriptFiles,
           createdAt: project.createdAt.toISOString(),
           updatedAt: project.updatedAt.toISOString()
         }),

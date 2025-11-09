@@ -86,6 +86,7 @@ export interface CrossFileFinding {
  */
 export interface DiagnosticSummary {
   totalFiles: number;
+  analyzedFiles?: number;  // Number of files that have been converted and analyzed
   totalInternalErrors: number;
   totalCrossFileErrors: number;
   criticalCount: number;
@@ -170,7 +171,8 @@ export function createEmptyFindings(): DiagnosticFindings {
  */
 export function calculateSummary(
   findings: Pick<DiagnosticFindings, 'internalFindings' | 'crossFileFindings'>,
-  totalFiles: number
+  totalFiles: number,
+  analyzedFiles?: number
 ): DiagnosticSummary {
   const allFindings = [
     ...findings.internalFindings,
@@ -184,6 +186,7 @@ export function calculateSummary(
 
   return {
     totalFiles,
+    analyzedFiles,  // Include the number of analyzed files
     totalInternalErrors: findings.internalFindings.length,
     totalCrossFileErrors: findings.crossFileFindings.length,
     criticalCount,

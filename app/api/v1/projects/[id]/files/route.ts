@@ -104,6 +104,18 @@ export async function POST(
         episodeNumber: validatedData.episodeNumber
       });
 
+      // Trigger background conversion (fire-and-forget)
+      // This will convert the file asynchronously without blocking the response
+      fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/v1/convert/script`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileId: file.id })
+      }).catch(err => {
+        console.error(`[FileUpload] Failed to trigger conversion for ${file.id}:`, err);
+      });
+
+      console.log(`[FileUpload] File ${file.id} created, conversion triggered in background`);
+
       // Format response
       return NextResponse.json(
         createApiResponse({
@@ -115,7 +127,8 @@ export async function POST(
           contentHash: file.contentHash,
           conversionStatus: file.conversionStatus,
           createdAt: file.createdAt.toISOString(),
-          updatedAt: file.updatedAt.toISOString()
+          updatedAt: file.updatedAt.toISOString(),
+          message: '文件上传成功，正在后台转换为结构化格式'
         }),
         { status: HTTP_STATUS.CREATED }
       );

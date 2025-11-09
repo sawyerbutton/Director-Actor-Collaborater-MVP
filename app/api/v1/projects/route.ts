@@ -11,12 +11,14 @@ import { sanitizeInput, sanitizeScriptContent, validateRequestSize, RequestSizeE
 const createProjectSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(1000).optional(),
-  content: z.string().min(1)
+  content: z.string().min(1).optional(), // Optional for MULTI_FILE projects
+  projectType: z.enum(['SINGLE', 'MULTI_FILE']).default('SINGLE')
 });
 
 const querySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20)
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  projectType: z.enum(['SINGLE', 'MULTI_FILE', 'ALL']).default('ALL') // Filter by project type
 });
 
 
@@ -40,7 +42,12 @@ export async function POST(request: NextRequest) {
       
       // Validate schema
       const validatedData = createProjectSchema.parse(sanitizedBody);
-      
+
+      // Validation: SINGLE projects must have content
+      if (validatedData.projectType === 'SINGLE' && !validatedData.content) {
+        throw new ValidationError('Content is required for SINGLE projects');
+      }
+
       // Additional sanitization for script content
       if (validatedData.content) {
         validatedData.content = sanitizeScriptContent(validatedData.content);
@@ -49,6 +56,7 @@ export async function POST(request: NextRequest) {
       // Create project
       const project = await projectService.create({
         ...validatedData,
+        content: validatedData.content || '', // Default to empty string for MULTI_FILE
         userId
       });
 
@@ -58,6 +66,7 @@ export async function POST(request: NextRequest) {
           id: project.id,
           title: project.title,
           description: project.description,
+          projectType: project.projectType,
           status: project.status,
           workflowStatus: project.workflowStatus,
           createdAt: project.createdAt.toISOString(),
@@ -82,16 +91,24 @@ export async function GET(request: NextRequest) {
       const searchParams = request.nextUrl.searchParams;
       const query = querySchema.parse({
         page: searchParams.get('page'),
-        limit: searchParams.get('limit')
+        limit: searchParams.get('limit'),
+        projectType: searchParams.get('projectType')
       });
 
       // Calculate pagination
       const offset = (query.page - 1) * query.limit;
 
+      // Build filter
+      const where: any = {};
+      if (query.projectType !== 'ALL') {
+        where.projectType = query.projectType;
+      }
+
       // Fetch projects
       const projects = await projectService.findByUser(userId, {
         limit: query.limit,
-        offset
+        offset,
+        where
       });
 
       // Count total projects for pagination
@@ -103,9 +120,11 @@ export async function GET(request: NextRequest) {
         id: project.id,
         title: project.title,
         description: project.description,
+        projectType: project.projectType,
         status: project.status,
         workflowStatus: project.workflowStatus,
         analysisCount: project._count?.analyses || 0,
+        fileCount: project._count?.scriptFiles || 0, // For MULTI_FILE projects
         createdAt: project.createdAt.toISOString(),
         updatedAt: project.updatedAt.toISOString()
       }));

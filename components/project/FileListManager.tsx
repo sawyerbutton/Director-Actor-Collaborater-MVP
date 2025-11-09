@@ -114,7 +114,7 @@ export function FileListManager({
 
     try {
       const response = await fetch(
-        `/api/v1/projects/${projectId}/files?orderBy=episodeNumber&order=asc`
+        `/api/v1/projects/${projectId}/files?orderBy=episodeNumber&order=asc&take=100`
       );
 
       if (!response.ok) {

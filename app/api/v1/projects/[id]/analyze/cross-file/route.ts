@@ -56,12 +56,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
       const { config } = validation.data;
 
-      console.log(`[API] Running cross-file analysis for project ${projectId}`);
+      // Default config with AI enabled
+      const analysisConfig = {
+        ...config,
+        useAI: config?.useAI !== false,  // Default to true (AI-powered analysis)
+        minConfidence: config?.minConfidence || 0.5
+      };
+
+      console.log(`[API] Running cross-file analysis for project ${projectId} (useAI=${analysisConfig.useAI})`);
 
       // Run cross-file analysis
       const result = await multiFileAnalysisService.analyzeCrossFileIssues(
         projectId,
-        config
+        analysisConfig
       );
 
       console.log(`[API] Cross-file analysis completed: ${result.findings.length} findings`);

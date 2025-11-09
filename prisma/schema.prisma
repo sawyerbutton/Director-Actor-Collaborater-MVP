@@ -32,6 +32,7 @@ model Project {
   title           String
   description     String?
   content         String            @db.Text // 剧本内容（单文件模式，保留兼容）
+  projectType     ProjectType       @default(SINGLE) // 项目类型：单文件/多文件
   status          String            @default("draft")
   workflowStatus  WorkflowStatus    @default(INITIALIZED)
   createdAt       DateTime          @default(now())
@@ -49,6 +50,8 @@ model Project {
   @@index([userId])
   @@index([status])
   @@index([workflowStatus])
+  @@index([projectType])        // 新增索引：按项目类型查询
+  @@index([userId, projectType]) // 新增复合索引：用户的特定类型项目
 }
 
 // Analysis模型 - 存储对某一个项目的AI分析结果
@@ -155,6 +158,12 @@ model RevisionDecision {
   @@index([projectId])
   @@index([act])
   @@index([projectId, act])
+}
+
+// 项目类型枚举
+enum ProjectType {
+  SINGLE          // 单文件分析项目（ACT1-5 + Synthesis）
+  MULTI_FILE      // 多文件分析项目（跨文件一致性检查）
 }
 
 // 工作流状态枚举
