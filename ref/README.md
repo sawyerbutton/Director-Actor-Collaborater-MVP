@@ -33,7 +33,7 @@ Prisma ORM and PostgreSQL documentation:
 - Query optimization tips
 - Connection pooling
 
-### [Multi-File Analysis Reference](MULTI_FILE_ANALYSIS.md) ✨ NEW
+### [Multi-File Analysis Reference](MULTI_FILE_ANALYSIS.md)
 Comprehensive multi-file script analysis system (Sprint 3):
 - Cross-file consistency checking (timeline, character, plot, setting)
 - AI-assisted decision making (CrossFileAdvisor)
@@ -41,6 +41,15 @@ Comprehensive multi-file script analysis system (Sprint 3):
 - Multi-file analysis API endpoints
 - Usage examples and best practices
 - Configuration and troubleshooting
+- Recent bug fixes (2025-11-09)
+
+### [Bug Fixes Reference](BUG_FIXES.md) ✨ NEW
+Critical bug fixes and troubleshooting guide:
+- Cross-file analysis display issues
+- React key warnings and solutions
+- AI analyzer null pointer exceptions
+- Data structure updates and best practices
+- Prevention checklist for future development
 
 ### [Frontend Components Reference](FRONTEND_COMPONENTS.md)
 Complete frontend guide:
@@ -94,9 +103,10 @@ Complete five-act workflow system:
 6. For multi-file features, see [Multi-File Analysis Reference](MULTI_FILE_ANALYSIS.md)
 
 ### Debugging Issues
-1. Check relevant reference guide for the component you're debugging
-2. Review [API Reference](API_REFERENCE.md) for error handling patterns
-3. Check [Testing Guide](TESTING_GUIDE.md) for testing the fix
+1. Check [Bug Fixes Reference](BUG_FIXES.md) for known issues and solutions
+2. Review relevant reference guide for the component you're debugging
+3. Check [API Reference](API_REFERENCE.md) for error handling patterns
+4. Review [Testing Guide](TESTING_GUIDE.md) for testing the fix
 
 ### Writing Tests
 1. Follow patterns in [Testing Guide](TESTING_GUIDE.md)

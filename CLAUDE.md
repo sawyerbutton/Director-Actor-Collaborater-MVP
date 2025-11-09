@@ -11,6 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **[API Reference](ref/API_REFERENCE.md)** - Complete V1 API documentation with all endpoints, request/response formats, error handling
 - **[Database Schema Reference](ref/DATABASE_SCHEMA.md)** - Prisma models, services, migrations, queries, and optimization tips
 - **[Multi-File Analysis Reference](ref/MULTI_FILE_ANALYSIS.md)** - Cross-file consistency checking, AI-assisted decision making, batch analysis (Sprint 3)
+- **[Bug Fixes Reference](ref/BUG_FIXES.md)** - ✨ **NEW** - Critical bug fixes, root causes, solutions, and prevention checklist
 - **[Frontend Components Reference](ref/FRONTEND_COMPONENTS.md)** - Pages, workspace components, UI library, API client, and state management
 - **[Testing Guide](ref/TESTING_GUIDE.md)** - Unit testing, integration testing, E2E testing patterns, and conventions
 - **[Deployment Guide](ref/DEPLOYMENT_GUIDE.md)** - Vercel deployment, Supabase setup, monitoring, troubleshooting, and scaling
@@ -30,10 +31,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - ✅ Learning the codebase for the first time → Start with **Architecture Overview** or **Workflow Reference**
 - ✅ Understanding system design → Read **Detailed Architecture** docs
 - ✅ Implementing new features → Check **AI Agents** + **API Reference** + relevant architecture doc
-- ✅ Debugging issues → Check relevant reference guide + **Deployment Architecture** troubleshooting
+- ✅ Debugging issues → Check **Bug Fixes Reference** + **Deployment Architecture** troubleshooting
 - ✅ Writing tests → Follow **Testing Guide** patterns
 - ✅ Deploying to production → Follow **Deployment Guide** + **Deployment Architecture**
 - ✅ Working with multi-file analysis → Check **Multi-File Analysis Reference** (Sprint 3)
+- ✅ Fixing bugs → Check **Bug Fixes Reference** for known issues and solutions
 
 **This File (CLAUDE.md):**
 - Quick start guide and essential commands

@@ -845,3 +845,120 @@ config: { maxFindingsPerType: 10 }
 **Version**: 1.0
 **Last Updated**: 2025-11-05
 **Maintainer**: AI Assistant
+
+---
+
+## Recent Updates (2025-11-09)
+
+### Bug Fixes
+
+**1. Cross-File Analysis Display Issue** ✅
+- **Problem**: Page showed "Not yet analyzed" despite successful analysis
+- **Root Cause**: Missing `analyzedFiles` field in `DiagnosticSummary`
+- **Solution**: Added `analyzedFiles?: number` field and updated `calculateSummary()`
+- **Files Modified**: 
+  - `types/diagnostic-report.ts`
+  - `lib/db/services/multi-file-analysis.service.ts`
+
+**2. React Key Warning** ✅
+- **Problem**: Console warning about missing unique `key` prop
+- **Root Cause**: AI-returned findings lack `id` field
+- **Solution**: Generate unique IDs in `runCrossFileAnalysis()` method
+- **ID Format**: `cross-file-{timestamp}-{index}`
+- **Files Modified**:
+  - `lib/db/services/multi-file-analysis.service.ts`
+  - `components/analysis/cross-file-findings-display.tsx`
+
+**3. AI Analyzer Null Pointer Exception** ✅
+- **Problem**: TypeError when accessing `jsonContent.metadata` on unconverted files
+- **Root Cause**: No null filtering before AI analysis
+- **Solution**: Filter `jsonContent !== null` in all 4 check methods
+- **Files Modified**:
+  - `lib/analysis/ai-cross-file-analyzer.ts` (4 methods updated)
+
+### Data Structure Updates
+
+**DiagnosticSummary Interface** (Updated):
+```typescript
+export interface DiagnosticSummary {
+  totalFiles: number;
+  analyzedFiles?: number;  // ✅ NEW: Number of successfully converted files
+  totalInternalErrors: number;
+  totalCrossFileErrors: number;
+  criticalCount: number;
+  highCount: number;
+  mediumCount: number;
+  lowCount: number;
+}
+```
+
+**CrossFileFinding Interface** (Updated):
+```typescript
+export interface CrossFileFinding {
+  id: string;  // ✅ NOW REQUIRED: Format "cross-file-{timestamp}-{index}"
+  type: 'cross_file_timeline' | 'cross_file_character' | 'cross_file_plot' | 'cross_file_setting';
+  severity: 'high' | 'medium' | 'low';
+  affectedFiles: Array<{
+    fileId: string;
+    filename: string;
+    episodeNumber: number | null;
+    location?: {
+      sceneId?: string;
+      line?: number;
+    };
+  }>;
+  description: string;
+  suggestion: string;
+  confidence: number;
+  evidence: string[];
+}
+```
+
+### Best Practices
+
+**When Implementing Cross-File Analysis**:
+
+1. **Always Filter Null Values**:
+   ```typescript
+   const validScripts = scripts.filter(s => 
+     s.jsonContent !== null && s.jsonContent !== undefined
+   );
+   ```
+
+2. **Generate Unique IDs**:
+   ```typescript
+   const findingsWithIds = findings.map((finding, index) => ({
+     ...finding,
+     id: finding.id || `cross-file-${Date.now()}-${index}`
+   }));
+   ```
+
+3. **Track Analyzed Files**:
+   ```typescript
+   const convertedFiles = files.filter(f => f.jsonContent !== null);
+   summary: calculateSummary(findings, files.length, convertedFiles.length)
+   ```
+
+4. **Use Proper React Keys**:
+   ```tsx
+   {findings.map((finding) => (
+     <Card key={finding.id}>  {/* Use unique id */}
+       {/* Content */}
+     </Card>
+   ))}
+   ```
+
+### Testing Checklist
+
+- [x] Page displays results when `analyzedFiles > 0`
+- [x] No React key warnings in console
+- [x] Analysis handles files with `jsonContent === null`
+- [x] All findings have unique `id` field
+- [x] UI correctly shows analyzed vs total files (e.g., "8/9 files analyzed")
+
+### Related Documentation
+
+- [Bug Fixes Reference](./BUG_FIXES.md) - Detailed troubleshooting guide
+- [API Reference](./API_REFERENCE.md) - API endpoints documentation
+- [Frontend Components](./FRONTEND_COMPONENTS.md) - UI components guide
+
