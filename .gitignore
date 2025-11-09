@@ -26,6 +26,8 @@
 # misc
 .DS_Store
 *.pem
+build.log
+*.log
 
 # debug
 npm-debug.log*
@@ -36,6 +38,7 @@ yarn-error.log*
 .env*.local
 .env
 /env/.env*.local
+.env.*.backup
 
 # vercel
 .vercel
